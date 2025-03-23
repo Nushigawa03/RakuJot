@@ -1,0 +1,70 @@
+.navigation-bar {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    background-color: #f5f5f5;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    transition: height 0.3s ease;
+    overflow: hidden;
+  }
+  
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 5px;
+  }
+  
+  .navigation-bar.expanded {
+    height: auto;
+  }
+
+  .navigation-bar.creating-memo {
+    background-color: #f5f5f5;
+  }
+  
+  .search-bar-container {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: white;
+    flex: 1;
+    gap: 10px;
+  }
+  
+  .search-bar {
+    flex: 1;
+    padding: 5px;
+  }
+  
+  .new-memo-button {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .new-memo-button:hover {
+    background-color: #0056b3;
+  }
+
+  .search-bar-container .tag button {
+    background: none;
+    border: none;
+    color: red;
+    margin-left: 5px;
+    cursor: pointer;
+  }
+  
+  .tag.selected {
+    background-color: #d3d3d3;
+    border: 1px solid #aaa;
+  }

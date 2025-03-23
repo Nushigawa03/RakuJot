@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import NavigationBar from './NavigationBar';
+import NavigationBar from './NavigationBar/NavigationBar';
 import MemoList from './MemoList';
 import Sidebar from './Sidebar';
 import QuickMemoInput from './QuickMemoInput';
@@ -8,6 +8,12 @@ import './Page.css';
 
 const Page: React.FC = () => {
   const [filterQuery, setFilterQuery] = useState<string>(''); // フィルタ条件
+
+  const handleQuickMemoSave = (memo: { title: string; createdAt: string }) => {
+    console.log('クイックメモが保存されました:', memo);
+    // 必要に応じて、メモリストに追加する処理やAPI呼び出しをここに追加
+  };
+
 
   return (
     <div className="page-container">
@@ -26,7 +32,7 @@ const Page: React.FC = () => {
         </aside>
       </div>
       <footer>
-        <QuickMemoInput />
+        <QuickMemoInput onSave={handleQuickMemoSave} />
       </footer>
     </div>
   );

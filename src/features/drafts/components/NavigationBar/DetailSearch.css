@@ -1,0 +1,28 @@
+.detail-search {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .search-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* 各項目の間隔を調整 */
+    align-items: center;
+  }
+  
+  .search-options label {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    gap: 5px;
+  }
+  
+  .search-options select,
+  .search-options input[type="date"] {
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }

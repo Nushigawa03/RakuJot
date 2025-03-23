@@ -1,0 +1,64 @@
+.new-memo {
+    width: 100%;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin: 20px auto;
+  }
+  
+  .new-memo h2 {
+    margin-bottom: 10px;
+  }
+  
+  .new-memo input,
+  .new-memo textarea {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .new-memo .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  
+  .new-memo .tag {
+    background: #e0e0e0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .new-memo .tag button {
+    margin-left: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .new-memo .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .new-memo .actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff; /* 青色 */
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+  }
+  
+  .new-memo .actions button:hover {
+    background-color: #0056b3; /* ホバー時の濃い青色 */
+  }
