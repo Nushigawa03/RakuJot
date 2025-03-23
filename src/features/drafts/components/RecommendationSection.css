@@ -1,0 +1,12 @@
+.recommendation-section {
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.recommendation-section h3 {
+  margin-bottom: 10px;
+}
+
+.recommendation-section p {
+  color: #666;
+}
