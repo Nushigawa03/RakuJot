@@ -7,13 +7,7 @@ import RecommendationSection from './RecommendationSection';
 import './Page.css';
 
 const Page: React.FC = () => {
-  const [filterQuery, setFilterQuery] = useState<string>(''); // フィルタ条件
-
-  const handleQuickMemoSave = (memo: { title: string; createdAt: string }) => {
-    console.log('クイックメモが保存されました:', memo);
-    // 必要に応じて、メモリストに追加する処理やAPI呼び出しをここに追加
-  };
-
+  const [filterQuery, setFilterQuery] = useState<string>('');
 
   return (
     <div className="page-container">
@@ -32,7 +26,7 @@ const Page: React.FC = () => {
         </aside>
       </div>
       <footer>
-        <QuickMemoInput onSave={handleQuickMemoSave} />
+        <QuickMemoInput />
       </footer>
     </div>
   );

@@ -1,0 +1,49 @@
+.edit-memo-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .edit-memo-header {
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+  
+  .edit-memo-form {
+    margin-bottom: 20px;
+  }
+  
+  .edit-memo-form label {
+    display: block;
+    margin-bottom: 10px;
+  }
+  
+  .edit-memo-form input, .edit-memo-form textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .edit-memo-form button[type="submit"] {
+    background-color: #4CAF50;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .edit-memo-form button[type="button"] {
+    background-color: #e74c3c;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }

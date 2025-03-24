@@ -1,5 +1,6 @@
 import { Link } from "@remix-run/react";
 import type { MetaFunction } from "@remix-run/node";
+import { getMemos } from '~/models/memo.server';
 
 export const meta: MetaFunction = () => {
   return [

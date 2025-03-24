@@ -8,17 +8,19 @@ export const useFilteredMemos = (memos: Memo[], filterQuery: string): Memo[] => 
     let include = false;
     let exclude = false;
 
+    const memoTags = memo.tags || [];
+
     queryParts.forEach((part, index) => {
       if (part.startsWith('-') || part.startsWith('NOT')) {
         const tag = part.replace(/^(NOT|-)/, '');
-        if (memo.tags.includes(tag)) exclude = true; // NOT検索
+        if (memoTags.includes(tag)) exclude = true; // NOT検索
       } else if (part === 'OR') {
         const nextTag = queryParts[index + 1];
-        if (nextTag && memo.tags.includes(nextTag)) include = true;
+        if (nextTag && memoTags.includes(nextTag)) include = true;
       } else if (part === 'AND') {
         // ANDは明示的に無視（デフォルトでAND検索）
       } else {
-        if (!include) include = memo.tags.includes(part); // AND検索
+        if (!include) include = memoTags.includes(part); // AND検索
       }
     });
 

@@ -20,3 +20,20 @@ model Post {
   createdAt DateTime @default(now())
   authorId  String
 }
+
+model Memo {
+  id        String   @id @default(cuid())
+  title     String
+  date      String?  // 日付はオプション
+  tags      Tag[]    @relation("MemoTags")
+  body      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  description String?
+  memos     Memo[]   @relation("MemoTags")
+}

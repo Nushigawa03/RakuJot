@@ -24,7 +24,7 @@ const NewMemo: React.FC<NewMemoProps> = ({ onSave, onCancel }) => {
     setTags(tags.filter((t) => t !== tag));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (title.trim()) {
       const newMemo: Omit<Memo, 'id' | 'createdAt' | 'updatedAt'> = {
         title,
@@ -32,6 +32,23 @@ const NewMemo: React.FC<NewMemoProps> = ({ onSave, onCancel }) => {
         date,
         body,
       };
+      try {
+        const response = await fetch('/api/memos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newMemo),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert(error.error || 'メモの保存に失敗しました。');
+          return;
+        }
+      } catch (error) {
+        console.error('メモの保存中にエラーが発生しました:', error);
+        alert('メモの保存中にエラーが発生しました。');
+      }
+      
       onSave(newMemo);
     } else {
       alert('タイトルは必須です。');
