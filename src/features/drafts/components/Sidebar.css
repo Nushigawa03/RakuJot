@@ -98,10 +98,44 @@
 }
 
 /* カテゴリ詳細のスタイル */
-.category-details {
+.filter-details {
   margin-top: 20px;
   padding: 10px;
   background-color: #e9ecef;
   border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* 論理演算子のスタイル */
+.logical-operator {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.9em;
+  margin: 0 4px;
+  opacity: 0.7;
+}
+
+.logical-operator.and {
+  color: #495057;
+}
+
+.logical-operator.or {
+  color: #495057;
+}
+
+.logical-operator.not {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* フィルタ名内の論理演算子 */
+.filter-name .logical-operator {
+  margin: 0 3px;
+  font-size: 0.85em;
+}
+
+/* 詳細表示内の論理演算子 */
+.filter-details .logical-operator {
+  margin: 0 4px;
   font-size: 0.9em;
 }

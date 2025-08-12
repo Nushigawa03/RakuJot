@@ -1,4 +1,6 @@
 import type { Tag } from "../../stores/tags";
+import type { Filter } from "../../stores/filters";
+import type { Category } from "../../stores/categories";
 
 // モックメモデータ
 export const mockMemos = [
@@ -56,6 +58,52 @@ export const mockTags: Tag[] = [
   { id: "idea", name: "アイデア", description: "アイデアに関するメモ" },
   { id: "private", name: "プライベート", description: "プライベートなメモ" },
   { id: "todo", name: "TODO", description: "やるべきこと" },
+];
+
+// モックフィルタデータ
+export const mockFilters: Filter[] = [
+  {
+    id: 'work',
+    name: '仕事',
+    orTerms: [{ include: ['work'], exclude: [] }]
+  },
+  {
+    id: 'private_or_idea',
+    name: 'プライベート OR アイデア',
+    orTerms: [
+      { include: ['private'], exclude: [] },
+      { include: ['idea'], exclude: [] }
+    ]
+  },
+  {
+    id: 'idea_not_todo',
+    name: 'アイデア NOT TODO',
+    orTerms: [{ include: ['idea'], exclude: ['todo'] }]
+  },
+  {
+    id: 'todo',
+    name: 'TODO',
+    orTerms: [{ include: ['todo'], exclude: [] }]
+  },
+];
+
+// モックカテゴリデータ
+export const mockCategories: Category[] = [
+  { 
+    id: 'important_idea', 
+    name: '重要なアイデア', 
+    orTerms: [{ include: ['important', 'idea'], exclude: [] }],
+    color: '#ff6b6b'
+  },
+  { 
+    id: 'work_related', 
+    name: '仕事関連', 
+    orTerms: [
+      { include: ['work'], exclude: [] },
+      { include: ['todo'], exclude: ['private'] }
+    ],
+    color: '#4ecdc4'
+  },
 ];
 
 // 環境変数の確認用ヘルパー

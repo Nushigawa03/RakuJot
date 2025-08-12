@@ -1,12 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './Sidebar.css';
 import { SidebarProps } from '../types/sidebar';
-import { filters } from '../stores/filters';
-import { categories } from '../stores/categories';
+import type { Filter } from '../stores/filters';
+import type { Category } from '../stores/categories';
 import { useFilter } from '../hooks/useFilter';
+import { formatLogicalText } from '../utils/logicalTextFormatter';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const { activeFilter, activeQuery, handleFilterClick } = useFilter(onFilterChange);
+  const [filters, setFilters] = useState<Filter[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [filtersResponse, categoriesResponse] = await Promise.all([
+          fetch('/api/filters'),
+          fetch('/api/categories')
+        ]);
+        
+        if (filtersResponse.ok && categoriesResponse.ok) {
+          const filtersData = await filtersResponse.json();
+          const categoriesData = await categoriesResponse.json();
+          setFilters(filtersData);
+          setCategories(categoriesData);
+        } else {
+          console.error('APIからのデータ取得に失敗しました');
+        }
+      } catch (error) {
+        console.error('フィルタ・カテゴリの読み込みエラー:', error);
+      }
+    };
+
+    loadData();
+  }, []);
 
   return (
     <div className="sidebar">
@@ -38,7 +65,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
             className={`filter ${activeFilter === filter.id ? 'active' : ''}`}
             onClick={() => handleFilterClick(filter)}
           >
-            {filter.name}
+            <span className="filter-name">
+              {formatLogicalText(filter.name)}
+            </span>
           </li>
         ))}
       </ul>
@@ -46,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
       {activeQuery && (
         <div className="filter-details">
           <h4>詳細</h4>
-          <p>{activeQuery}</p>
+          <p>{formatLogicalText(activeQuery)}</p>
         </div>
       )}
     </div>

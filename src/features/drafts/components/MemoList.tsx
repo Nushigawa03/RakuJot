@@ -4,13 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { useFilteredMemos } from "../hooks/useFilteredMemos";
 import { useSortedMemos } from "../hooks/useSortedMemos";
 import { Memo, MemoListProps } from "../types/memo";
-import { getTagNameById } from "../utils/tagUtils";
+import { getTagNameById, initializeTags } from "../utils/tagUtils";
+import { shouldHighlightTag } from "../utils/tagHighlight";
+import type { Filter } from "../stores/filters";
+import type { Category } from "../stores/categories";
 
 const MemoList: React.FC<MemoListProps> = ({ filterQuery }) => {
   const navigate = useNavigate();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortKey, setSortKey] = useState<"date" | "title">("date");
   const [memos, setMemos] = useState<Memo[]>([]);
+  const [filters, setFilters] = useState<Filter[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // APIからメモを取得
   useEffect(() => {
@@ -31,6 +36,30 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery }) => {
     };
 
     fetchMemos();
+  }, []);
+
+  // フィルタとカテゴリとタグを取得
+  useEffect(() => {
+    const loadFilterData = async () => {
+      try {
+        const [filtersResponse, categoriesResponse] = await Promise.all([
+          fetch('/api/filters'),
+          fetch('/api/categories'),
+          initializeTags() // タグデータを初期化
+        ]);
+        
+        if (filtersResponse.ok && categoriesResponse.ok) {
+          const filtersData = await filtersResponse.json();
+          const categoriesData = await categoriesResponse.json();
+          setFilters(filtersData);
+          setCategories(categoriesData);
+        }
+      } catch (error) {
+        console.error('フィルタ・カテゴリ・タグの読み込みエラー:', error);
+      }
+    };
+
+    loadFilterData();
   }, []);
 
   const filteredMemos = useFilteredMemos(memos, filterQuery);
@@ -76,7 +105,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery }) => {
                 {memo.tags.map((tagId) => (
                   <span
                     key={tagId}
-                    className={`tag ${filterQuery.includes(tagId) ? "highlight" : ""}`}
+                    className={`tag ${shouldHighlightTag(tagId, filterQuery, memo.tags, filters, categories) ? "highlight" : ""}`}
                   >
                     {getTagNameById(tagId)}
                   </span>

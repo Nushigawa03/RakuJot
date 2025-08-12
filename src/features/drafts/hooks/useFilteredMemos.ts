@@ -1,9 +1,37 @@
 import { Memo } from '../types/memo';
-import { filters } from '../stores/filters';
-import { categories } from '../stores/categories';
 import { evaluateFilterExpression, FilterTerm } from '../types/filterTypes';
+import { useEffect, useState } from 'react';
+import type { Filter } from '../stores/filters';
+import type { Category } from '../stores/categories';
 
 export const useFilteredMemos = (memos: Memo[], filterQuery: string): Memo[] => {
+  const [filters, setFilters] = useState<Filter[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [filtersResponse, categoriesResponse] = await Promise.all([
+          fetch('/api/filters'),
+          fetch('/api/categories')
+        ]);
+        
+        if (filtersResponse.ok && categoriesResponse.ok) {
+          const filtersData = await filtersResponse.json();
+          const categoriesData = await categoriesResponse.json();
+          setFilters(filtersData);
+          setCategories(categoriesData);
+        } else {
+          console.error('APIからのデータ取得に失敗しました');
+        }
+      } catch (error) {
+        console.error('フィルタ・カテゴリの読み込みエラー:', error);
+      }
+    };
+
+    loadData();
+  }, []);
+
   if (!filterQuery) {
     return memos;
   }
