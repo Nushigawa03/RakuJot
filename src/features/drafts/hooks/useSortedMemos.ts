@@ -21,6 +21,10 @@ export const useSortedMemos = (
   sortKey: 'date' | 'title',
   sortOrder: 'asc' | 'desc'
 ): Memo[] => {
+  if (!Array.isArray(memos) || memos.length === 0) {
+    return [];
+  }
+
   return [...memos].sort((a, b) => {
     let comparison = 0;
 

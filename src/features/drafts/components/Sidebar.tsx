@@ -2,6 +2,7 @@ import React from 'react';
 import './Sidebar.css';
 import { SidebarProps } from '../types/sidebar';
 import { filters } from '../stores/filters';
+import { categories } from '../stores/categories';
 import { useFilter } from '../hooks/useFilter';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
@@ -21,21 +22,30 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
         </span>
       </h3>
       <ul>
-        {filters.map((filter, index) => (
+        {categories.map((category) => (
           <li
-            key={index}
-            className={`${activeFilter === filter.query ? 'active' : ''} ${
-              filter.isCategory ? 'category' : 'tag'
-            }`}
+            key={category.id}
+            className={`category ${activeFilter === category.id ? 'active' : ''}`}
+            onClick={() => handleFilterClick(category)}
+            style={{ borderLeft: category.color ? `4px solid ${category.color}` : undefined }}
+          >
+            {category.name}
+          </li>
+        ))}
+        {filters.map((filter) => (
+          <li
+            key={filter.id}
+            className={`filter ${activeFilter === filter.id ? 'active' : ''}`}
             onClick={() => handleFilterClick(filter)}
           >
             {filter.name}
           </li>
         ))}
       </ul>
+
       {activeQuery && (
-        <div className="category-details">
-          <h4>カテゴリの詳細</h4>
+        <div className="filter-details">
+          <h4>詳細</h4>
           <p>{activeQuery}</p>
         </div>
       )}

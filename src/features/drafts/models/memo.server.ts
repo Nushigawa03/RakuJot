@@ -1,22 +1,29 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaClientInitializationError, PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { mockMemos, shouldUseMockDatabase } from "./mock/mockData";
 
 const prisma = new PrismaClient();
 
-// モックデータ
-const mockDatabase = [
-  { id: "1", title: "メモ1", date: "2025-03-20", tags: ["仕事", "重要"], createdAt: new Date().toISOString() },
-  { id: "2", title: "メモ2", date: "2024-spring", tags: ["プライベート"], createdAt: new Date().toISOString() },
-  { id: "3", title: "メモ3", date: "2024", tags: ["アイデア", "TODO"], createdAt: new Date().toISOString() },
-  { id: "4", title: "メモ4", date: "", tags: ["仕事"], createdAt: new Date().toISOString() },
-  { id: "5", title: "メモ5", date: "2023-winter", tags: ["重要", "アイデア"], createdAt: new Date().toISOString() },
-];
-
 export const getMemo = async (id: string) => {
   try {
+    // まずモックデータから検索
+    if (shouldUseMockDatabase()) {
+      const mockMemo = mockMemos.find(memo => memo.id === id);
+      if (mockMemo) {
+        return mockMemo;
+      }
+    }
+
+    // モックデータになければデータベースから取得
     const memo = await prisma.memo.findUnique({ where: { id } });
     return memo;
   } catch (error) {
     console.error("データベースエラー:", error);
+    // データベースエラーの場合、モックデータのみから検索
+    if (shouldUseMockDatabase()) {
+      const mockMemo = mockMemos.find(memo => memo.id === id);
+      return mockMemo || { error: "メモの取得に失敗しました。" };
+    }
     return { error: "メモの取得に失敗しました。" };
   } finally {
     await prisma.$disconnect();
@@ -29,12 +36,35 @@ export const getMemos = async () => {
       orderBy: { createdAt: "desc" },
     });
 
-    const useMockDatabase = process.env.USE_MOCK_DATABASE === "true";
-    const combinedMemos = useMockDatabase ? [...mockDatabase, ...dbMemos] : dbMemos;
+    // モックデータを使用する場合は、データベースのデータにモックデータを追加
+    if (shouldUseMockDatabase()) {
+      console.log("Adding mock database data to existing memos");
+      return [...mockMemos, ...dbMemos];
+    }
 
-    return combinedMemos;
+    return dbMemos;
   } catch (error) {
     console.error("データベースエラー:", error);
+    if (error instanceof PrismaClientInitializationError) {
+      // データベース接続エラーの場合は、モックデータのみ返す
+      if (shouldUseMockDatabase()) {
+        console.log("Database connection failed, using mock data only");
+        return mockMemos;
+      }
+      return { error: "データベースに接続できません。サーバーが起動していることを確認してください。" };
+    }
+    
+    if (error instanceof PrismaClientKnownRequestError) {
+      switch (error.code) {
+        case 'P2002':
+          return { error: "同じタイトルのメモが既に存在します。" };
+        case 'P2025':
+          return { error: "参照先のデータが見つかりません。" };
+        default:
+          return { error: `データベースエラー: ${error.message}` };
+      }
+    }
+    
     return { error: "メモの取得に失敗しました。" };
   }
 };
@@ -45,12 +75,13 @@ export const createMemo = async (data: any) => {
       return { error: "タイトルが必要です。" };
     }
 
+    // 常にデータベースに作成を試行
     const newMemo = await prisma.memo.create({
       data: {
         title: data.title,
         date: data.date || "",
         tags: {
-          connectOrCreate: data.tags.map((tag) => ({
+          connectOrCreate: (data.tags || []).map((tag: string) => ({
             where: { name: tag },
             create: { name: tag },
           })),
@@ -63,6 +94,22 @@ export const createMemo = async (data: any) => {
     return newMemo;
   } catch (error) {
     console.error("データベースエラー:", error);
+    
+    // データベースエラーでもモックモードの場合はメモを作成したことにする
+    if (shouldUseMockDatabase()) {
+      console.log("Database error in mock mode, creating mock memo:", data.title);
+      const newMockMemo = {
+        id: `mock-${Date.now()}`,
+        title: data.title,
+        body: data.body || "",
+        date: data.date || "",
+        tags: data.tags || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      return newMockMemo;
+    }
+    
     return { error: "メモの作成に失敗しました。" };
   }
 };
@@ -70,6 +117,12 @@ export const createMemo = async (data: any) => {
 
 export const deleteMemo = async (id: string) => {
   try {
+    // モックデータのIDの場合は処理をスキップ
+    if (shouldUseMockDatabase() && id.startsWith('mock-')) {
+      console.log("Mock mode: Skipping deletion of mock memo:", id);
+      return;
+    }
+
     await prisma.memo.delete({
       where: { id },
     });
@@ -81,6 +134,12 @@ export const deleteMemo = async (id: string) => {
 
 export const updateMemo = async (id: string, data: any) => {
   try {
+    // モックデータのIDの場合は処理をスキップ
+    if (shouldUseMockDatabase() && id.startsWith('mock-')) {
+      console.log("Mock mode: Skipping update of mock memo:", id);
+      return;
+    }
+
     await prisma.memo.update({
       where: { id },
       data,
