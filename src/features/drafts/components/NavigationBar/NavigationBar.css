@@ -68,3 +68,111 @@
     background-color: #d3d3d3;
     border: 1px solid #aaa;
   }
+
+  /* フィルタ保存ボタン */
+  .save-filter-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s, background-color 0.2s;
+    margin-left: 5px;
+  }
+
+  .save-filter-button:hover {
+    opacity: 1;
+    background-color: rgba(0, 123, 255, 0.1);
+  }
+
+  /* フィルタ保存モーダル */
+  .save-filter-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+  }
+
+  .save-filter-modal {
+    background: white;
+    border-radius: 8px;
+    width: 90vw;
+    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .save-filter-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .save-filter-modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .save-filter-modal-content {
+    padding: 1.5rem;
+  }
+
+  .current-search {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #495057;
+    border-left: 4px solid #007bff;
+  }
+
+  .filter-note {
+    margin-bottom: 1rem;
+    color: #6c757d;
+    font-size: 0.9em;
+  }
+
+  .save-filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .save-button {
+    padding: 0.5rem 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .save-button:hover {
+    background-color: #0056b3;
+  }
+
+  .cancel-button {
+    padding: 0.5rem 1rem;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .cancel-button:hover {
+    background-color: #545b62;
+  }

@@ -1,44 +1,49 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunction, ActionFunction } from "@remix-run/node";
-import { getFilters } from "~/features/drafts/models/filter.server";
 import { prisma } from "~/db.server";
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ params }) => {
   try {
-    const filters = await getFilters();
-    return json(filters);
+    const { id } = params;
+    if (!id) {
+      return json({ error: "IDが指定されていません" }, { status: 400 });
+    }
+
+    const filter = await prisma.filter.findUnique({
+      where: { id },
+    });
+
+    if (!filter) {
+      return json({ error: "フィルタが見つかりません" }, { status: 404 });
+    }
+
+    return json(filter);
   } catch (error) {
-    console.error("API filters loader error:", error);
+    console.error("API filter loader error:", error);
     return json({ error: "フィルタの取得に失敗しました" }, { status: 500 });
   }
 };
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, params }) => {
   try {
-    const body = await request.json();
+    const { id } = params;
+    if (!id) {
+      return json({ error: "IDが指定されていません" }, { status: 400 });
+    }
 
     switch (request.method) {
-      case "POST":
+      case "PUT":
+        const body = await request.json();
         const { orTerms } = body;
-        const newFilter = await prisma.filter.create({
+        const updatedFilter = await prisma.filter.update({
+          where: { id },
           data: {
             orTerms: orTerms,
-          },
-        });
-        return json({ success: true, filter: newFilter });
-
-      case "PUT":
-        const { id: updateId, orTerms: updateOrTerms } = body;
-        const updatedFilter = await prisma.filter.update({
-          where: { id: updateId },
-          data: {
-            orTerms: updateOrTerms,
           },
         });
         return json({ success: true, filter: updatedFilter });
 
       case "DELETE":
-        const { id } = body;
         await prisma.filter.delete({
           where: { id },
         });

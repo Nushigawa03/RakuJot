@@ -1,31 +1,32 @@
 import { mockFilters, shouldUseMockDatabase } from "./mock/mockData";
-import type { Filter } from "../stores/filters";
+import { prisma } from "../../../db.server";
+import { FilterBase, FilterTerm } from "../types/filterTypes";
 
-// 将来的にはPrismaClientを使用してデータベースからフィルタを取得
-// const prisma = new PrismaClient();
-
-export const getFilters = async (): Promise<Filter[]> => {
+export const getFilters = async (): Promise<FilterBase[]> => {
   try {
-    // 現在はモックデータのみ
-    // 将来的にはデータベースからの取得も実装
+    // データベースからフィルタを取得
+    const dbFilters = await prisma.filter.findMany();
+    
+    const dbData = dbFilters.map(filter => ({
+      id: filter.id,
+      orTerms: filter.orTerms as unknown as FilterTerm[]
+    }));
+
+    // モックデータを使用する場合は、モックデータとデータベースのデータを両方表示
     if (shouldUseMockDatabase()) {
-      console.log("Using mock filters");
-      return mockFilters;
+      console.log("Using both mock and database filters");
+      return [...mockFilters, ...dbData];
     }
 
-    // データベースからフィルタを取得する場合の実装
-    // const dbFilters = await prisma.filter.findMany();
-    // return dbFilters;
-    
-    return mockFilters; // 暫定的にモックデータを返す
+    return dbData;
   } catch (error) {
     console.error("フィルタの取得エラー:", error);
-    // エラー時はモックデータを返す
-    return mockFilters;
+    // エラー時はモックデータを返す（モック使用時のみ）
+    return shouldUseMockDatabase() ? mockFilters : [];
   }
 };
 
-export const getFilter = async (id: string): Promise<Filter | null> => {
+export const getFilter = async (id: string): Promise<FilterBase | null> => {
   try {
     const filters = await getFilters();
     return filters.find(filter => filter.id === id) || null;

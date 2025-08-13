@@ -1,8 +1,9 @@
 import { Memo } from '../types/memo';
-import { evaluateFilterExpression, FilterTerm } from '../types/filterTypes';
+import { FilterTerm } from '../types/filterTypes';
+import { evaluateFilterExpression } from '../utils/filterUtils';
 import { useEffect, useState } from 'react';
-import type { Filter } from '../stores/filters';
-import type { Category } from '../stores/categories';
+import type { Filter } from '../types/filters';
+import type { Category } from '../types/categories';
 
 export const useFilteredMemos = (memos: Memo[], filterQuery: string): Memo[] => {
   const [filters, setFilters] = useState<Filter[]>([]);

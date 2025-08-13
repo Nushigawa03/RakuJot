@@ -13,14 +13,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
-  authorId  String
-}
-
 model Memo {
   id        String   @id @default(cuid())
   title     String
@@ -32,8 +24,23 @@ model Memo {
 }
 
 model Tag {
-  id        String   @id @default(cuid())
-  name      String   @unique
+  id          String @id @default(cuid())
+  name        String @unique
   description String?
-  memos     Memo[]   @relation("MemoTags")
+  memos       Memo[] @relation("MemoTags")
+}
+
+model Filter {
+  id      String @id @default(cuid())
+  orTerms Json   // FilterTerm[]をJSONで保存
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  orTerms   Json     // FilterTerm[]をJSONで保存
+  color     String?
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

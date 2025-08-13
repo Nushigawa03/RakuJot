@@ -1,6 +1,6 @@
-import type { Tag } from "../../stores/tags";
-import type { Filter } from "../../stores/filters";
-import type { Category } from "../../stores/categories";
+import type { Tag } from "../../types/tags";
+import type { Filter } from "../../types/filters";
+import type { Category } from "../../types/categories";
 
 // モックメモデータ
 export const mockMemos = [
@@ -64,12 +64,10 @@ export const mockTags: Tag[] = [
 export const mockFilters: Filter[] = [
   {
     id: 'work',
-    name: '仕事',
     orTerms: [{ include: ['work'], exclude: [] }]
   },
   {
     id: 'private_or_idea',
-    name: 'プライベート OR アイデア',
     orTerms: [
       { include: ['private'], exclude: [] },
       { include: ['idea'], exclude: [] }
@@ -77,12 +75,10 @@ export const mockFilters: Filter[] = [
   },
   {
     id: 'idea_not_todo',
-    name: 'アイデア NOT TODO',
     orTerms: [{ include: ['idea'], exclude: ['todo'] }]
   },
   {
     id: 'todo',
-    name: 'TODO',
     orTerms: [{ include: ['todo'], exclude: [] }]
   },
 ];

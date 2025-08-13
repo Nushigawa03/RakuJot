@@ -1,4 +1,4 @@
-import type { Category } from '../stores/categories';
+import type { Category } from '../types/categories';
 
 export const getCategoryTags = async (
   categoryId: string, 

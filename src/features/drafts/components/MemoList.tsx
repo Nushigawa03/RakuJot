@@ -6,8 +6,8 @@ import { useSortedMemos } from "../hooks/useSortedMemos";
 import { Memo, MemoListProps } from "../types/memo";
 import { getTagNameById, initializeTags } from "../utils/tagUtils";
 import { shouldHighlightTag } from "../utils/tagHighlight";
-import type { Filter } from "../stores/filters";
-import type { Category } from "../stores/categories";
+import type { Filter } from "../types/filters";
+import type { Category } from "../types/categories";
 
 const MemoList: React.FC<MemoListProps> = ({ filterQuery }) => {
   const navigate = useNavigate();

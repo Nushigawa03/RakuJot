@@ -1,4 +1,4 @@
-import type { Tag } from '../stores/tags';
+import type { Tag } from '../types/tags';
 
 // タグデータのキャッシュ
 let cachedTags: Tag[] = [];

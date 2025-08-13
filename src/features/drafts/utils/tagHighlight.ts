@@ -1,6 +1,6 @@
 import { FilterTerm } from '../types/filterTypes';
-import type { Filter } from '../stores/filters';
-import type { Category } from '../stores/categories';
+import type { Filter } from '../types/filters';
+import type { Category } from '../types/categories';
 
 // タグがフィルタ条件でハイライトされるべきかを判定
 export const shouldHighlightTag = (

@@ -19,6 +19,7 @@ const NavigationBar: React.FC = () => {
   const [selectedStartDate, setSelectedStartDate] = React.useState<string | null>(null);
   const [selectedEndDate, setSelectedEndDate] = React.useState<string | null>(null);
   const [isCreatingMemo, setIsCreatingMemo] = React.useState(false); // 新規メモ作成状態
+  const [isSavingFilter, setIsSavingFilter] = React.useState(false); // フィルタ保存状態
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +80,52 @@ const NavigationBar: React.FC = () => {
     setIsCreatingMemo(false); // キャンセル時に画面を閉じる
   };
 
+  const handleSaveAsFilter = () => {
+    if (filterTags.length > 0 || searchQuery.trim()) {
+      setIsSavingFilter(true);
+    }
+  };
+
+  const handleFilterSave = async () => {
+    const filterQuery = [...filterTags];
+    if (searchQuery.trim()) {
+      filterQuery.push(searchQuery.trim());
+    }
+    
+    // FilterTermsを構築（簡単な実装）
+    const orTerms = [{
+      include: filterQuery.filter(tag => !tag.startsWith('NOT ')),
+      exclude: filterQuery.filter(tag => tag.startsWith('NOT ')).map(tag => tag.replace('NOT ', ''))
+    }];
+    
+    try {
+      const response = await fetch('/api/filters', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orTerms: orTerms,
+        }),
+      });
+      
+      if (response.ok) {
+        console.log('フィルタが保存されました');
+        // 成功時の処理（通知など）
+      } else {
+        console.error('フィルタの保存に失敗しました');
+      }
+    } catch (error) {
+      console.error('フィルタ保存エラー:', error);
+    }
+    
+    setIsSavingFilter(false);
+  };
+
+  const handleFilterSaveCancel = () => {
+    setIsSavingFilter(false);
+  };
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'n') {
@@ -133,6 +180,15 @@ const NavigationBar: React.FC = () => {
               <button className="search-button" onClick={handleSearch}>
                 🔍
               </button>
+              {(filterTags.length > 0 || searchQuery.trim()) && (
+                <button 
+                  className="save-filter-button" 
+                  onClick={handleSaveAsFilter}
+                  title="この検索をフィルタとして保存"
+                >
+                  📌
+                </button>
+              )}
             </div>
             <button className="new-memo-button" onClick={() => setIsCreatingMemo(true)}>
               新規メモ (Ctrl + N)
@@ -154,6 +210,33 @@ const NavigationBar: React.FC = () => {
               onDetailSearchToggle={toggleDetailSearch}
             />
           )}
+        </div>
+      )}
+      
+      {isSavingFilter && (
+        <div className="save-filter-modal-overlay" onClick={handleFilterSaveCancel}>
+          <div className="save-filter-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="save-filter-modal-header">
+              <h3>フィルタとして保存</h3>
+              <button className="close-button" onClick={handleFilterSaveCancel}>×</button>
+            </div>
+            <div className="save-filter-modal-content">
+              <p className="current-search">
+                保存する検索: {[...filterTags, ...(searchQuery.trim() ? [searchQuery.trim()] : [])].join(isOrSearch ? ' OR ' : ' AND ')}
+              </p>
+              <p className="filter-note">
+                この検索条件をクイックアクセス用のフィルタとして保存しますか？
+              </p>
+              <div className="save-filter-buttons">
+                <button className="save-button" onClick={handleFilterSave}>
+                  保存
+                </button>
+                <button className="cancel-button" onClick={handleFilterSaveCancel}>
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>
