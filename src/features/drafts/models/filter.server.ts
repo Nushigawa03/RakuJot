@@ -1,6 +1,7 @@
 import { mockFilters, shouldUseMockDatabase } from "./mock/mockData";
 import { prisma } from "../../../db.server";
 import { FilterBase, FilterTerm } from "../types/filterTypes";
+import { c } from "node_modules/vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
 
 export const getFilters = async (): Promise<FilterBase[]> => {
   try {
@@ -15,6 +16,8 @@ export const getFilters = async (): Promise<FilterBase[]> => {
     // モックデータを使用する場合は、モックデータとデータベースのデータを両方表示
     if (shouldUseMockDatabase()) {
       console.log("Using both mock and database filters");
+      // console.log("Mock Filters:", JSON.stringify(mockFilters, null, 2));
+      console.log("Database Filters:", JSON.stringify(dbData, null, 2));
       return [...mockFilters, ...dbData];
     }
 

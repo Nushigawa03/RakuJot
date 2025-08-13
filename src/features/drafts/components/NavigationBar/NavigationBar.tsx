@@ -3,6 +3,8 @@ import DetailSearch from './DetailSearch';
 import { useNavigationBarStore } from '../../stores/navigationBarStore';
 import './NavigationBar.css';
 import NewMemo from '../NewMemo/NewMemo';
+import { SearchTag } from '../../types/searchTag';
+import { Tag } from '../../types/tags';
 
 const NavigationBar: React.FC = () => {
   const {
@@ -14,53 +16,174 @@ const NavigationBar: React.FC = () => {
 
   const [isFocused, setIsFocused] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [filterTags, setFilterTags] = React.useState<string[]>([]);
+  const [filterTags, setFilterTags] = React.useState<SearchTag[]>([]);
   const [selectedTagIndex, setSelectedTagIndex] = React.useState<number | null>(null);
   const [selectedStartDate, setSelectedStartDate] = React.useState<string | null>(null);
   const [selectedEndDate, setSelectedEndDate] = React.useState<string | null>(null);
   const [isCreatingMemo, setIsCreatingMemo] = React.useState(false); // 新規メモ作成状態
   const [isSavingFilter, setIsSavingFilter] = React.useState(false); // フィルタ保存状態
+  const [availableTags, setAvailableTags] = React.useState<Tag[]>([]); // 利用可能なタグ一覧
+  const [suggestions, setSuggestions] = React.useState<Tag[]>([]); // サジェスト候補
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState<number>(-1); // 選択中のサジェスト
+  const [showSuggestions, setShowSuggestions] = React.useState(false); // サジェスト表示フラグ
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    setSelectedTagIndex(null);
+  // タグ一覧を取得
+  React.useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const response = await fetch('/api/tags');
+        if (response.ok) {
+          const tags = await response.json();
+          setAvailableTags(tags);
+        }
+      } catch (error) {
+        console.error('タグの取得エラー:', error);
+      }
+    };
+    fetchTags();
+  }, []);
+
+  // タグ名からタグIDを取得
+  const findTagByName = (tagName: string): Tag | undefined => {
+    return availableTags.find(tag => tag.name === tagName);
   };
 
-  const handleTagAdd = (tag: string) => {
-    const formattedTag = tag.startsWith('-') ? `NOT ${tag.slice(1)}` : tag;
-    if (!filterTags.includes(formattedTag)) {
-      setFilterTags([...filterTags, formattedTag]);
+  // サジェストからタグを選択
+  const selectSuggestion = (tag: Tag) => {
+    const isExclude = searchQuery.trim().startsWith('-');
+    const tagInput = isExclude ? `-${tag.name}` : tag.name;
+    handleTagAdd(tagInput);
+    setSearchQuery('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSelectedSuggestionIndex(-1);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setSelectedTagIndex(null);
+    setSelectedSuggestionIndex(-1);
+    
+    // サジェストを更新
+    if (value.trim()) {
+      const input = value.trim();
+      const isExclude = input.startsWith('-');
+      const searchTerm = isExclude ? input.slice(1) : input;
+      
+      if (searchTerm) {
+        const matchingTags = availableTags.filter(tag => 
+          tag.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !filterTags.some(filterTag => filterTag.id === tag.id && filterTag.isExclude === isExclude)
+        );
+        setSuggestions(matchingTags.slice(0, 5)); // 最大5件表示
+        setShowSuggestions(matchingTags.length > 0);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   };
 
-  const handleTagRemove = (tag: string) => {
-    setFilterTags(filterTags.filter((t) => t !== tag));
+  const handleTagAdd = (tagInput: string) => {
+    const isExclude = tagInput.startsWith('-');
+    const tagName = isExclude ? tagInput.slice(1) : tagInput;
+    
+    // タグ名からタグIDを取得
+    const foundTag = findTagByName(tagName);
+    
+    const newSearchTag: SearchTag = {
+      id: foundTag ? foundTag.id : `temp_${Date.now()}`, // 一時的なIDを生成（存在しないタグの場合）
+      name: tagName,
+      isExclude: isExclude
+    };
+    
+    // 同じタグが既に存在しないかチェック
+    const existingTag = filterTags.find(tag => tag.id === newSearchTag.id && tag.isExclude === newSearchTag.isExclude);
+    if (!existingTag) {
+      setFilterTags([...filterTags, newSearchTag]);
+    }
+  };
+
+  const handleTagRemove = (targetTag: SearchTag) => {
+    setFilterTags(filterTags.filter((tag) => !(tag.id === targetTag.id && tag.isExclude === targetTag.isExclude)));
     setSelectedTagIndex(null); // タグを削除したら選択をリセット
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      // Enterキーでタグを追加
-      handleTagAdd(searchQuery.trim());
-      setSearchQuery('');
+    // サジェストが表示されている場合のキーボード操作
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) => 
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) => 
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        return;
+      }
+      if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(suggestions[selectedSuggestionIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        return;
+      }
     }
-    if (e.key === 'Backspace' && !searchQuery) {
-      // Backspaceキーでタグを削除
+
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      const input = searchQuery.trim();
+      const isExclude = input.startsWith('-');
+      const tagName = isExclude ? input.slice(1) : input;
+      const foundTag = findTagByName(tagName);
+      
+      if (foundTag) {
+        // 既存タグの場合のみタグチップとして追加
+        handleTagAdd(input);
+        setSearchQuery('');
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } else {
+        // 存在しないタグの場合はテキスト検索として残す（チップ化しない）
+        // 検索実行
+        handleSearch();
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }
+    if (e.key === 'Backspace' && (!searchQuery || (e.target as HTMLInputElement).selectionStart === 0)) {
+      // Backspaceキーでタグを削除（検索欄が空か、カーソルが先頭にある場合）
       if (selectedTagIndex !== null) {
+        e.preventDefault(); // テキスト削除を防ぐ
         handleTagRemove(filterTags[selectedTagIndex]);
       } else if (filterTags.length > 0) {
+        e.preventDefault(); // テキスト削除を防ぐ
         handleTagRemove(filterTags[filterTags.length - 1]);
       }
     }
-    if (e.key === 'ArrowLeft' && !searchQuery) {
-      // 左矢印キーでタグを選択
+    if (e.key === 'ArrowLeft' && (!searchQuery || (e.target as HTMLInputElement).selectionStart === 0)) {
+      // 左矢印キーでタグを選択（検索欄が空か、カーソルが先頭にある場合）
+      e.preventDefault();
       setSelectedTagIndex((prev) =>
         prev === null ? filterTags.length - 1 : Math.max(prev - 1, 0)
       );
     }
-    if (e.key === 'ArrowRight' && !searchQuery) {
-      // 右矢印キーでタグを選択
+    if (e.key === 'ArrowRight' && !searchQuery && selectedTagIndex !== null) {
+      // 右矢印キーでタグを選択（検索欄が空で、タグが選択されている場合のみ）
+      e.preventDefault();
       setSelectedTagIndex((prev) =>
         prev === null ? 0 : Math.min(prev + 1, filterTags.length - 1)
       );
@@ -87,15 +210,23 @@ const NavigationBar: React.FC = () => {
   };
 
   const handleFilterSave = async () => {
-    const filterQuery = [...filterTags];
+    // SearchTagからタグIDを抽出してorTermsを構築
+    const includeTagIds = filterTags.filter(tag => !tag.isExclude).map(tag => tag.id);
+    const excludeTagIds = filterTags.filter(tag => tag.isExclude).map(tag => tag.id);
+    
+    // 検索クエリがある場合の処理（一時的に文字列として扱う）
     if (searchQuery.trim()) {
-      filterQuery.push(searchQuery.trim());
+      // 検索クエリは現在文字列なので、一時的なタグとして扱う
+      const tempTag = findTagByName(searchQuery.trim());
+      if (tempTag) {
+        includeTagIds.push(tempTag.id);
+      }
+      // TODO: 検索クエリがタグでない場合の処理を実装
     }
     
-    // FilterTermsを構築（簡単な実装）
     const orTerms = [{
-      include: filterQuery.filter(tag => !tag.startsWith('NOT ')),
-      exclude: filterQuery.filter(tag => tag.startsWith('NOT ')).map(tag => tag.replace('NOT ', ''))
+      include: includeTagIds,
+      exclude: excludeTagIds
     }];
     
     try {
@@ -161,22 +292,39 @@ const NavigationBar: React.FC = () => {
             <div className="search-bar-container">
               {filterTags.map((tag, index) => (
                 <span
-                  key={tag}
-                  className={`tag ${selectedTagIndex === index ? 'selected' : ''}`}
+                  key={`${tag.id}-${tag.isExclude}`}
+                  className={`tag ${selectedTagIndex === index ? 'selected' : ''} ${tag.isExclude ? 'exclude' : ''}`}
                 >
-                  {tag}
+                  {tag.isExclude ? `NOT ${tag.name}` : tag.name}
                   <button onClick={() => handleTagRemove(tag)}>×</button>
                 </span>
               ))}
-              <input
-                type="text"
-                placeholder="タイトル、タグ、詳細を検索..."
-                className="search-bar"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onFocus={() => setIsFocused(true)}
-                onKeyDown={handleKeyDown} // キー操作を追加
-              />
+              <div className="search-input-container">
+                <input
+                  type="text"
+                  placeholder="タイトル、タグ、詳細を検索..."
+                  className="search-bar"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => setIsFocused(true)}
+                  onKeyDown={handleKeyDown} // キー操作を追加
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="suggestions-dropdown">
+                    {suggestions.map((tag, index) => (
+                      <div
+                        key={tag.id}
+                        className={`suggestion-item ${selectedSuggestionIndex === index ? 'selected' : ''}`}
+                        onClick={() => selectSuggestion(tag)}
+                        onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                      >
+                        <span className="tag-icon">🏷️</span>
+                        {searchQuery.trim().startsWith('-') ? `NOT ${tag.name}` : tag.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button className="search-button" onClick={handleSearch}>
                 🔍
               </button>
@@ -222,7 +370,10 @@ const NavigationBar: React.FC = () => {
             </div>
             <div className="save-filter-modal-content">
               <p className="current-search">
-                保存する検索: {[...filterTags, ...(searchQuery.trim() ? [searchQuery.trim()] : [])].join(isOrSearch ? ' OR ' : ' AND ')}
+                保存する検索: {[
+                  ...filterTags.map(tag => tag.isExclude ? `NOT ${tag.name}` : tag.name),
+                  ...(searchQuery.trim() ? [searchQuery.trim()] : [])
+                ].join(isOrSearch ? ' OR ' : ' AND ')}
               </p>
               <p className="filter-note">
                 この検索条件をクイックアクセス用のフィルタとして保存しますか？

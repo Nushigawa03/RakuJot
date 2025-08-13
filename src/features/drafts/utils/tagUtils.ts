@@ -34,7 +34,15 @@ export const getTagNameById = (id: string): string => {
     return tag.name;
   }
   
-  return id; // 見つからない場合はIDをそのまま返す
+  // IDが見つからない場合、タグNameが誤って渡されていないかチェック
+  const matchingTagByName = cachedTags.find((tag: Tag) => tag.name === id);
+  if (matchingTagByName) {
+    // タグNameが渡されている場合、より明確にエラーを示す
+    return `[ERROR: NAME_AS_ID] "${id}" (正しいID: ${matchingTagByName.id})`;
+  }
+  
+  // IDもNameも見つからない場合
+  return `[ERROR: UNKNOWN_TAG] "${id}"`;
 };
 
 // タグデータを初期化（コンポーネントの初期化時に呼び出し）
