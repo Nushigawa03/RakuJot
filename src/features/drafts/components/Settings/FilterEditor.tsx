@@ -43,7 +43,7 @@ const FilterEditor: React.FC = () => {
   const loadFilters = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/filters');
+  const response = await fetch('/api/tagExpressions');
       if (!response.ok) {
         throw new Error('フィルターの読み込みに失敗しました');
       }
@@ -266,7 +266,7 @@ const FilterEditor: React.FC = () => {
         })
       );
 
-      const url = editingFilter ? `/api/filters/${editingFilter.id}` : '/api/filters';
+  const url = editingFilter ? `/api/tagExpressions/${editingFilter.id}` : '/api/tagExpressions';
       const method = editingFilter ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -301,7 +301,7 @@ const FilterEditor: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/filters/${filterId}`, {
+  const response = await fetch(`/api/tagExpressions/${filterId}`, {
         method: 'DELETE'
       });
 

@@ -18,7 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
     e.stopPropagation(); // 親要素のクリックイベントを停止
     
     try {
-      const response = await fetch('/api/filters', {
+  const response = await fetch('/api/tagExpressions', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -47,14 +47,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
 
   const loadData = async () => {
     try {
-      const [filtersResponse, categoriesResponse] = await Promise.all([
-        fetch('/api/filters'),
-        fetch('/api/categories')
-      ]);
-      
-      if (filtersResponse.ok && categoriesResponse.ok) {
-        const filtersData = await filtersResponse.json();
-        const categoriesData = await categoriesResponse.json();
+      const response = await fetch('/api/tagExpressions');
+      if (response.ok) {
+        const data = await response.json();
+        const filtersData = data.filter((d: any) => !d.name) as Filter[];
+        const categoriesData = data.filter((d: any) => !!d.name) as Category[];
         setFilters(filtersData);
         setCategories(categoriesData);
       } else {

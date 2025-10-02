@@ -1,30 +1,24 @@
 import { mockFilters, shouldUseMockDatabase } from "./mock/mockData";
 import { prisma } from "../../../db.server";
-import { FilterBase, FilterTerm } from "../types/filterTypes";
-import { c } from "node_modules/vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
+import { FilterBase } from "../types/filterTypes";
 
+// 変更点: DB の Filter モデルは廃止し、TagExpression を参照してフィルタのみ（name がないもの）を返す
 export const getFilters = async (): Promise<FilterBase[]> => {
   try {
-    // データベースからフィルタを取得
-    const dbFilters = await prisma.filter.findMany();
-    
-    const dbData = dbFilters.map(filter => ({
-      id: filter.id,
-      orTerms: filter.orTerms as unknown as FilterTerm[]
-    }));
+    const dbExpressions = await (prisma as any).tagExpression.findMany() as any[];
 
-    // モックデータを使用する場合は、モックデータとデータベースのデータを両方表示
+    const dbFilters = dbExpressions
+      .filter((e: any) => !e.name) // name がない（匿名）ものをフィルタとして扱う
+      .map((e: any) => ({ id: e.id, orTerms: e.orTerms as unknown as FilterBase['orTerms'] }));
+
     if (shouldUseMockDatabase()) {
       console.log("Using both mock and database filters");
-      // console.log("Mock Filters:", JSON.stringify(mockFilters, null, 2));
-      console.log("Database Filters:", JSON.stringify(dbData, null, 2));
-      return [...mockFilters, ...dbData];
+      return [...mockFilters, ...dbFilters];
     }
 
-    return dbData;
+    return dbFilters;
   } catch (error) {
     console.error("フィルタの取得エラー:", error);
-    // エラー時はモックデータを返す（モック使用時のみ）
     return shouldUseMockDatabase() ? mockFilters : [];
   }
 };

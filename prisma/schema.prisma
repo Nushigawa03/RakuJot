@@ -30,17 +30,12 @@ model Tag {
   memos       Memo[] @relation("MemoTags")
 }
 
-model Filter {
-  id      String @id @default(cuid())
-  orTerms Json   // FilterTerm[]をJSONで保存
-}
-
-model Category {
+model TagExpression {
   id        String   @id @default(cuid())
-  name      String
-  orTerms   Json     // FilterTerm[]をJSONで保存
+  orTerms   Json      // TagExpressionTerm[]をJSONで保存
+  name      String?   // 保存されない場合はnull
   color     String?
   icon      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime? 
+  updatedAt DateTime? 
 }

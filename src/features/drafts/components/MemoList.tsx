@@ -42,15 +42,15 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery }) => {
   useEffect(() => {
     const loadFilterData = async () => {
       try {
-        const [filtersResponse, categoriesResponse] = await Promise.all([
-          fetch('/api/filters'),
-          fetch('/api/categories'),
+        const [expressionsResponse] = await Promise.all([
+          fetch('/api/tagExpressions'),
           initializeTags() // タグデータを初期化
         ]);
-        
-        if (filtersResponse.ok && categoriesResponse.ok) {
-          const filtersData = await filtersResponse.json();
-          const categoriesData = await categoriesResponse.json();
+
+        if (expressionsResponse.ok) {
+          const data = await expressionsResponse.json();
+          const filtersData = data.filter((d: any) => !d.name) as Filter[];
+          const categoriesData = data.filter((d: any) => !!d.name) as Category[];
           setFilters(filtersData);
           setCategories(categoriesData);
         }

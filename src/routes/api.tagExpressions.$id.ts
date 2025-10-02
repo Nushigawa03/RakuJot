@@ -9,18 +9,18 @@ export const loader: LoaderFunction = async ({ params }) => {
       return json({ error: "IDが指定されていません" }, { status: 400 });
     }
 
-    const filter = await prisma.filter.findUnique({
+    const expr = await (prisma as any).tagExpression.findUnique({
       where: { id },
     });
 
-    if (!filter) {
-      return json({ error: "フィルタが見つかりません" }, { status: 404 });
+    if (!expr) {
+      return json({ error: "tagExpression が見つかりません" }, { status: 404 });
     }
 
-    return json(filter);
+    return json(expr);
   } catch (error) {
-    console.error("API filter loader error:", error);
-    return json({ error: "フィルタの取得に失敗しました" }, { status: 500 });
+    console.error("API tagExpression loader error:", error);
+    return json({ error: "tagExpression の取得に失敗しました" }, { status: 500 });
   }
 };
 
@@ -34,17 +34,20 @@ export const action: ActionFunction = async ({ request, params }) => {
     switch (request.method) {
       case "PUT":
         const body = await request.json();
-        const { orTerms } = body;
-        const updatedFilter = await prisma.filter.update({
+        const { orTerms, name, color, icon } = body;
+        const updated = await (prisma as any).tagExpression.update({
           where: { id },
           data: {
-            orTerms: orTerms,
+            orTerms,
+            name: name ?? null,
+            color: color || null,
+            icon: icon || null,
           },
         });
-        return json({ success: true, filter: updatedFilter });
+        return json({ success: true, tagExpression: updated });
 
       case "DELETE":
-        await prisma.filter.delete({
+        await (prisma as any).tagExpression.delete({
           where: { id },
         });
         return json({ success: true });
@@ -53,7 +56,7 @@ export const action: ActionFunction = async ({ request, params }) => {
         return json({ error: "サポートされていないメソッドです" }, { status: 405 });
     }
   } catch (error) {
-    console.error("フィルタ操作エラー:", error);
-    return json({ error: "フィルタの操作に失敗しました" }, { status: 500 });
+    console.error("tagExpression 操作エラー:", error);
+    return json({ error: "tagExpression の操作に失敗しました" }, { status: 500 });
   }
 };

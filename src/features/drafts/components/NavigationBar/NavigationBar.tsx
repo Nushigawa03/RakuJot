@@ -230,7 +230,7 @@ const NavigationBar: React.FC = () => {
     }];
     
     try {
-      const response = await fetch('/api/filters', {
+  const response = await fetch('/api/tagExpressions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

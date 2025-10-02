@@ -5,7 +5,7 @@ export const getCategoryTags = async (
   getTagNameById: (id: string) => string
 ): Promise<string[]> => {
   try {
-    const response = await fetch('/api/categories');
+  const response = await fetch('/api/tagExpressions');
     if (!response.ok) {
       throw new Error('Failed to fetch categories');
     }

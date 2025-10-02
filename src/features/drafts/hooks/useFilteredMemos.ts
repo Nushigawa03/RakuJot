@@ -12,14 +12,12 @@ export const useFilteredMemos = (memos: Memo[], filterQuery: string): Memo[] => 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [filtersResponse, categoriesResponse] = await Promise.all([
-          fetch('/api/filters'),
-          fetch('/api/categories')
-        ]);
-        
-        if (filtersResponse.ok && categoriesResponse.ok) {
-          const filtersData = await filtersResponse.json();
-          const categoriesData = await categoriesResponse.json();
+        const response = await fetch('/api/tagExpressions');
+        if (response.ok) {
+          const data = await response.json();
+          // name の有無でフィルタ（匿名）とカテゴリ（名前付き）を振り分け
+          const filtersData = data.filter((d: any) => !d.name);
+          const categoriesData = data.filter((d: any) => !!d.name);
           setFilters(filtersData);
           setCategories(categoriesData);
         } else {

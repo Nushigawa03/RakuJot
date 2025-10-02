@@ -30,12 +30,14 @@ const CategoryEditor: React.FC = () => {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/categories');
+      const response = await fetch('/api/tagExpressions');
       if (!response.ok) {
         throw new Error('カテゴリーの読み込みに失敗しました');
       }
       const data = await response.json();
-      setCategories(data);
+      // 名前があるものだけをカテゴリとして扱う
+      const categoriesData = data.filter((d: any) => !!d.name) as Category[];
+      setCategories(categoriesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
@@ -79,7 +81,7 @@ const CategoryEditor: React.FC = () => {
 
     try {
       setLoading(true);
-      const url = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
+  const url = editingCategory ? `/api/tagExpressions/${editingCategory.id}` : '/api/tagExpressions';
       const method = editingCategory ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -119,7 +121,7 @@ const CategoryEditor: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/categories/${categoryId}`, {
+      const response = await fetch(`/api/tagExpressions/${categoryId}`, {
         method: 'DELETE'
       });
 
