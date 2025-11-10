@@ -9,7 +9,7 @@ import { shouldHighlightTag } from "../utils/tagHighlight";
 import type { Filter } from "../types/filters";
 import type { Category } from "../types/categories";
 
-const MemoList: React.FC<MemoListProps> = ({ filterQuery }) => {
+const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, filterTags }) => {
   const navigate = useNavigate();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortKey, setSortKey] = useState<"date" | "title">("date");
@@ -62,12 +62,13 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery }) => {
     loadFilterData();
   }, []);
 
-  const filteredMemos = useFilteredMemos(memos, filterQuery);
+  const filteredMemos = useFilteredMemos(memos, filterQuery, dateQuery, queryEmbedding, filterTags);
   const sortedMemos = useSortedMemos(filteredMemos, sortKey, sortOrder);
 
   // デバッグ用ログ
   console.log("Raw memos:", memos.length);
   console.log("Filter query:", filterQuery);
+  console.log("Date query:", dateQuery);
   console.log("Filtered memos:", filteredMemos.length);
   console.log("Sorted memos:", sortedMemos.length);
 

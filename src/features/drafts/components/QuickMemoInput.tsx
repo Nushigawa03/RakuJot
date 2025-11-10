@@ -41,12 +41,12 @@ const QuickMemoInput: React.FC = () => {
   return (
     <div className="quick-memo-input">
       <textarea
-        placeholder="ここにクイックメモを入力..."
+        placeholder="メモを入力..."
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         disabled={isSaving}
       />
-      <button onClick={handleSave} disabled={isSaving}>
+      <button className="save" onClick={handleSave} disabled={isSaving}>
         {isSaving ? '保存中...' : '保存'}
       </button>
     </div>

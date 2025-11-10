@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaClientInitializationError, PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { mockMemos, shouldUseMockDatabase } from "./mock/mockData";
+import { computeMemoEmbedding } from "../services/embeddingService";
+import { normalizeTagName } from "../utils/normalizeTagName";
 
 const prisma = new PrismaClient();
 
@@ -75,26 +77,54 @@ export const createMemo = async (data: any) => {
       return { error: "タイトルが必要です。" };
     }
 
-    // 常にデータベースに作成を試行
+    // 既存タグ一覧を取得
+    const existingTags = await prisma.tag.findMany();
+    const normalizedExisting = existingTags.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
+    const tagsToConnect: { name: string }[] = [];
+    const tagsToCreate: { name: string }[] = [];
+    (data.tags || []).forEach((tagName: string) => {
+      const norm = normalizeTagName(tagName);
+      const found = normalizedExisting.find(t => t._norm === norm);
+      if (found) {
+        tagsToConnect.push({ name: found.name });
+      } else {
+        tagsToCreate.push({ name: tagName });
+      }
+    });
+
     const newMemo = await prisma.memo.create({
       data: {
         title: data.title,
         date: data.date || "",
         tags: {
-          connectOrCreate: (data.tags || []).map((tag: string) => ({
-            where: { name: tag },
-            create: { name: tag },
-          })),
+          connect: tagsToConnect,
+          create: tagsToCreate,
         },
         body: data.body || "",
         createdAt: new Date().toISOString(),
       },
     });
 
+    // Compute and store embedding separately
+    const embedding = await computeMemoEmbedding({
+      title: newMemo.title,
+      date: newMemo.date || "",
+      body: newMemo.body || "",
+    });
+
+    if (embedding) {
+      await prisma.memo.update({
+        where: { id: newMemo.id },
+        data: {
+          // @ts-ignore - embedding field exists in schema but not yet in generated types
+          embedding: embedding,
+        },
+      });
+    }
+
     return newMemo;
   } catch (error) {
     console.error("データベースエラー:", error);
-    
     // データベースエラーでもモックモードの場合はメモを作成したことにする
     if (shouldUseMockDatabase()) {
       console.log("Database error in mock mode, creating mock memo:", data.title);
@@ -109,7 +139,6 @@ export const createMemo = async (data: any) => {
       };
       return newMockMemo;
     }
-    
     return { error: "メモの作成に失敗しました。" };
   }
 };
@@ -138,6 +167,25 @@ export const updateMemo = async (id: string, data: any) => {
     if (shouldUseMockDatabase() && id.startsWith('mock-')) {
       console.log("Mock mode: Skipping update of mock memo:", id);
       return;
+    }
+
+    // If title, date, or body are being updated, recalculate embedding
+    if (data.title || data.date || data.body) {
+      const existing = await prisma.memo.findUnique({ where: { id } });
+      if (existing) {
+        const embedding = await computeMemoEmbedding({
+          title: data.title || existing.title,
+          date: data.date !== undefined ? data.date : existing.date,
+          body: data.body || existing.body,
+        });
+        if (embedding) {
+          data = {
+            ...data,
+            // @ts-ignore - embedding field exists in schema but not yet in generated types
+            embedding: embedding,
+          };
+        }
+      }
     }
 
     await prisma.memo.update({

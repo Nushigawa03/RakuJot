@@ -1,0 +1,40 @@
+.page-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  header {
+    flex: 0 0 auto;
+  }
+  
+  .main-content {
+    display: flex;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  
+  .sidebar {
+    flex: 0 0 20%;
+    background-color: #f0f0f0;
+    overflow-y: auto;
+  }
+  
+  .memo-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  
+  .recommendation-section {
+    flex: 0 0 20%;
+    background-color: #f9f9f9;
+    overflow-y: auto;
+  }
+  
+  footer {
+    flex: 0 0 auto;
+    background-color: #fff;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+  }

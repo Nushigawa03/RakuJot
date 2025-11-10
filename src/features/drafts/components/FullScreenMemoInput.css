@@ -1,0 +1,70 @@
+.full-screen-memo-input {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  align-items: stretch;
+  position: relative;
+  /* ensure full-bleed feel on mobile - content area will handle inner padding */
+}
+
+.full-screen-memo-input .inputs {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1rem;
+  /* leave space for save button (include extra gap so button isn't flush to edge) */
+  padding-bottom: calc(1rem + 76px);
+  overflow-y: auto;
+}
+
+/* single textarea that fills the remaining space */
+.full-screen-memo-input .content {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  outline: none;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: none;
+  color: var(--text, #111827);
+}
+
+.full-screen-memo-input .content::placeholder {
+  color: rgba(0,0,0,0.35);
+}
+
+.full-screen-memo-input .actions {
+  display: flex;
+  justify-content: flex-end;
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  /* add keyboard inset variable; default 0 */
+  /* add 12px extra gap so the button isn't flush to the very bottom */
+  bottom: calc(env(safe-area-inset-bottom, 1rem) + var(--kbd-height, 0px) + 12px);
+}
+
+.full-screen-memo-input .actions {
+  transition: bottom 200ms ease, box-shadow 120ms ease;
+  will-change: bottom;
+}
+
+.full-screen-memo-input .save {
+  padding: 0.75rem 1rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  width: 100%;
+}
+
+/* when textarea is focused, slightly lift the save button for clarity */
+.full-screen-memo-input .content:focus + .actions {
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.04);
+}

@@ -6,7 +6,7 @@ import type { Category } from "../../types/categories";
 export const mockMemos = [
   { 
     id: "mock-1", 
-    title: "モック：重要な会議メモ", 
+    title: "重要な会議メモ", 
     body: "来週の企画会議について\n- 新機能の提案\n- 予算確認\n- スケジュール調整",
     date: "2025-03-20", 
     tags: ["work", "important"], 
@@ -15,7 +15,7 @@ export const mockMemos = [
   },
   { 
     id: "mock-2", 
-    title: "モック：旅行計画", 
+    title: "旅行計画", 
     body: "夏休みの旅行プラン\n- 宿泊先の予約\n- 観光地リスト\n- 持ち物チェック",
     date: "2024-spring", 
     tags: ["private"], 
@@ -24,7 +24,7 @@ export const mockMemos = [
   },
   { 
     id: "mock-3", 
-    title: "モック：アプリ改善アイデア", 
+    title: "アプリ改善アイデア", 
     body: "RakuJotの新機能案\n- タグ機能の強化\n- 検索機能の改善\n- UIの見直し",
     date: "2024", 
     tags: ["idea", "todo"], 
@@ -33,7 +33,7 @@ export const mockMemos = [
   },
   { 
     id: "mock-4", 
-    title: "モック：明日の予定", 
+    title: "明日の予定", 
     body: "明日のスケジュール\n- 9:00 朝礼\n- 10:30 開発作業\n- 14:00 ミーティング",
     date: "", 
     tags: ["work"], 
@@ -42,7 +42,7 @@ export const mockMemos = [
   },
   { 
     id: "mock-5", 
-    title: "モック：読書ノート", 
+    title: "読書ノート", 
     body: "「プログラマが知るべき97のこと」\n- 良いコードの書き方\n- チーム開発のコツ\n- 継続的学習の重要性",
     date: "2023-winter", 
     tags: ["important", "idea"], 

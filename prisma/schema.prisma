@@ -14,13 +14,14 @@ datasource db {
 }
 
 model Memo {
-  id        String   @id @default(cuid())
-  title     String
-  date      String?  // 日付はオプション
-  tags      Tag[]    @relation("MemoTags")
-  body      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  title      String
+  date       String?  // 日付はオプション
+  tags       Tag[]    @relation("MemoTags")
+  body       String?
+  embedding  Json?    // 埋め込みベクトル（Gemini embedding-001の場合、768次元、JSON配列で保存）
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Tag {

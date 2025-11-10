@@ -1,35 +1,12 @@
-import React, { useState } from 'react';
-import NavigationBar from './NavigationBar/NavigationBar';
-import MemoList from './MemoList';
-import Sidebar from './Sidebar';
-import QuickMemoInput from './QuickMemoInput';
-import RecommendationSection from './RecommendationSection';
-import './Page.css';
+import React from "react";
+import useScreenType from "../../App/hooks/useScreenType";
+import PagePC from "./PagePC";
+import PageMobile from "./PageMobile";
 
 const Page: React.FC = () => {
-  const [filterQuery, setFilterQuery] = useState<string>('');
-
-  return (
-    <div className="page-container">
-      <header>
-        <NavigationBar />
-      </header>
-      <div className="main-content">
-        <aside className="sidebar">
-          <Sidebar onFilterChange={setFilterQuery} />
-        </aside>
-        <section className="memo-list">
-          <MemoList filterQuery={filterQuery} />
-        </section>
-        <aside className="recommendation-section">
-          <RecommendationSection />
-        </aside>
-      </div>
-      <footer>
-        <QuickMemoInput />
-      </footer>
-    </div>
-  );
+  const screenType = useScreenType();
+  // スマホ判定のみ PC とそれ以外で分岐（必要なら tablet も分ける）
+  return screenType === "smartphone" ? <PageMobile /> : <PagePC />;
 };
 
 export default Page;
