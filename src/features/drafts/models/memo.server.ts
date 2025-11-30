@@ -17,7 +17,7 @@ export const getMemo = async (id: string) => {
     }
 
     // モックデータになければデータベースから取得
-    const memo = await prisma.memo.findUnique({ where: { id } });
+  const memo = await prisma.memo.findUnique({ where: { id }, include: { tags: true } });
     return memo;
   } catch (error) {
     console.error("データベースエラー:", error);
@@ -36,6 +36,7 @@ export const getMemos = async () => {
   try {
     const dbMemos = await prisma.memo.findMany({
       orderBy: { createdAt: "desc" },
+      include: { tags: true },
     });
 
     // モックデータを使用する場合は、データベースのデータにモックデータを追加

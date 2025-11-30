@@ -530,7 +530,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
               <input
                 className="nav-search"
                 type="search"
-                placeholder="検索..."
+                placeholder="さがす..."
                 value={searchQuery}
                 onChange={handleSearchChange}
                 onFocus={() => setIsFocused(true)}

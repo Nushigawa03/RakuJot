@@ -10,6 +10,8 @@ import type { Filter } from "../types/filters";
 import type { Category } from "../types/categories";
 
 const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, filterTags }) => {
+  // デバッグ用: タグを常に表示するかどうか
+  const DEBUG_ALWAYS_SHOW_TAGS = true;
   const navigate = useNavigate();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortKey, setSortKey] = useState<"date" | "title">("date");
@@ -101,16 +103,20 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
           <li key={memo.id} onClick={() => navigate(`/drafts/edit/${memo.id}`)}>
             <span className="memo-date">{memo.date || "不明"}</span>
             <span className="memo-title">{memo.title}</span>
-            {filterQuery && (
+            {(DEBUG_ALWAYS_SHOW_TAGS || filterQuery) && (
               <span className="memo-tags">
-                {memo.tags.map((tagId) => (
-                  <span
-                    key={tagId}
-                    className={`tag ${shouldHighlightTag(tagId, filterQuery, memo.tags, filters, categories) ? "highlight" : ""}`}
-                  >
-                    {getTagNameById(tagId)}
-                  </span>
-                ))}
+                {(memo.tags || []).map((tag: any) => {
+                  // tagがオブジェクト(Tag)ならidを、文字列ならそのまま
+                  const tagId = typeof tag === 'string' ? tag : tag.id;
+                  return (
+                    <span
+                      key={tagId}
+                      className={`tag ${shouldHighlightTag(tagId, filterQuery, memo.tags, filters, categories) ? "highlight" : ""}`}
+                    >
+                      {getTagNameById(tagId)}
+                    </span>
+                  );
+                })}
               </span>
             )}
           </li>

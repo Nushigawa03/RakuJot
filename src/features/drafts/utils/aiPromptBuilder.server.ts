@@ -87,8 +87,11 @@ export function buildMemoExtractionInstruction(tags?: Tag[]): string {
   sb += '      - "先週のX曜日": the weekday in the previous week (compute target weekday in current week then subtract 7 days).\n';
   sb += '      - "来週のX曜日": the weekday in the next week (compute then add 7 days).\n';
   sb += `      Example: "先週の金曜日" -> ${toDateJST(lastWeekFriday)} (compute using server date)\n`;
-  sb += '  - IMPORTANT: For vague PERIOD expressions (examples: "去年の夏", "来年の春", "来月"), DO NOT convert them into a precise YYYY-MM-DD or an explicit range. Instead:\n';
-  sb += '      - Preserve vague qualifiers (くらい／ごろ／前後). Normalize any resolvable part (year/month) but keep the ambiguity marker in the string. Treat colloquial variants without the particle "の" as equivalent (e.g. "去年春" == "去年の春"). Examples:\n';
+  sb += '  - IMPORTANT: For vague PERIOD expressions (examples: "去年の夏", "来年の春", "来月"), DO NOT convert them into a precise YYYY-MM-DD or an explicit range.\n';
+  sb += '      - ABSOLUTELY NEVER convert vague/seasonal expressions (like "去年の夏", "来年の春", "夏ごろ", "春前後") into a YYYY-MM-DD or any specific date.\n';
+  sb += '      - If the input contains words like "夏", "春", "秋", "冬", "ごろ", "くらい", "前後", "頃", or similar, you MUST NOT output a YYYY-MM-DD.\n';
+  sb += '      - Instead, preserve vague qualifiers (くらい／ごろ／前後). Normalize any resolvable part (year/month) but keep the ambiguity marker in the string. Treat colloquial variants without the particle "の" as equivalent (e.g. "去年春" == "去年の春").\n';
+  sb += '      - If you are unsure, prefer to keep the original vague expression (e.g. "2024年夏", "2025年春頃") in the date field.\n';
   sb += `          "去年の夏" -> "${new Date().getFullYear() - 1}年夏"\n`;
   sb += `          "来年の春" -> "${new Date().getFullYear() + 1}年春"\n`;
   sb += `          "来年の春くらい" -> "${new Date().getFullYear() + 1}年春頃"\n`;
