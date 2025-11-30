@@ -3,6 +3,7 @@ import { FilterBase, FilterTerm } from '../../types/filterTypes';
 import { useTagSuggestions } from '../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '../TagSuggestionInput';
 import './FilterEditor.css';
+import tagExpressionService from '../../services/tagExpressionService';
 
 const FilterEditor: React.FC = () => {
   const [filters, setFilters] = useState<FilterBase[]>([]);
@@ -43,12 +44,9 @@ const FilterEditor: React.FC = () => {
   const loadFilters = async () => {
     try {
       setLoading(true);
-  const response = await fetch('/api/tagExpressions');
-      if (!response.ok) {
-        throw new Error('フィルターの読み込みに失敗しました');
-      }
-      const data = await response.json();
-      setFilters(data);
+      const { filters: f, categories: c } = await tagExpressionService.load();
+      // 旧来の挙動を保つため、全ての TagExpression をまとめてセット
+      setFilters([...f, ...c] as any);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
@@ -266,17 +264,10 @@ const FilterEditor: React.FC = () => {
         })
       );
 
-  const url = editingFilter ? `/api/tagExpressions/${editingFilter.id}` : '/api/tagExpressions';
-      const method = editingFilter ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orTerms: processedOrTerms })
-      });
-
-      if (!response.ok) {
-        throw new Error('保存に失敗しました');
+      if (editingFilter) {
+        await tagExpressionService.update(editingFilter.id, { orTerms: processedOrTerms });
+      } else {
+        await tagExpressionService.create({ orTerms: processedOrTerms });
       }
 
       await loadFilters();
@@ -301,13 +292,7 @@ const FilterEditor: React.FC = () => {
 
     try {
       setLoading(true);
-  const response = await fetch(`/api/tagExpressions/${filterId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        throw new Error('削除に失敗しました');
-      }
+      await tagExpressionService.delete(filterId as string);
 
       await loadFilters();
     } catch (err) {

@@ -4,10 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { useFilteredMemos } from "../hooks/useFilteredMemos";
 import { useSortedMemos } from "../hooks/useSortedMemos";
 import { Memo, MemoListProps } from "../types/memo";
+import { memoService } from "../services/memoService";
 import { getTagNameById, initializeTags } from "../utils/tagUtils";
 import { shouldHighlightTag } from "../utils/tagHighlight";
 import type { Filter } from "../types/filters";
 import type { Category } from "../types/categories";
+import tagExpressionService from '../services/tagExpressionService';
 
 const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, filterTags }) => {
   // デバッグ用: タグを常に表示するかどうか
@@ -23,13 +25,8 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   useEffect(() => {
     const fetchMemos = async () => {
       try {
-        console.log("Fetching memos from API...");
-        const response = await fetch("/api/memos");
-        if (!response.ok) {
-          throw new Error("メモの取得に失敗しました。");
-        }
-        const data = await response.json();
-        console.log("API response:", data);
+        console.log("Fetching memos via memoService...");
+        const data = await memoService.getMemos();
         console.log("Number of memos:", data.length);
         setMemos(data);
       } catch (error) {
@@ -44,17 +41,14 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   useEffect(() => {
     const loadFilterData = async () => {
       try {
-        const [expressionsResponse] = await Promise.all([
-          fetch('/api/tagExpressions'),
-          initializeTags() // タグデータを初期化
+        const [exprsResult] = await Promise.all([
+          tagExpressionService.load(),
+          initializeTags(), // タグデータを初期化
         ]);
 
-        if (expressionsResponse.ok) {
-          const data = await expressionsResponse.json();
-          const filtersData = data.filter((d: any) => !d.name) as Filter[];
-          const categoriesData = data.filter((d: any) => !!d.name) as Category[];
-          setFilters(filtersData);
-          setCategories(categoriesData);
+        if (exprsResult) {
+          setFilters(exprsResult.filters);
+          setCategories(exprsResult.categories);
         }
       } catch (error) {
         console.error('フィルタ・カテゴリ・タグの読み込みエラー:', error);

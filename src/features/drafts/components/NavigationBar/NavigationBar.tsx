@@ -5,6 +5,7 @@ import './NavigationBar.css';
 import NewMemo from '../NewMemo/NewMemo';
 import { SearchTag } from '../../types/searchTag';
 import { Tag } from '../../types/tags';
+import tagExpressionService from '../../services/tagExpressionService';
 
 const NavigationBar: React.FC = () => {
   const {
@@ -230,22 +231,8 @@ const NavigationBar: React.FC = () => {
     }];
     
     try {
-  const response = await fetch('/api/tagExpressions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orTerms: orTerms,
-        }),
-      });
-      
-      if (response.ok) {
-        console.log('フィルタが保存されました');
-        // 成功時の処理（通知など）
-      } else {
-        console.error('フィルタの保存に失敗しました');
-      }
+      await tagExpressionService.create({ orTerms });
+      console.log('フィルタが保存されました');
     } catch (error) {
       console.error('フィルタ保存エラー:', error);
     }

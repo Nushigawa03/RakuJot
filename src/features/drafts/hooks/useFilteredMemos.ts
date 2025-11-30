@@ -6,6 +6,7 @@ import { evaluateDateQuery, type DateQueryEvalConfig } from '../utils/dateQueryE
 import { useEffect, useState } from 'react';
 import type { Filter } from '../types/filters';
 import type { Category } from '../types/categories';
+import tagExpressionService from '../services/tagExpressionService';
 
 export const useFilteredMemos = (memos: Memo[], filterQuery: string, dateQuery?: string, queryEmbedding?: number[], filterTags?: SearchTag[]): Memo[] => {
   const [filters, setFilters] = useState<Filter[]>([]);
@@ -14,17 +15,9 @@ export const useFilteredMemos = (memos: Memo[], filterQuery: string, dateQuery?:
   useEffect(() => {
     const loadData = async () => {
       try {
-        const response = await fetch('/api/tagExpressions');
-        if (response.ok) {
-          const data = await response.json();
-          // name の有無でフィルタ（匿名）とカテゴリ（名前付き）を振り分け
-          const filtersData = data.filter((d: any) => !d.name);
-          const categoriesData = data.filter((d: any) => !!d.name);
-          setFilters(filtersData);
-          setCategories(categoriesData);
-        } else {
-          console.error('APIからのデータ取得に失敗しました');
-        }
+        const { filters: f, categories: c } = await tagExpressionService.load();
+        setFilters(f);
+        setCategories(c);
       } catch (error) {
         console.error('フィルタ・カテゴリの読み込みエラー:', error);
       }
@@ -42,19 +35,11 @@ export const useFilteredMemos = (memos: Memo[], filterQuery: string, dateQuery?:
   if (filterQuery) {
     result = memos.filter((memo) => {
       const memoTags = memo.tags || [];
-      
-      // フィルタIDまたはカテゴリIDでフィルタリング
-      const filter = filters.find(f => f.id === filterQuery);
-      const category = categories.find(c => c.id === filterQuery);
-      
-      if (filter) {
-        return evaluateFilterExpression(memoTags, filter.orTerms);
-      }
-      
-      if (category) {
-        return evaluateFilterExpression(memoTags, category.orTerms);
-      }
-      
+
+      // まず TagExpression サービス経由で判定
+      const matched = tagExpressionService.isMemoMatchingByExpressionId(memoTags, filterQuery, filters, categories);
+      if (matched) return true;
+
       // 従来のクエリ文字列形式もサポート（後方互換性）
       return evaluateLegacyQuery(memo, filterQuery);
     });

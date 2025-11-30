@@ -3,6 +3,7 @@ import { Category } from '../../types/categories';
 import { useTagSuggestions } from '../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '../TagSuggestionInput';
 import './CategoryEditor.css';
+import tagExpressionService from '../../services/tagExpressionService';
 
 const CategoryEditor: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -30,14 +31,8 @@ const CategoryEditor: React.FC = () => {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/tagExpressions');
-      if (!response.ok) {
-        throw new Error('カテゴリーの読み込みに失敗しました');
-      }
-      const data = await response.json();
-      // 名前があるものだけをカテゴリとして扱う
-      const categoriesData = data.filter((d: any) => !!d.name) as Category[];
-      setCategories(categoriesData);
+      const { categories: cats } = await tagExpressionService.load();
+      setCategories(cats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
@@ -81,21 +76,19 @@ const CategoryEditor: React.FC = () => {
 
     try {
       setLoading(true);
-  const url = editingCategory ? `/api/tagExpressions/${editingCategory.id}` : '/api/tagExpressions';
-      const method = editingCategory ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      if (editingCategory) {
+        await tagExpressionService.update(editingCategory.id, {
           name: formData.name.trim(),
           color: formData.color.trim() || undefined,
-          icon: formData.icon.trim() || undefined
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('保存に失敗しました');
+          icon: formData.icon.trim() || undefined,
+        });
+      } else {
+        await tagExpressionService.create({
+          name: formData.name.trim(),
+          color: formData.color.trim() || undefined,
+          icon: formData.icon.trim() || undefined,
+          orTerms: [],
+        });
       }
 
       await loadCategories();
@@ -121,13 +114,7 @@ const CategoryEditor: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/tagExpressions/${categoryId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        throw new Error('削除に失敗しました');
-      }
+      await tagExpressionService.delete(categoryId);
 
       await loadCategories();
     } catch (err) {

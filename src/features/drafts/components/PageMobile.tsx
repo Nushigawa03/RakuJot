@@ -12,6 +12,7 @@ import { Category } from "../types/categories";
 import { SearchTag } from "../types/searchTag";
 import { generateFilterName } from "../utils/filterUtils";
 import { formatLogicalText } from "../utils/logicalTextFormatter";
+import tagExpressionService from '../services/tagExpressionService';
 
 const PageMobile: React.FC = () => {
   const [filterQuery, setFilterQuery] = useState<string>("");
@@ -118,14 +119,9 @@ const PageMobile: React.FC = () => {
 
   const loadFiltersAndCategories = async () => {
     try {
-      const response = await fetch('/api/tagExpressions');
-      if (response.ok) {
-        const data = await response.json();
-        const filtersData = data.filter((d: any) => !d.name) as Filter[];
-        const categoriesData = data.filter((d: any) => !!d.name) as Category[];
-        setFilters(filtersData);
-        setCategories(categoriesData);
-      }
+      const { filters: f, categories: c } = await tagExpressionService.load();
+      setFilters(f);
+      setCategories(c);
     } catch (error) {
       console.error('フィルタ・カテゴリの読み込みエラー:', error);
     }

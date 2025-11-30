@@ -7,6 +7,7 @@ import { generateFilterName } from '../utils/filterUtils';
 import { useFilter } from '../hooks/useFilter';
 import { formatLogicalText } from '../utils/logicalTextFormatter';
 import { SidebarSettingsModal } from './SidebarSettingsModal';
+import tagExpressionService from '../services/tagExpressionService';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const { activeFilter, activeQuery, handleFilterClick } = useFilter(onFilterChange);
@@ -18,23 +19,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
     e.stopPropagation(); // 親要素のクリックイベントを停止
     
     try {
-  const response = await fetch('/api/tagExpressions', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: filterId }),
-      });
-      
-      if (response.ok) {
-        // フィルタリストから削除
-        setFilters(filters.filter(f => f.id !== filterId));
-        // アクティブなフィルタの場合はリセット
-        if (activeFilter === filterId) {
-          onFilterChange('');
-        }
-      } else {
-        console.error('フィルタの削除に失敗しました');
+      await tagExpressionService.delete(filterId);
+      // フィルタリストから削除
+      setFilters(filters.filter(f => f.id !== filterId));
+      // アクティブなフィルタの場合はリセット
+      if (activeFilter === filterId) {
+        onFilterChange('');
       }
     } catch (error) {
       console.error('フィルタ削除エラー:', error);
@@ -47,16 +37,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
 
   const loadData = async () => {
     try {
-      const response = await fetch('/api/tagExpressions');
-      if (response.ok) {
-        const data = await response.json();
-        const filtersData = data.filter((d: any) => !d.name) as Filter[];
-        const categoriesData = data.filter((d: any) => !!d.name) as Category[];
-        setFilters(filtersData);
-        setCategories(categoriesData);
-      } else {
-        console.error('APIからのデータ取得に失敗しました');
-      }
+      const { filters: f, categories: c } = await tagExpressionService.load();
+      setFilters(f);
+      setCategories(c);
     } catch (error) {
       console.error('フィルタ・カテゴリの読み込みエラー:', error);
     }
