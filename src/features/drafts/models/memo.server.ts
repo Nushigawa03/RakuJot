@@ -170,28 +170,62 @@ export const updateMemo = async (id: string, data: any) => {
       return;
     }
 
+    // タグの処理を分離
+    const { tags, ...updateData } = data;
+    
+    // タグが指定されている場合の処理
+    if (tags !== undefined) {
+      // 既存タグ一覧を取得
+      const existingTags = await prisma.tag.findMany();
+      const normalizedExisting = existingTags.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
+      const tagsToConnect: { name: string }[] = [];
+      const tagsToCreate: { name: string }[] = [];
+      
+      (tags || []).forEach((tagName: string) => {
+        const norm = normalizeTagName(tagName);
+        const found = normalizedExisting.find(t => t._norm === norm);
+        if (found) {
+          tagsToConnect.push({ name: found.name });
+        } else {
+          tagsToCreate.push({ name: tagName });
+        }
+      });
+
+      // 現在のメモに紐づいているタグをクリア
+      await prisma.memo.update({
+        where: { id },
+        data: {
+          tags: {
+            set: [], // すべてのタグをクリア
+          }
+        }
+      });
+
+      // 新しいタグを設定
+      updateData.tags = {
+        connect: tagsToConnect,
+        create: tagsToCreate,
+      };
+    }
+
     // If title, date, or body are being updated, recalculate embedding
-    if (data.title || data.date || data.body) {
+    if (updateData.title || updateData.date !== undefined || updateData.body) {
       const existing = await prisma.memo.findUnique({ where: { id } });
       if (existing) {
         const embedding = await computeMemoEmbedding({
-          title: data.title || existing.title,
-          date: data.date !== undefined ? data.date : existing.date,
-          body: data.body || existing.body,
+          title: updateData.title || existing.title,
+          date: updateData.date !== undefined ? updateData.date : existing.date,
+          body: updateData.body || existing.body,
         });
         if (embedding) {
-          data = {
-            ...data,
-            // @ts-ignore - embedding field exists in schema but not yet in generated types
-            embedding: embedding,
-          };
+          updateData.embedding = embedding;
         }
       }
     }
 
     await prisma.memo.update({
       where: { id },
-      data,
+      data: updateData,
     });
   } catch (error) {
     console.error("データベースエラー:", error);

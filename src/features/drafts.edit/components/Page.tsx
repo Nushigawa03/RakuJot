@@ -1,16 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from '@remix-run/react';
 import EditMemoForm from './EditMemoForm';
 
-interface PageProps {
-  memo: any;
+interface Tag {
+  id: string;
+  name: string;
 }
 
-const Page: React.FC<PageProps> = ({ memo }) => {
+interface PageProps {
+  memo: any;
+  availableTags: Tag[];
+}
+
+const Page: React.FC<PageProps> = ({ memo, availableTags }) => {
   const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
 
-  const handleSubmit = async (title: string, body: string) => {
+  const handleSubmit = async (title: string, body: string, tags: string[], date: string) => {
     setError(null);
 
     try {
@@ -23,6 +29,8 @@ const Page: React.FC<PageProps> = ({ memo }) => {
           id: memo.id,
           title,
           body,
+          tags,
+          date,
         }),
       });
 
@@ -38,19 +46,17 @@ const Page: React.FC<PageProps> = ({ memo }) => {
   };
 
   const handleDelete = async () => {
-    if (window.confirm('このメモを削除してもよろしいですか？')) {
-      try {
-        await fetch(`/api/memos`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ id: memo.id }),
-        });
-        navigate("/drafts");
-      } catch (err) {
-        setError("削除中にエラーが発生しました。");
-      }
+    try {
+      await fetch(`/api/memos`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: memo.id }),
+      });
+      navigate("/drafts");
+    } catch (err) {
+      setError("削除中にエラーが発生しました。");
     }
   };
 
@@ -60,6 +66,7 @@ const Page: React.FC<PageProps> = ({ memo }) => {
       onSubmit={handleSubmit}
       onDelete={handleDelete}
       error={error}
+      availableTags={availableTags}
     />
   );
 };

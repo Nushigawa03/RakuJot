@@ -83,7 +83,7 @@ export const action: ActionFunction = async ({ request }) => {
     // Fallback: do heuristic parse if model call fails
     try {
       // @ts-ignore - library typing may differ
-      const res = await genAI.models.generate({ model: "text-bison-001", input: prompt });
+      const res = await genAI.models.generate({ model: 'gemini-2.5-flash-lite', input: prompt });
       const output = (res?.output?.[0]?.content ?? res?.candidates?.[0]?.content ?? "").toString();
       // try to extract JSON from output
       const jsonMatch = output.match(/\{[\s\S]*\}/m);
