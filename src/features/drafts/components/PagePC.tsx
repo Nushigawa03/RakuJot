@@ -3,7 +3,7 @@ import NavigationBar from './NavigationBar/NavigationBar';
 import MemoList from './MemoList';
 import Sidebar from './Sidebar';
 import QuickMemoInput from './QuickMemoInput';
-import RecommendationSection from './RecommendationSection';
+import { MemoPreview } from './MemoPreview';
 import './PagePC.css';
 import { SearchTag } from '../types/searchTag';
 
@@ -11,6 +11,13 @@ const Page: React.FC = () => {
   const [filterQuery, setFilterQuery] = useState<string>('');
   const [dateQuery, setDateQuery] = useState<string>('');
   const [filterTags, setFilterTags] = useState<SearchTag[]>([]);
+  const [hoveredMemo, setHoveredMemo] = useState<{
+    id: string;
+    title: string;
+    body: string;
+    date?: string;
+    tags?: { id: string; name: string }[];
+  } | null>(null);
 
   // Listen for search events from NavigationBar
   useEffect(() => {
@@ -40,6 +47,21 @@ const Page: React.FC = () => {
     return () => window.removeEventListener('searchExecuted', onSearchExecuted as EventListener);
   }, []);
 
+  // Listen for memo hover events from MemoList
+  useEffect(() => {
+    const onMemoHover = (ev: Event) => {
+      try {
+        const detail = (ev as CustomEvent).detail;
+        setHoveredMemo(detail.memo || null);
+      } catch (err) {
+        console.error('onMemoHover handler error', err);
+      }
+    };
+
+    window.addEventListener('memoHover', onMemoHover as EventListener);
+    return () => window.removeEventListener('memoHover', onMemoHover as EventListener);
+  }, []);
+
   return (
     <div className="page-container">
       <header>
@@ -53,7 +75,7 @@ const Page: React.FC = () => {
           <MemoList filterQuery={filterQuery} dateQuery={dateQuery} filterTags={filterTags} />
         </section>
         <aside className="recommendation-section">
-          <RecommendationSection />
+          <MemoPreview memo={hoveredMemo} />
         </aside>
       </div>
       <footer>

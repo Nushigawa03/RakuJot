@@ -94,7 +94,35 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
       </div>
       <ul>
         {sortedMemos.map((memo) => (
-          <li key={memo.id} onClick={() => navigate(`/drafts/edit/${memo.id}`)}>
+          <li 
+            key={memo.id} 
+            onClick={() => navigate(`/drafts/edit/${memo.id}`)}
+            onMouseEnter={() => {
+              window.dispatchEvent(
+                new CustomEvent('memoHover', {
+                  detail: {
+                    memo: {
+                      id: memo.id,
+                      title: memo.title,
+                      body: memo.body,
+                      date: memo.date,
+                      tags: memo.tags?.map((tag: any) => ({
+                        id: typeof tag === 'string' ? tag : tag.id,
+                        name: getTagNameById(typeof tag === 'string' ? tag : tag.id)
+                      }))
+                    }
+                  }
+                })
+              );
+            }}
+            onMouseLeave={() => {
+              window.dispatchEvent(
+                new CustomEvent('memoHover', {
+                  detail: { memo: null }
+                })
+              );
+            }}
+          >
             <span className="memo-date">{memo.date || "不明"}</span>
             <span className="memo-title">{memo.title}</span>
             {(DEBUG_ALWAYS_SHOW_TAGS || filterQuery) && (

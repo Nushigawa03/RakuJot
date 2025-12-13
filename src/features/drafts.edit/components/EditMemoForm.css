@@ -43,6 +43,13 @@
   position: sticky;
   top: 0;
 }
+
+.top-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .back-button {
   background: transparent;
   color: #333;
@@ -54,6 +61,39 @@
 .back-button:hover {
   background: #f5f5f5;
 }
+
+.discard-button {
+  background: #fff;
+  color: #ff9800;
+  border: 1px solid #ff9800;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.discard-button:hover:not(:disabled) {
+  background: #ff9800;
+  color: white;
+}
+.discard-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.delete-button-top {
+  background: #fff;
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.delete-button-top:hover {
+  background: #e74c3c;
+  color: white;
+}
+
 .mode-toggle-button {
   background: #4CAF50;
   color: white;
@@ -65,6 +105,33 @@
 }
 .mode-toggle-button:hover {
   background: #45a049;
+}
+
+/* 自動保存インジケーター */
+.auto-save-indicator {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 6px 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-bottom: 1px solid #c8e6c9;
+}
+
+.saving-indicator {
+  background: #fff3e0;
+  color: #e65100;
+  padding: 6px 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-bottom: 1px solid #ffe0b2;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .error-message {
@@ -376,7 +443,7 @@ button {
   flex: 1 1 auto;
   min-height: 0;
   position: relative;
-  padding: 16px 12px 100px; /* 下部固定ボタン分余白を広げる */
+  padding: 16px 12px 24px; /* 下部ボタンなしで余白削減 */
   background: #fafafa;
 }
 

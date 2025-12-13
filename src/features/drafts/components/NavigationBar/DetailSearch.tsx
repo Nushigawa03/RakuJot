@@ -51,7 +51,7 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
         />
 
         {/* タグ選択 */}
-        <label>
+        {/* <label>
           タグを選択:
           <select onChange={(e) => onTagAdd(e.target.value)} defaultValue="">
             <option value="" disabled>
@@ -63,10 +63,10 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
               </option>
             ))}
           </select>
-        </label>
+        </label> */}
 
         {/* カテゴリ選択 */}
-        <label>
+        {/* <label>
           カテゴリを選択:
           <select onChange={(e) => onCategorySelect(e.target.value)} defaultValue="">
             <option value="" disabled>
@@ -78,7 +78,7 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
               </option>
             ))}
           </select>
-        </label>
+        </label> */}
 
         {/* トグルスイッチ */}
         {/* <ToggleSwitch

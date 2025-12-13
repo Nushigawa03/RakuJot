@@ -37,6 +37,8 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>(
     memo.tags?.map(t => t.name) || []
   );
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -58,9 +60,36 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
   const [historyIndex, setHistoryIndex] = useState(-1);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(title, body, selectedTags, date);
+  // 初期状態を履歴に保存（一度だけ）
+  useEffect(() => {
+    const initial = { title: memo.title || "", body: memo.body || "", tags: (memo.tags?.map(t => t.name) || []), date: memo.date || "" };
+    setHistory([initial]);
+    setHistoryIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSaving(true);
+    try {
+      await onSubmit(title, body, selectedTags, date);
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error("保存エラー:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    if (history.length > 0) {
+      const initial = history[0];
+      setTitle(initial.title);
+      setBody(initial.body);
+      setSelectedTags(initial.tags);
+      setDate(initial.date);
+      setHistoryIndex(0);
+    }
   };
 
   const handleAddTag = (tagName: string) => {
@@ -98,9 +127,10 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
     await onDelete();
   };
 
-  const saveToHistory = () => {
+  const saveToHistory = (snapshot?: { title: string; body: string; tags: string[]; date: string }) => {
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push({ title, body, tags: selectedTags, date });
+    const stateToSave = snapshot ?? { title, body, tags: selectedTags, date };
+    newHistory.push(stateToSave);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   };
@@ -144,14 +174,25 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
       };
       
       if (autoApplySuggestions) {
-        // 即時適用（履歴に積んで反映）
-        saveToHistory();
+        // 即時適用（変更後スナップショットを履歴に保存）
+        saveToHistory(suggestion);
         setTitle(suggestion.title);
         setBody(suggestion.body);
         setSelectedTags(suggestion.tags);
         setDate(suggestion.date);
         setQuickEditContent("");
         setAiSuggestion(null);
+        
+        // 自動保存（state更新後に即座に実行）
+        setIsSaving(true);
+        try {
+          await onSubmit(suggestion.title, suggestion.body, suggestion.tags, suggestion.date);
+          setLastSaved(new Date());
+        } catch (error) {
+          console.error("保存エラー:", error);
+        } finally {
+          setIsSaving(false);
+        }
       } else {
         // プレビュー表示
         setAiSuggestion(suggestion);
@@ -166,7 +207,8 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
   const handleApplySuggestion = () => {
     if (!aiSuggestion) return;
     
-    saveToHistory();
+    // 変更後スナップショットを履歴に保存
+    saveToHistory(aiSuggestion);
     setTitle(aiSuggestion.title);
     setBody(aiSuggestion.body);
     setSelectedTags(aiSuggestion.tags);
@@ -185,14 +227,43 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
         <button type="button" className="back-button" onClick={() => navigate(-1)}>
           ← 戻る
         </button>
-        <button 
-          type="button" 
-          className="mode-toggle-button"
-          onClick={() => setEditMode(!editMode)}
-        >
-          {editMode ? '📖 閲覧モード' : '✏️ 詳細編集'}
-        </button>
+        <div className="top-actions-right">
+          <button 
+            type="button" 
+            className="discard-button"
+            onClick={handleDiscardChanges}
+            disabled={historyIndex === 0}
+            title="変更を破棄"
+          >
+            🔄 破棄
+          </button>
+          <button 
+            type="button" 
+            className="delete-button-top"
+            onClick={handleDeleteClick}
+            title="削除"
+          >
+            🗑️ 削除
+          </button>
+          <button 
+            type="button" 
+            className="mode-toggle-button"
+            onClick={() => setEditMode(!editMode)}
+          >
+            {editMode ? '📖 閲覧モード' : '✏️ 詳細編集'}
+          </button>
+        </div>
       </div>
+      {lastSaved && (
+        <div className="auto-save-indicator">
+          ✓ {lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み
+        </div>
+      )}
+      {isSaving && (
+        <div className="saving-indicator">
+          💾 保存中...
+        </div>
+      )}
       {error && <div className="error-message">エラー: {error}</div>}
       
       {!editMode ? (
@@ -300,26 +371,11 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
                   onClick={handleAiSuggest}
                   disabled={!quickEditContent.trim() || isAiProcessing}
                 >
-                  {isAiProcessing ? '🤖 AI処理中...' : '🤖 AIに提案してもらう'}
+                  {isAiProcessing ? '処理中...' : 'クイック編集'}
                 </button>
               </>
             )}
-            {!aiSuggestion && (
-              <div className="actions">
-                <button className="save-primary" onClick={(e) => { 
-                  e.preventDefault(); 
-                  onSubmit(title, body, selectedTags, date);
-                }}>
-                  💾 保存
-                </button>
-                <button className="delete-secondary" onClick={(e) => { 
-                  e.preventDefault(); 
-                  handleDeleteClick(); 
-                }}>
-                  🗑️ 削除
-                </button>
-              </div>
-            )}
+
           </div>
         </div>
       ) : (

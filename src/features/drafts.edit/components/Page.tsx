@@ -34,12 +34,11 @@ const Page: React.FC<PageProps> = ({ memo, availableTags }) => {
         }),
       });
 
-      if (response.ok) {
-        navigate("/drafts");
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
         setError(errorData.error || "メモの更新に失敗しました。");
       }
+      // 保存成功時も画面を閉じずに継続編集可能
     } catch (err) {
       setError("ネットワークエラーが発生しました。");
     }
