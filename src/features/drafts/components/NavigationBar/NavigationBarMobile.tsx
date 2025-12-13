@@ -6,7 +6,7 @@ import './NavigationBarMobile.css';
 import { SearchTag } from '../../types/searchTag';
 import { Tag } from '../../types/tags';
 import { useTagSearch } from '../../hooks/useTagSearch';
-import { fetchTags, parseSearchQuery } from '../../services/searchService';
+import { searchService } from '../../services/searchService';
 import { parseFuzzyDate, buildDateQuery } from '../../utils/dateUtils';
 
 type Props = {
@@ -50,7 +50,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
 
   // タグ一覧を取得
   useEffect(() => {
-    fetchTags().then(setAvailableTags).catch((error) => {
+    searchService.fetchTags().then(setAvailableTags).catch((error) => {
       console.error('タグの取得エラー:', error);
     });
   }, []);
@@ -130,7 +130,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
     // If user typed a free-form query and hasn't set start/end manually, try to parse it.
     if (searchQuery && !selectedStartDate && !selectedEndDate) {
       try {
-        const data = await parseSearchQuery(searchQuery);
+        const data = await searchService.parseSearchQuery(searchQuery);
         const parsedStart = data.start ?? null;
         const parsedEnd = data.end ?? null;
         const parsedTag = data.tag ?? null;

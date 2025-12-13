@@ -32,10 +32,12 @@
 .top-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 8px 12px;
   background: rgba(255,255,255,0.85);
   backdrop-filter: saturate(120%) blur(6px);
   z-index: 10;
+  gap: 10px;
 }
 .top-actions.sticky {
   position: sticky;
@@ -51,6 +53,18 @@
 }
 .back-button:hover {
   background: #f5f5f5;
+}
+.mode-toggle-button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mode-toggle-button:hover {
+  background: #45a049;
 }
 
 .error-message {
@@ -220,8 +234,9 @@
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 8px;
+  margin-top: 16px;
   gap: 10px;
+  padding-bottom: 20px;
 }
 
 button {
@@ -235,44 +250,37 @@ button {
   letter-spacing: 0.3px;
 }
 
-.save-button {
+.save-primary {
   background: #4CAF50;
   color: white;
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
 }
-.save-button.large {
-  padding: 12px 22px;
-  font-size: 15px;
-}
 
-.save-button:hover {
+.save-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 12px rgba(76, 175, 80, 0.25);
+  background: #45a049;
 }
 
-.save-button:active {
+.save-primary:active {
   transform: translateY(0);
 }
 
-.delete-button {
+.delete-secondary {
   background: #fff;
   color: #e74c3c;
-  border: 1px solid #e74c3c;
+  border: 2px solid #e74c3c;
   box-shadow: 0 1px 6px rgba(231, 76, 60, 0.1);
 }
-.delete-button.large {
-  padding: 12px 22px;
-  font-size: 15px;
-}
 
-.delete-button:hover {
+.delete-secondary:hover {
   background: #e74c3c;
   color: #fff;
   transform: translateY(-1px);
   box-shadow: 0 3px 12px rgba(231, 76, 60, 0.2);
 }
 
-.delete-button:active {
+.delete-secondary:active {
   transform: translateY(0);
 }
 
@@ -298,6 +306,69 @@ button {
   }
 }
 
+/* 閲覧モード */
+.view-mode {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.memo-display {
+  padding: 20px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e6e6e6;
+  overflow-y: auto;
+  max-height: 50vh;
+  flex-shrink: 0;
+}
+
+.memo-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.memo-date {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.memo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #f6fbf7;
+  color: #2c5f31;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid rgba(76, 175, 80, 0.28);
+}
+
+.memo-body {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.memo-body p {
+  margin: 0 0 8px 0;
+}
+
 /* クイック編集欄 */
 .quick-edit {
   display: flex;
@@ -305,41 +376,292 @@ button {
   flex: 1 1 auto;
   min-height: 0;
   position: relative;
-  padding: 8px 12px;
+  padding: 16px 12px 100px; /* 下部固定ボタン分余白を広げる */
+  background: #fafafa;
 }
-.quick-edit .quick-title,
+
+.quick-edit-header {
+  margin-bottom: 12px;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.quick-edit-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c5f31;
+  margin: 0;
+}
+
+.history-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.quick-edit-description {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .quick-edit .quick-body {
   width: 100%;
-  padding: 7px 9px;
-  border: 1px solid #e6e6e6;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border: 2px solid #e6e6e6;
+  border-radius: 8px;
   font-size: 14px;
   margin-bottom: 8px;
+  resize: vertical;
+  min-height: 120px;
+  background: white;
+  font-family: inherit;
+  line-height: 1.6;
 }
-.quick-edit .quick-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  resize: none;
+
+.quick-edit .quick-body:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
-.quick-edit .actions {
+
+.quick-edit .quick-body:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+/* AI提案ボタン */
+.btn-ai-suggest {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-ai-suggest:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-ai-suggest:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* AI提案プレビュー */
+.ai-suggestion-preview {
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestion-header {
   display: flex;
-  gap: 8px;
-  position: absolute;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.suggestion-label {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 0.95rem;
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-undo,
+.btn-redo {
+  padding: 6px 12px;
+  font-size: 1.2rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: #666;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-undo:hover:not(:disabled),
+.btn-redo:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #4CAF50;
+  color: #4CAF50;
+  transform: scale(1.05);
+}
+
+.btn-undo:disabled,
+.btn-redo:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.suggestion-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestion-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suggestion-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.suggestion-field input,
+.suggestion-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.suggestion-field textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+.suggestion-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestion-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.actions-fixed {
+  position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(env(safe-area-inset-bottom, 12px) + var(--kbd-height, 0px) + 12px);
+  bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
+  z-index: 25; /* 保存削除より優先 */
 }
-.quick-edit .actions .save,
-.quick-edit .actions .delete {
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
+
+.btn-apply,
+.btn-reject {
+  flex: 1;
+  padding: 10px;
   border: none;
-  width: 100%;
+  border-radius: 8px;
   font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
-.quick-edit .actions .save { background: #2563eb; color: white; }
-.quick-edit .actions .delete { background: #fff; color: #e74c3c; border: 1px solid #e74c3c; }
-.quick-edit .content:focus + .actions,
-.quick-edit .quick-body:focus + .actions {
-  box-shadow: 0 0 0 4px rgba(37,99,235,0.04);
+
+.btn-apply {
+  background: #4CAF50;
+  color: white;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+}
+
+.btn-apply:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+}
+
+.btn-reject {
+  background: white;
+  color: #e74c3c;
+  border: 2px solid #e74c3c;
+}
+
+.btn-reject:hover {
+  background: #e74c3c;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.quick-edit .actions {
+  display: flex;
+  gap: 10px;
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
+  z-index: 20;
+}
+
+.quick-edit .actions .save-primary,
+.quick-edit .actions .delete-secondary {
+  padding: 0.85rem 1.2rem;
+  border-radius: 10px;
+  border: none;
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.quick-edit .actions .save-primary { 
+  background: #4CAF50; 
+  color: white; 
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.quick-edit .actions .save-primary:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.quick-edit .actions .delete-secondary { 
+  background: #fff; 
+  color: #e74c3c; 
+  border: 2px solid #e74c3c;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.15);
+}
+
+.quick-edit .actions .delete-secondary:hover {
+  background: #e74c3c;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }

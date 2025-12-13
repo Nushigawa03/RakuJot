@@ -1,5 +1,6 @@
 import React from 'react';
 import ToggleSwitch from './ToggleSwitch';
+import DatePickerInput from './DatePickerInput';
 import './DetailSearch.css';
 
 interface DetailSearchProps {
@@ -15,6 +16,7 @@ interface DetailSearchProps {
   onCategorySelect: (category: string) => void;
   onOrSearchToggle: () => void;
   onDetailSearchToggle: () => void;
+  onClear?: () => void;
 }
 
 const DetailSearch: React.FC<DetailSearchProps> = ({
@@ -30,28 +32,23 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
   onCategorySelect,
   onOrSearchToggle,
   onDetailSearchToggle,
+  onClear,
 }) => {
   return (
     <div className="detail-search">
       <p>詳細検索オプション</p>
       <div className="search-options">
         {/* 日付検索 */}
-        <label>
-          開始日:
-          <input
-            type="date"
-            value={selectedStartDate || ''}
-            onChange={(e) => onStartDateChange(e.target.value)}
-          />
-        </label>
-        <label>
-          終了日:
-          <input
-            type="date"
-            value={selectedEndDate || ''}
-            onChange={(e) => onEndDateChange(e.target.value)}
-          />
-        </label>
+        <DatePickerInput 
+          label="開始日"
+          value={selectedStartDate}
+          onChange={onStartDateChange}
+        />
+        <DatePickerInput 
+          label="終了日"
+          value={selectedEndDate}
+          onChange={onEndDateChange}
+        />
 
         {/* タグ選択 */}
         <label>
@@ -84,7 +81,7 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
         </label>
 
         {/* トグルスイッチ */}
-        <ToggleSwitch
+        {/* <ToggleSwitch
             label="本文詳細検索"
             isChecked={isDetailSearch}
             onChange={onDetailSearchToggle}
@@ -93,7 +90,16 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
             label="タグOR検索"
             isChecked={isOrSearch}
             onChange={onOrSearchToggle}
-        />
+        /> */}
+
+        {/* クリアボタンを他の要素と同列に配置 */}
+        {onClear && (
+          <div className="detail-search-actions">
+            <button className="clear-button" onClick={onClear}>
+              クリア
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

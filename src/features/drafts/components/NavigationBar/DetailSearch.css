@@ -4,13 +4,14 @@
     background-color: #f9f9f9;
     border: 1px solid #ddd;
     border-radius: 5px;
+    position: relative;
   }
   
   .search-options {
     display: flex;
     flex-wrap: wrap;
     gap: 20px; /* 各項目の間隔を調整 */
-    align-items: center;
+    align-items: flex-end; /* すべての要素を下揃えに変更 */
   }
   
   .search-options label {
@@ -25,4 +26,30 @@
     padding: 4px;
     border: 1px solid #ccc;
     border-radius: 4px;
+  }
+
+  .detail-search-actions {
+    display: inline-flex;
+    align-items: flex-end; /* 下揃え */
+  }
+
+  .clear-button {
+    padding: 8px 16px; /* DatePickerInputの高さに合わせて調整 */
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: 38px; /* DatePickerInputの入力欄の高さに合わせる */
+    box-sizing: border-box;
+  }
+
+  .clear-button:hover {
+    background-color: #d32f2f;
+  }
+
+  .clear-button:active {
+    background-color: #b71c1c;
   }

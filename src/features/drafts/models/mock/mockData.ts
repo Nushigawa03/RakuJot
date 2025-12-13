@@ -35,7 +35,7 @@ export const mockMemos = [
     id: "mock-4", 
     title: "明日の予定", 
     body: "明日のスケジュール\n- 9:00 朝礼\n- 10:30 開発作業\n- 14:00 ミーティング",
-    date: "2025-11-11", 
+    date: "2024-11-11", 
     tags: ["work"], 
     createdAt: new Date("2025-03-08T18:00:00Z").toISOString(),
     updatedAt: new Date("2025-03-08T18:00:00Z").toISOString()

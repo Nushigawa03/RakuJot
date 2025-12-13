@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import DetailSearch from './DetailSearch';
 import { useNavigationBarStore } from '../../stores/navigationBarStore';
 import './NavigationBar.css';
@@ -6,6 +6,9 @@ import NewMemo from '../NewMemo/NewMemo';
 import { SearchTag } from '../../types/searchTag';
 import { Tag } from '../../types/tags';
 import tagExpressionService from '../../services/tagExpressionService';
+import { useTagSearch } from '../../hooks/useTagSearch';
+import { searchService } from '../../services/searchService';
+import { buildDateQuery } from '../../utils/dateUtils';
 
 const NavigationBar: React.FC = () => {
   const {
@@ -15,40 +18,39 @@ const NavigationBar: React.FC = () => {
     toggleDetailSearch,
   } = useNavigationBarStore();
 
-  const [isFocused, setIsFocused] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [filterTags, setFilterTags] = React.useState<SearchTag[]>([]);
-  const [selectedTagIndex, setSelectedTagIndex] = React.useState<number | null>(null);
-  const [selectedStartDate, setSelectedStartDate] = React.useState<string | null>(null);
-  const [selectedEndDate, setSelectedEndDate] = React.useState<string | null>(null);
-  const [isCreatingMemo, setIsCreatingMemo] = React.useState(false); // 新規メモ作成状態
-  const [isSavingFilter, setIsSavingFilter] = React.useState(false); // フィルタ保存状態
-  const [availableTags, setAvailableTags] = React.useState<Tag[]>([]); // 利用可能なタグ一覧
-  const [suggestions, setSuggestions] = React.useState<Tag[]>([]); // サジェスト候補
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState<number>(-1); // 選択中のサジェスト
-  const [showSuggestions, setShowSuggestions] = React.useState(false); // サジェスト表示フラグ
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
+  const [isCreatingMemo, setIsCreatingMemo] = useState(false);
+  const [isSavingFilter, setIsSavingFilter] = useState(false);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    filterTags,
+    setFilterTags,
+    suggestions,
+    setSuggestions,
+    selectedSuggestionIndex,
+    setSelectedSuggestionIndex,
+    showSuggestions,
+    setShowSuggestions,
+    selectedTagIndex,
+    setSelectedTagIndex,
+    handleSearchChange,
+    handleTagAdd,
+    handleTagRemove,
+    findTagByName,
+  } = useTagSearch(availableTags);
 
   // タグ一覧を取得
-  React.useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const response = await fetch('/api/tags');
-        if (response.ok) {
-          const tags = await response.json();
-          setAvailableTags(tags);
-        }
-      } catch (error) {
-        console.error('タグの取得エラー:', error);
-      }
-    };
-    fetchTags();
+  useEffect(() => {
+    searchService.fetchTags().then(setAvailableTags).catch((error) => {
+      console.error('タグの取得エラー:', error);
+    });
   }, []);
-
-  // タグ名からタグIDを取得
-  const findTagByName = (tagName: string): Tag | undefined => {
-    return availableTags.find(tag => tag.name === tagName);
-  };
 
   // サジェストからタグを選択
   const selectSuggestion = (tag: Tag) => {
@@ -61,73 +63,21 @@ const NavigationBar: React.FC = () => {
     setSelectedSuggestionIndex(-1);
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    setSelectedTagIndex(null);
-    setSelectedSuggestionIndex(-1);
-    
-    // サジェストを更新
-    if (value.trim()) {
-      const input = value.trim();
-      const isExclude = input.startsWith('-');
-      const searchTerm = isExclude ? input.slice(1) : input;
-      
-      if (searchTerm) {
-        const matchingTags = availableTags.filter(tag => 
-          tag.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !filterTags.some(filterTag => filterTag.id === tag.id && filterTag.isExclude === isExclude)
-        );
-        setSuggestions(matchingTags.slice(0, 5)); // 最大5件表示
-        setShowSuggestions(matchingTags.length > 0);
-      } else {
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  };
 
-  const handleTagAdd = (tagInput: string) => {
-    const isExclude = tagInput.startsWith('-');
-    const tagName = isExclude ? tagInput.slice(1) : tagInput;
-    
-    // タグ名からタグIDを取得
-    const foundTag = findTagByName(tagName);
-    
-    const newSearchTag: SearchTag = {
-      id: foundTag ? foundTag.id : `temp_${Date.now()}`, // 一時的なIDを生成（存在しないタグの場合）
-      name: tagName,
-      isExclude: isExclude
-    };
-    
-    // 同じタグが既に存在しないかチェック
-    const existingTag = filterTags.find(tag => tag.id === newSearchTag.id && tag.isExclude === newSearchTag.isExclude);
-    if (!existingTag) {
-      setFilterTags([...filterTags, newSearchTag]);
-    }
-  };
-
-  const handleTagRemove = (targetTag: SearchTag) => {
-    setFilterTags(filterTags.filter((tag) => !(tag.id === targetTag.id && tag.isExclude === targetTag.isExclude)));
-    setSelectedTagIndex(null); // タグを削除したら選択をリセット
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // サジェストが表示されている場合のキーボード操作
     if (showSuggestions && suggestions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedSuggestionIndex((prev) => 
+        setSelectedSuggestionIndex((prev: number) => 
           prev < suggestions.length - 1 ? prev + 1 : 0
         );
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedSuggestionIndex((prev) => 
+        setSelectedSuggestionIndex((prev: number) => 
           prev > 0 ? prev - 1 : suggestions.length - 1
         );
         return;
@@ -191,8 +141,41 @@ const NavigationBar: React.FC = () => {
     }
   };
 
-  const handleSearch = () => {
-    console.log('検索実行:', searchQuery, filterTags, selectedStartDate, selectedEndDate, isOrSearch, isDetailSearch);
+  const handleSearch = async () => {
+    if (searchQuery && !selectedStartDate && !selectedEndDate) {
+      try {
+        const data = await searchService.parseSearchQuery(searchQuery);
+        const parsedStart = data.start ?? null;
+        const parsedEnd = data.end ?? null;
+        const parsedTag = data.tag ?? null;
+        if (parsedStart) setSelectedStartDate(parsedStart);
+        if (parsedEnd) setSelectedEndDate(parsedEnd);
+        if (parsedTag) {
+          const foundExact = availableTags.find(t => t.name === parsedTag);
+          const foundCi = availableTags.find(t => t.name.toLowerCase() === parsedTag.toLowerCase());
+          const foundIncludes = availableTags.find(t => t.name.toLowerCase().includes(parsedTag.toLowerCase()));
+          const match = foundExact || foundCi || foundIncludes;
+          if (match) handleTagAdd(match.name);
+        }
+        const startRaw2 = parsedStart ?? (selectedStartDate ? selectedStartDate.trim() : '');
+        const endRaw2 = parsedEnd ?? (selectedEndDate ? selectedEndDate.trim() : '');
+        applyDateFilterFromRaw(startRaw2, endRaw2);
+        return;
+      } catch (err) {
+        console.warn('[NavigationBar] parseSearch call failed', err);
+      }
+    }
+    const startRaw = selectedStartDate ? selectedStartDate.trim() : '';
+    const endRaw = selectedEndDate ? selectedEndDate.trim() : '';
+    applyDateFilterFromRaw(startRaw, endRaw);
+  };
+
+  const applyDateFilterFromRaw = (startRaw: string, endRaw: string) => {
+    const { start, end, query } = buildDateQuery(startRaw, endRaw);
+    try {
+      window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'date', start: start || null, end: end || null, query } }));
+    } catch (e) {}
+    setIsFocused(false);
   };
 
   const handleNewMemoSave = (memo: { title: string; tags: string[]; date?: string; body?: string }) => {
@@ -244,6 +227,17 @@ const NavigationBar: React.FC = () => {
     setIsSavingFilter(false);
   };
 
+  const handleClearSearch = () => {
+    setSelectedStartDate(null);
+    setSelectedEndDate(null);
+    setFilterTags([]);
+    setSearchQuery('');
+    // 検索クリアイベントを発行
+    try {
+      window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'clear' } }));
+    } catch (e) {}
+  };
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'n') {
@@ -289,16 +283,16 @@ const NavigationBar: React.FC = () => {
               <div className="search-input-container">
                 <input
                   type="text"
-                  placeholder="タイトル、タグ、詳細を検索..."
+                  placeholder="さがす..."
                   className="search-bar"
                   value={searchQuery}
-                  onChange={handleSearchChange}
+                  onChange={e => handleSearchChange(e.target.value)}
                   onFocus={() => setIsFocused(true)}
                   onKeyDown={handleKeyDown} // キー操作を追加
                 />
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="suggestions-dropdown">
-                    {suggestions.map((tag, index) => (
+                    {suggestions.map((tag: Tag, index: number) => (
                       <div
                         key={tag.id}
                         className={`suggestion-item ${selectedSuggestionIndex === index ? 'selected' : ''}`}
@@ -343,6 +337,7 @@ const NavigationBar: React.FC = () => {
               onCategorySelect={(category) => console.log('カテゴリ選択:', category)}
               onOrSearchToggle={toggleOrSearch}
               onDetailSearchToggle={toggleDetailSearch}
+              onClear={handleClearSearch}
             />
           )}
         </div>

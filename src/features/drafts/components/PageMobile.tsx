@@ -97,6 +97,12 @@ const PageMobile: React.FC = () => {
       try {
         const detail = (ev as CustomEvent).detail;
         if (detail) {
+          if (detail.type === 'clear') {
+            // クリア時はすべての検索条件をリセット
+            setDateQuery('');
+            setFilterTags([]);
+            return;
+          }
           if (typeof detail.query === 'string') {
             setDateQuery(detail.query);
             // if not already in list mode, switch to list so user sees results
