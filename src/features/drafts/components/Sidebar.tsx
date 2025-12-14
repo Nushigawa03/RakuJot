@@ -8,12 +8,14 @@ import { useFilter } from '../hooks/useFilter';
 import { formatLogicalText } from '../utils/logicalTextFormatter';
 import { SidebarSettingsModal } from './SidebarSettingsModal';
 import tagExpressionService from '../services/tagExpressionService';
+import { initializeTags } from '../utils/tagUtils';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const { activeFilter, activeQuery, handleFilterClick } = useFilter(onFilterChange);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleDeleteFilter = async (filterId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // 親要素のクリックイベントを停止
@@ -37,11 +39,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
 
   const loadData = async () => {
     try {
+      setIsLoading(true);
+      // タグを最初に初期化してからフィルタ/カテゴリを読み込む
+      await initializeTags();
       const { filters: f, categories: c } = await tagExpressionService.load();
       setFilters(f);
       setCategories(c);
     } catch (error) {
       console.error('フィルタ・カテゴリの読み込みエラー:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,18 +79,21 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
           ⚙️
         </button>
       </div>
-      <ul>
-        {categories.map((category) => (
-          <li
-            key={category.id}
-            className={`category ${activeFilter === category.id ? 'active' : ''}`}
-            onClick={() => handleFilterClick(category)}
-            style={{ borderLeft: category.color ? `4px solid ${category.color}` : undefined }}
-          >
-            {category.name}
-          </li>
-        ))}
-        {filters.map((filter) => (
+      {isLoading ? (
+        <div className="sidebar-loading">読み込み中...</div>
+      ) : (
+        <ul>
+          {categories.map((category) => (
+            <li
+              key={category.id}
+              className={`category ${activeFilter === category.id ? 'active' : ''}`}
+              onClick={() => handleFilterClick(category)}
+              style={{ borderLeft: category.color ? `4px solid ${category.color}` : undefined }}
+            >
+              {category.name}
+            </li>
+          ))}
+          {filters.map((filter) => (
           <li
             key={filter.id}
             className={`filter ${activeFilter === filter.id ? 'active' : ''}`}
@@ -101,7 +111,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
             </button>
           </li>
         ))}
-      </ul>
+        </ul>
+      )}
 
       {activeQuery && (
         <div className="filter-details">

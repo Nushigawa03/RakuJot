@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import NavigationBarMobile from "./NavigationBar/NavigationBarMobile";
 import MemoList from "./MemoList";
 import QuickMemoInput from "./QuickMemoInput";

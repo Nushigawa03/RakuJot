@@ -1,3 +1,10 @@
+.memo-list-loading {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
 .memo-list-header {
   display: flex;
   justify-content: space-between; /* 左右に要素を配置 */

@@ -3,6 +3,7 @@ import type { Tag } from '../types/tags';
 // タグデータのキャッシュ
 let cachedTags: Tag[] = [];
 let isTagsCached = false;
+let fetchPromise: Promise<Tag[]> | null = null;
 
 // タグデータをAPIから取得
 const fetchTags = async (): Promise<Tag[]> => {
@@ -10,24 +11,40 @@ const fetchTags = async (): Promise<Tag[]> => {
     return cachedTags;
   }
 
-  try {
-    const response = await fetch('/api/tags');
-    if (response.ok) {
-      const tags = await response.json();
-      cachedTags = tags;
-      isTagsCached = true;
-      return tags;
-    } else {
-      console.error('タグの取得に失敗しました');
-      return [];
-    }
-  } catch (error) {
-    console.error('タグの取得エラー:', error);
-    return [];
+  // 既に取得中の場合は同じPromiseを返す
+  if (fetchPromise) {
+    return fetchPromise;
   }
+
+  fetchPromise = (async () => {
+    try {
+      const response = await fetch('/api/tags');
+      if (response.ok) {
+        const tags = await response.json();
+        cachedTags = tags;
+        isTagsCached = true;
+        return tags;
+      } else {
+        console.error('タグの取得に失敗しました');
+        return [];
+      }
+    } catch (error) {
+      console.error('タグの取得エラー:', error);
+      return [];
+    } finally {
+      fetchPromise = null;
+    }
+  })();
+
+  return fetchPromise;
 };
 
 export const getTagNameById = (id: string): string => {
+  // タグがまだ読み込まれていない場合は読み込み中と表示
+  if (!isTagsCached && cachedTags.length === 0) {
+    return '読み込み中...';
+  }
+
   // キャッシュからタグを検索
   const tag = cachedTags.find((tag: Tag) => tag.id === id);
   if (tag) {

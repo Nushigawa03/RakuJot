@@ -1,10 +1,9 @@
-import { json } from "@remix-run/node";
-import type { ActionFunction } from "@remix-run/node";
+import type { ActionFunction } from "react-router";
 import { computeEmbeddingsBatch } from "~/features/drafts/services/embeddingService";
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
@@ -12,7 +11,7 @@ export const action: ActionFunction = async ({ request }) => {
     const texts = Array.isArray(data?.texts) ? data.texts : [];
 
     if (texts.length === 0) {
-      return json({ error: "texts array is required and must not be empty" }, { status: 400 });
+      return Response.json({ error: "texts array is required and must not be empty" }, { status: 400 });
     }
 
     console.debug("[api.embeddings] received texts count:", texts.length);
@@ -22,7 +21,7 @@ export const action: ActionFunction = async ({ request }) => {
 
     console.debug("[api.embeddings] generated embeddings:", embeddings.length);
 
-    return json({
+    return Response.json({
       texts,
       embeddings,
       count: texts.length,
@@ -32,17 +31,17 @@ export const action: ActionFunction = async ({ request }) => {
     if (e?.error?.status === "RESOURCE_EXHAUSTED") {
       console.warn("[api.embeddings] API quota exceeded. Returning empty embeddings to allow fallback to exact date matching.");
       // Return empty embeddings array to signal client-side fallback
-      return json({ 
+      return Response.json({ 
         error: "API quota exceeded", 
         embeddings: [],
         fallback: true 
       }, { status: 429 });
     } else if (e?.error?.status === "PERMISSION_DENIED") {
       console.error("[api.embeddings] Permission denied. Check API key configuration.");
-      return json({ error: "Permission denied - check API key" }, { status: 403 });
+      return Response.json({ error: "Permission denied - check API key" }, { status: 403 });
     }
     
     console.error("[api.embeddings] error:", e);
-    return json({ error: "Embedding generation failed" }, { status: 500 });
+    return Response.json({ error: "Embedding generation failed" }, { status: 500 });
   }
 };

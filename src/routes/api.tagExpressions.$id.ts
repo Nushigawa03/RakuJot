@@ -1,12 +1,11 @@
-import { json } from "@remix-run/node";
-import type { LoaderFunction, ActionFunction } from "@remix-run/node";
+import type { LoaderFunction, ActionFunction } from "react-router";
 import { prisma } from "~/db.server";
 
 export const loader: LoaderFunction = async ({ params }) => {
   try {
     const { id } = params;
     if (!id) {
-      return json({ error: "IDが指定されていません" }, { status: 400 });
+      return Response.json({ error: "IDが指定されていません" }, { status: 400 });
     }
 
     const expr = await (prisma as any).tagExpression.findUnique({
@@ -14,13 +13,13 @@ export const loader: LoaderFunction = async ({ params }) => {
     });
 
     if (!expr) {
-      return json({ error: "tagExpression が見つかりません" }, { status: 404 });
+      return Response.json({ error: "tagExpression が見つかりません" }, { status: 404 });
     }
 
-    return json(expr);
+    return Response.json(expr);
   } catch (error) {
     console.error("API tagExpression loader error:", error);
-    return json({ error: "tagExpression の取得に失敗しました" }, { status: 500 });
+    return Response.json({ error: "tagExpression の取得に失敗しました" }, { status: 500 });
   }
 };
 
@@ -28,7 +27,7 @@ export const action: ActionFunction = async ({ request, params }) => {
   try {
     const { id } = params;
     if (!id) {
-      return json({ error: "IDが指定されていません" }, { status: 400 });
+      return Response.json({ error: "IDが指定されていません" }, { status: 400 });
     }
 
     switch (request.method) {
@@ -44,19 +43,19 @@ export const action: ActionFunction = async ({ request, params }) => {
             icon: icon || null,
           },
         });
-        return json({ success: true, tagExpression: updated });
+        return Response.json({ success: true, tagExpression: updated });
 
       case "DELETE":
         await (prisma as any).tagExpression.delete({
           where: { id },
         });
-        return json({ success: true });
+        return Response.json({ success: true });
 
       default:
-        return json({ error: "サポートされていないメソッドです" }, { status: 405 });
+        return Response.json({ error: "サポートされていないメソッドです" }, { status: 405 });
     }
   } catch (error) {
     console.error("tagExpression 操作エラー:", error);
-    return json({ error: "tagExpression の操作に失敗しました" }, { status: 500 });
+    return Response.json({ error: "tagExpression の操作に失敗しました" }, { status: 500 });
   }
 };

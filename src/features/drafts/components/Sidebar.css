@@ -3,6 +3,13 @@
   background-color: #f0f0f0;
 }
 
+.sidebar-loading {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
 .sidebar h3 {
   margin-bottom: 10px;
   display: flex;

@@ -1,4 +1,4 @@
-import { Link } from "@remix-run/react";
+import { Link } from "react-router";
 import useScreenType from "../../App/hooks/useScreenType";
 import AuthButtons from "../../App/components/AuthButtons";
 import PCComponent from "./PCComponent";

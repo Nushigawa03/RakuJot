@@ -1,5 +1,4 @@
-import { json } from "@remix-run/node";
-import type { ActionFunction } from "@remix-run/node";
+import type { ActionFunction } from "react-router";
 import { GoogleGenAI } from "@google/genai";
 
 // Simple heuristic parser (server-side) for Japanese date + tag extraction.
@@ -60,18 +59,18 @@ function heuristicParse(text: string) {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  if (request.method !== "POST") return json({ error: "Method not allowed" }, { status: 405 });
+  if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405 });
 
   const body = await request.json();
   const text = (body?.text || "").toString();
 
   // Try to use GoogleGenAI if API key exists; otherwise fallback to heuristic
   const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
-  if (!text) return json({ error: "text required" }, { status: 400 });
+  if (!text) return Response.json({ error: "text required" }, { status: 400 });
 
   if (!apiKey) {
     const heuristic = heuristicParse(text);
-    return json({ source: "heuristic", ...heuristic });
+    return Response.json({ source: "heuristic", ...heuristic });
   }
 
   try {
@@ -90,7 +89,7 @@ export const action: ActionFunction = async ({ request }) => {
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0]);
-          return json({ source: "genai", start: parsed.start ?? null, end: parsed.end ?? null, tag: parsed.tag ?? null });
+          return Response.json({ source: "genai", start: parsed.start ?? null, end: parsed.end ?? null, tag: parsed.tag ?? null });
         } catch (e) {
           // fall through to heuristic
           console.warn('[api.parseSearch] failed to parse JSON from model output', e);
@@ -101,10 +100,10 @@ export const action: ActionFunction = async ({ request }) => {
     }
 
     const heuristic = heuristicParse(text);
-    return json({ source: "heuristic", ...heuristic });
+    return Response.json({ source: "heuristic", ...heuristic });
   } catch (e) {
     console.error('[api.parseSearch] unexpected error', e);
     const heuristic = heuristicParse(text);
-    return json({ source: "heuristic", ...heuristic });
+    return Response.json({ source: "heuristic", ...heuristic });
   }
 };

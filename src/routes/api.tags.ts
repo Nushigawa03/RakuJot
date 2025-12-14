@@ -1,15 +1,14 @@
-import { json } from "@remix-run/node";
-import type { LoaderFunction, ActionFunction } from "@remix-run/node";
+import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTags } from "~/features/drafts/models/tag.server";
 import { prisma } from "~/db.server";
 
 export const loader: LoaderFunction = async () => {
   try {
     const tags = await getTags();
-    return json(tags);
+    return Response.json(tags);
   } catch (error) {
     console.error("API tags loader error:", error);
-    return json({ error: "タグの取得に失敗しました" }, { status: 500 });
+    return Response.json({ error: "タグの取得に失敗しました" }, { status: 500 });
   }
 };
 
@@ -26,7 +25,7 @@ export const action: ActionFunction = async ({ request }) => {
             description: description || null,
           },
         });
-        return json({ 
+        return Response.json({ 
           success: true, 
           tag: {
             id: newTag.id,
@@ -41,7 +40,7 @@ export const action: ActionFunction = async ({ request }) => {
           where: { id },
           data: updateData,
         });
-        return json({ success: true, tag: updatedTag });
+        return Response.json({ success: true, tag: updatedTag });
 
       case "DELETE":
         const { id: deleteId } = body;
@@ -55,7 +54,7 @@ export const action: ActionFunction = async ({ request }) => {
         });
         
         if (memoCount > 0) {
-          return json({ 
+          return Response.json({ 
             error: `このタグは${memoCount}個のメモで使用されているため削除できません` 
           }, { status: 400 });
         }
@@ -63,13 +62,13 @@ export const action: ActionFunction = async ({ request }) => {
         await prisma.tag.delete({
           where: { id: deleteId },
         });
-        return json({ success: true });
+        return Response.json({ success: true });
 
       default:
-        return json({ error: "サポートされていないメソッドです" }, { status: 405 });
+        return Response.json({ error: "サポートされていないメソッドです" }, { status: 405 });
     }
   } catch (error) {
     console.error("タグ操作エラー:", error);
-    return json({ error: "タグの操作に失敗しました" }, { status: 500 });
+    return Response.json({ error: "タグの操作に失敗しました" }, { status: 500 });
   }
 };

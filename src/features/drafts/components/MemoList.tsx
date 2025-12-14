@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./MemoList.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useFilteredMemos } from "../hooks/useFilteredMemos";
 import { useSortedMemos } from "../hooks/useSortedMemos";
 import { Memo, MemoListProps } from "../types/memo";
@@ -20,42 +20,38 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   const [memos, setMemos] = useState<Memo[]>([]);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // APIからメモを取得
+  // 全データを一括で取得
   useEffect(() => {
-    const fetchMemos = async () => {
+    const loadAllData = async () => {
       try {
-        console.log("Fetching memos via memoService...");
-        const data = await memoService.getMemos();
-        console.log("Number of memos:", data.length);
-        setMemos(data);
-      } catch (error) {
-        console.error("Error fetching memos:", error);
-      }
-    };
-
-    fetchMemos();
-  }, []);
-
-  // フィルタとカテゴリとタグを取得
-  useEffect(() => {
-    const loadFilterData = async () => {
-      try {
-        const [exprsResult] = await Promise.all([
+        setIsDataLoaded(false);
+        
+        // タグを最初に初期化してから、並行して他のデータを取得
+        await initializeTags();
+        
+        const [memosData, exprsResult] = await Promise.all([
+          memoService.getMemos(),
           tagExpressionService.load(),
-          initializeTags(), // タグデータを初期化
         ]);
 
+        console.log("Number of memos:", memosData.length);
+        setMemos(memosData);
+        
         if (exprsResult) {
           setFilters(exprsResult.filters);
           setCategories(exprsResult.categories);
         }
+        
+        setIsDataLoaded(true);
       } catch (error) {
-        console.error('フィルタ・カテゴリ・タグの読み込みエラー:', error);
+        console.error('データの読み込みエラー:', error);
+        setIsDataLoaded(true); // エラーでも表示する
       }
     };
 
-    loadFilterData();
+    loadAllData();
   }, []);
 
   const filteredMemos = useFilteredMemos(memos, filterQuery, dateQuery, queryEmbedding, filterTags);
@@ -67,6 +63,14 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   console.log("Date query:", dateQuery);
   console.log("Filtered memos:", filteredMemos.length);
   console.log("Sorted memos:", sortedMemos.length);
+
+  if (!isDataLoaded) {
+    return (
+      <div className="memo-list">
+        <div className="memo-list-loading">データを読み込んでいます...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="memo-list">

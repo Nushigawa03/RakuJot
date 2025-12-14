@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './EditMemoForm.css';
 import DeleteConfirmModal from './DeleteConfirmModal';
-import { useNavigate } from '@remix-run/react';
+import { useNavigate } from 'react-router';
 
 interface Tag {
   id: string;
