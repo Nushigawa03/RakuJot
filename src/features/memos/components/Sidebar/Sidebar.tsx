@@ -3,15 +3,15 @@ import './Sidebar.css';
 import { SidebarProps } from '../../types/sidebar';
 import { Filter } from '../../types/filters';
 import { Category } from '../../types/categories';
-import { generateFilterName } from '../../utils/filterUtils';
-import { useFilter } from '../../hooks/useFilter';
+import { generateExpressionName } from '../../utils/tagExpressionUtils';
+import { useTagExpression } from '../../hooks/useTagExpression';
 import { formatLogicalText } from '../../utils/logicalTextFormatter';
 import { SidebarSettingsModal } from './SidebarSettingsModal';
 import tagExpressionService from '../../services/tagExpressionService';
 import { initializeTags } from '../../utils/tagUtils';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
-  const { activeFilter, activeQuery, handleFilterClick } = useFilter(onFilterChange);
+  const { activeExpression, activeQuery, handleExpressionClick } = useTagExpression(onFilterChange);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -19,15 +19,15 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
 
   const getCategoryClassName = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
 
-  const handleDeleteFilter = async (filterId: string, e: React.MouseEvent) => {
+      const handleDeleteFilter = async (filterId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // 親要素のクリックイベントを停止
     
     try {
       await tagExpressionService.delete(filterId);
       // フィルタリストから削除
       setFilters(filters.filter(f => f.id !== filterId));
-      // アクティブなフィルタの場合はリセット
-      if (activeFilter === filterId) {
+      // アクティブな式の場合はリセット
+      if (activeExpression === filterId) {
         onFilterChange('');
       }
     } catch (error) {
@@ -111,8 +111,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
           {categories.map((category) => (
             <li
               key={category.id}
-              className={`category ${category.color ? 'has-color' : ''} ${activeFilter === category.id ? 'active' : ''} ${category.color ? `category-color--${getCategoryClassName(category.id)}` : ''}`}
-              onClick={() => handleFilterClick(category)}
+              className={`category ${category.color ? 'has-color' : ''} ${activeExpression === category.id ? 'active' : ''} ${category.color ? `category-color--${getCategoryClassName(category.id)}` : ''}`}
+              onClick={() => handleExpressionClick(category)}
             >
               <span className="category-label">
                 <span className="category-name">{category.name}</span>
@@ -122,11 +122,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
           {filters.map((filter) => (
           <li
             key={filter.id}
-            className={`filter ${activeFilter === filter.id ? 'active' : ''}`}
-            onClick={() => handleFilterClick(filter)}
+            className={`filter ${activeExpression === filter.id ? 'active' : ''}`}
+            onClick={() => handleExpressionClick(filter)}
           >
             <span className="filter-name">
-              {formatLogicalText(generateFilterName(filter.orTerms))}
+              {formatLogicalText(generateExpressionName(filter.orTerms))}
             </span>
             <button 
               className="delete-filter-button"

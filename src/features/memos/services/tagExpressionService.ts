@@ -1,7 +1,7 @@
 import type { Filter } from "../types/filters";
 import type { Category } from "../types/categories";
 import type { FilterTerm } from "../types/filterTypes";
-import { evaluateFilterExpression } from "../utils/filterUtils";
+import { evaluateExpression } from "../utils/tagExpressionUtils";
 import { extractTagIds } from '../utils/tagUtils';
 
 export type TagExpressionRaw = any;
@@ -60,7 +60,7 @@ class TagExpressionService {
   matchesExpression(memoTags: Array<string | { id?: string } | any>, orTerms: FilterTerm[] | undefined): boolean {
     if (!orTerms || orTerms.length === 0) return true;
     const ids = extractTagIds(memoTags);
-    return evaluateFilterExpression(ids, orTerms as FilterTerm[]);
+    return evaluateExpression(ids, orTerms as FilterTerm[]);
   }
 
   isMemoMatchingByExpressionId(memoTags: Array<string | { id?: string } | any>, id: string, filters: Filter[], categories: Category[]): boolean {

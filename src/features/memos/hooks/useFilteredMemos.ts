@@ -1,7 +1,7 @@
 import { Memo } from '../types/memo';
 import { SearchTag } from '../types/searchTag';
 import { FilterTerm } from '../types/filterTypes';
-import { evaluateFilterExpression } from '../utils/filterUtils';
+import { evaluateExpression } from '../utils/tagExpressionUtils';
 import { evaluateDateQuery, type DateQueryEvalConfig } from '../utils/dateQueryEvaluator';
 import { useEffect, useState } from 'react';
 import type { Filter } from '../types/filters';

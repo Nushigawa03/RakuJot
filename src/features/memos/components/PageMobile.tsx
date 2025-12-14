@@ -6,11 +6,11 @@ import QuickMemoInput from "./Input/QuickMemoInput";
 import FullScreenMemoInput from "./Input/FullScreenMemoInput";
 import "./PageMobile.css";
 import SwipeArea from "src/components/SwipeArea";
-import { useFilter } from "../hooks/useFilter";
+import { useTagExpression } from "../hooks/useTagExpression";
 import { Filter } from "../types/filters";
 import { Category } from "../types/categories";
 import { SearchTag } from "../types/searchTag";
-import { generateFilterName } from "../utils/filterUtils";
+import { generateExpressionName } from "../utils/tagExpressionUtils";
 import { formatLogicalText } from "../utils/logicalTextFormatter";
 import tagExpressionService from '../services/tagExpressionService';
 
@@ -20,7 +20,7 @@ const PageMobile: React.FC = () => {
   const [queryEmbedding, setQueryEmbedding] = useState<number[] | undefined>(undefined);
   const [filterTags, setFilterTags] = useState<SearchTag[]>([]);
   const [mode, setMode] = useState<'input' | 'list'>('input');
-  const { activeFilter, handleFilterClick } = useFilter((query) => setFilterQuery(query));
+  const { activeExpression, handleExpressionClick } = useTagExpression((query) => setFilterQuery(query));
   const [filters, setFilters] = useState<Filter[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -177,8 +177,8 @@ const PageMobile: React.FC = () => {
                   {categories.map((category) => (
                     <button
                       key={category.id}
-                      onClick={() => handleFilterClick(category)}
-                      className={`page-mobile__pill ${activeFilter === category.id ? 'page-mobile__pill--active' : ''}`}
+                      onClick={() => handleExpressionClick(category)}
+                      className={`page-mobile__pill ${activeExpression === category.id ? 'page-mobile__pill--active' : ''}`}
                     >
                       {category.name}
                     </button>
@@ -186,10 +186,10 @@ const PageMobile: React.FC = () => {
                   {filters.map((filter) => (
                     <button
                       key={filter.id}
-                      onClick={() => handleFilterClick(filter)}
-                      className={`page-mobile__pill ${activeFilter === filter.id ? 'page-mobile__pill--active' : ''}`}
+                      onClick={() => handleExpressionClick(filter)}
+                      className={`page-mobile__pill ${activeExpression === filter.id ? 'page-mobile__pill--active' : ''}`}
                     >
-                      {formatLogicalText(generateFilterName(filter.orTerms))}
+                      {formatLogicalText(generateExpressionName(filter.orTerms))}
                     </button>
                   ))}
                 </div>
