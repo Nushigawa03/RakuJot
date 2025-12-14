@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './TagEditor.css';
-import { Tag } from '../../types/tags';
+import { Tag } from '../../../types/tags';
 
 interface TagEditorProps {
   onClose: () => void;

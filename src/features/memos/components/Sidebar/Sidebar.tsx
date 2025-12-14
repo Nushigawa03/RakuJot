@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import './Sidebar.css';
-import { SidebarProps } from '../types/sidebar';
-import { Filter } from '../types/filters';
-import { Category } from '../types/categories';
-import { generateFilterName } from '../utils/filterUtils';
-import { useFilter } from '../hooks/useFilter';
-import { formatLogicalText } from '../utils/logicalTextFormatter';
+import { SidebarProps } from '../../types/sidebar';
+import { Filter } from '../../types/filters';
+import { Category } from '../../types/categories';
+import { generateFilterName } from '../../utils/filterUtils';
+import { useFilter } from '../../hooks/useFilter';
+import { formatLogicalText } from '../../utils/logicalTextFormatter';
 import { SidebarSettingsModal } from './SidebarSettingsModal';
-import tagExpressionService from '../services/tagExpressionService';
-import { initializeTags } from '../utils/tagUtils';
+import tagExpressionService from '../../services/tagExpressionService';
+import { initializeTags } from '../../utils/tagUtils';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const { activeFilter, activeQuery, handleFilterClick } = useFilter(onFilterChange);

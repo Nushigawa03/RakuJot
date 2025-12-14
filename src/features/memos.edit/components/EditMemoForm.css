@@ -50,6 +50,22 @@
   gap: 8px;
 }
 
+.top-actions-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.top-actions-center .auto-save-indicator,
+.top-actions-center .saving-indicator {
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 0;
+}
+
 .back-button {
   background: transparent;
   color: var(--color-text);
@@ -341,7 +357,7 @@
   flex-shrink: 0;
 }
 
-.memo-title {
+.edit-memo-container .memo-title {
   font-size: 1.6rem;
   font-weight: 700;
   color: #1a1a1a;
@@ -349,13 +365,13 @@
   line-height: 1.4;
 }
 
-.memo-date {
+.edit-memo-container .memo-date {
   font-size: 0.9rem;
   color: #666;
   margin-bottom: 12px;
 }
 
-.memo-tags {
+.edit-memo-container .memo-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;

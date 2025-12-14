@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FilterBase, FilterTerm } from '../../types/filterTypes';
-import { useTagSuggestions } from '../../hooks/useTagSuggestions';
+import { FilterBase, FilterTerm } from '../../../types/filterTypes';
+import { useTagSuggestions } from '../../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './FilterEditor.css';
-import tagExpressionService from '../../services/tagExpressionService';
+import tagExpressionService from '../../../services/tagExpressionService';
 
 const FilterEditor: React.FC = () => {
   const [filters, setFilters] = useState<FilterBase[]>([]);

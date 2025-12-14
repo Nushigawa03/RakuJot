@@ -52,6 +52,28 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
     };
 
     loadAllData();
+
+    // 新規メモ作成時のイベントリスナー
+    const handleMemoSaved = (event: any) => {
+      const newMemo = event.detail;
+      if (newMemo) {
+        setMemos((prevMemos) => {
+          // 既に存在するメモなら更新、なければ追加
+          const existingIndex = prevMemos.findIndex((m) => m.id === newMemo.id);
+          if (existingIndex >= 0) {
+            const updated = [...prevMemos];
+            updated[existingIndex] = newMemo;
+            return updated;
+          }
+          return [newMemo, ...prevMemos];
+        });
+      }
+    };
+
+    window.addEventListener('memoSaved', handleMemoSaved);
+    return () => {
+      window.removeEventListener('memoSaved', handleMemoSaved);
+    };
   }, []);
 
   const filteredMemos = useFilteredMemos(memos, filterQuery, dateQuery, queryEmbedding, filterTags);

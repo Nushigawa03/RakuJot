@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import DetailSearch from './DetailSearch';
 import { useNavigationBarStore } from '../../stores/navigationBarStore';
 import './NavigationBar.css';
-import NewMemo from '../NewMemo/NewMemo';
+import InlineMemoInput from '../Input/InlineMemoInput';
 import { SearchTag } from '../../types/searchTag';
 import { Tag } from '../../types/tags';
 import tagExpressionService from '../../services/tagExpressionService';
@@ -180,6 +180,9 @@ const NavigationBar: React.FC = () => {
 
   const handleNewMemoSave = (memo: { title: string; tags: string[]; date?: string; body?: string }) => {
     console.log('新しいメモが保存されました:', memo);
+    try {
+      window.dispatchEvent(new CustomEvent('memoSaved', { detail: memo }));
+    } catch (e) {}
     setIsCreatingMemo(false); // 保存後に画面を閉じる
   };
 
@@ -240,7 +243,7 @@ const NavigationBar: React.FC = () => {
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'n') {
+      if (e.key === 'n') {
         e.preventDefault();
         setIsCreatingMemo(true);
       }
@@ -256,7 +259,7 @@ const NavigationBar: React.FC = () => {
     <>
       {isCreatingMemo ? (
         <div className="navigation-bar creating-memo">
-          <NewMemo onSave={handleNewMemoSave} onCancel={handleNewMemoCancel} />
+          <InlineMemoInput onSave={handleNewMemoSave} onCancel={handleNewMemoCancel} autoFocus={true} />
         </div>
       ) : (
         <div
@@ -320,7 +323,7 @@ const NavigationBar: React.FC = () => {
               )}
             </div>
             <button className="new-memo-button" onClick={() => setIsCreatingMemo(true)}>
-              新規メモ (Ctrl + N)
+              新規メモ (N)
             </button>
           </div>
           {isFocused && (

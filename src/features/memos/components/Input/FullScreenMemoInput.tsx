@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '~/components';
-import useCreateQuickMemo from '../hooks/useCreateQuickMemo';
+import useCreateQuickMemo from '../../hooks/useCreateQuickMemo';
 import './FullScreenMemoInput.css';
 
 const FullScreenMemoInput: React.FC = () => {
@@ -18,7 +18,8 @@ const FullScreenMemoInput: React.FC = () => {
       if (result.ok) {
         setContent('');
         try {
-          window.dispatchEvent(new CustomEvent('memoSaved', { detail: result.payload }));
+          // dispatch created memo (with id) when available
+          window.dispatchEvent(new CustomEvent('memoSaved', { detail: result.memo ?? result.payload }));
         } catch {}
       } else {
         alert(result.error || '保存に失敗しました。');

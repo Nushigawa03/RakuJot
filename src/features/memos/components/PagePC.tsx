@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import NavigationBar from './NavigationBar/NavigationBar';
 import MemoList from './MemoList';
-import Sidebar from './Sidebar';
-import QuickMemoInput from './QuickMemoInput';
-import { MemoPreview } from './MemoPreview';
+import Sidebar from './Sidebar/Sidebar';
+import QuickMemoInput from './Input/QuickMemoInput';
+import { MemoPreview } from './Sidebar/MemoPreview';
 import './PagePC.css';
 import { SearchTag } from '../types/searchTag';
 

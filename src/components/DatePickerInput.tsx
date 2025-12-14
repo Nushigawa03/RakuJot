@@ -30,7 +30,15 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({ label, value, onChang
       <div className="date-with-picker">
         <input className="date" type="text" placeholder={placeholder} value={value || ''} onChange={(e) => onChange(e.target.value)} />
         <button type="button" className="date-picker-btn" onClick={handleCalendarClick}>📅</button>
-        <input ref={hiddenRef} className="date-picker-hidden" type="date" value={value || ''} onChange={(e) => onChange(e.target.value)} />
+        <input
+          ref={hiddenRef}
+          className="date-picker-hidden"
+          type="date"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
       </div>
     </label>
   );

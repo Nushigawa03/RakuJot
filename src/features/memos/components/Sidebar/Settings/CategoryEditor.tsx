@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Category } from '../../types/categories';
-import { useTagSuggestions } from '../../hooks/useTagSuggestions';
+import { Category } from '../../../types/categories';
+import { useTagSuggestions } from '../../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './CategoryEditor.css';
-import tagExpressionService from '../../services/tagExpressionService';
+import tagExpressionService from '../../../services/tagExpressionService';
 
 const CategoryEditor: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);

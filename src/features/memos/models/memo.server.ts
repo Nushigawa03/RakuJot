@@ -5,6 +5,16 @@ import { mockMemos, shouldUseMockDatabase } from "./mock/mockData";
 import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
 import { normalizeTagName } from "../utils/normalizeTagName";
 
+// Helper function to convert Prisma objects to JSON-serializable format
+const serializeMemo = (memo: any) => {
+  if (!memo) return memo;
+  return {
+    ...memo,
+    createdAt: memo.createdAt instanceof Date ? memo.createdAt.toISOString() : memo.createdAt,
+    updatedAt: memo.updatedAt instanceof Date ? memo.updatedAt.toISOString() : memo.updatedAt,
+  };
+};
+
 export const getMemo = async (id: string) => {
   try {
     // まずモックデータから検索
@@ -17,7 +27,7 @@ export const getMemo = async (id: string) => {
 
     // モックデータになければデータベースから取得
   const memo = await prisma.memo.findUnique({ where: { id }, include: { tags: true } });
-    return memo;
+    return serializeMemo(memo);
   } catch (error) {
     console.error("データベースエラー:", error);
     // データベースエラーの場合、モックデータのみから検索
@@ -41,10 +51,10 @@ export const getMemos = async () => {
     // モックデータを使用する場合は、データベースのデータにモックデータを追加
     if (shouldUseMockDatabase()) {
       console.log("Adding mock database data to existing memos");
-      return [...mockMemos, ...dbMemos];
+      return [...mockMemos, ...dbMemos.map(serializeMemo)];
     }
 
-    return dbMemos;
+    return dbMemos.map(serializeMemo);
   } catch (error) {
     console.error("データベースエラー:", error);
     if (error instanceof PrismaClientInitializationError) {
@@ -103,6 +113,7 @@ export const createMemo = async (data: any) => {
         body: data.body || "",
         createdAt: new Date().toISOString(),
       },
+      include: { tags: true },
     });
 
     // Compute and store embedding separately
@@ -122,7 +133,8 @@ export const createMemo = async (data: any) => {
       });
     }
 
-    return newMemo;
+    // Convert Date fields to ISO strings for JSON serialization
+    return serializeMemo(newMemo);
   } catch (error) {
     console.error("データベースエラー:", error);
     // データベースエラーでもモックモードの場合はメモを作成したことにする
@@ -132,7 +144,7 @@ export const createMemo = async (data: any) => {
         id: `mock-${Date.now()}`,
         title: data.title,
         body: data.body || "",
-        date: data.date || "",
+        date: data.data || "",
         tags: data.tags || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -149,12 +161,13 @@ export const deleteMemo = async (id: string) => {
     // モックデータのIDの場合は処理をスキップ
     if (shouldUseMockDatabase() && id.startsWith('mock-')) {
       console.log("Mock mode: Skipping deletion of mock memo:", id);
-      return;
+      return { success: true };
     }
 
     await prisma.memo.delete({
       where: { id },
     });
+    return { success: true };
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "メモの削除に失敗しました。" };
@@ -222,10 +235,14 @@ export const updateMemo = async (id: string, data: any) => {
       }
     }
 
-    await prisma.memo.update({
+    const updated = await prisma.memo.update({
       where: { id },
       data: updateData,
+      include: { tags: true },
     });
+
+    // Convert Date fields to ISO strings for JSON serialization
+    return serializeMemo(updated);
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "メモの更新に失敗しました。" };

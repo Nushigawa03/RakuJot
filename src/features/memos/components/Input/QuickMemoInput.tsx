@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import useCreateQuickMemo from '../hooks/useCreateQuickMemo';
+import useCreateQuickMemo from '../../hooks/useCreateQuickMemo';
 import './QuickMemoInput.css';
 import { Button } from '~/components';
 
@@ -17,7 +17,8 @@ const QuickMemoInput: React.FC = () => {
       if (result.ok) {
         setTitle('');
         try {
-          window.dispatchEvent(new CustomEvent('memoSaved', { detail: result.payload }));
+          // prefer the server-created memo (with id) if available
+          window.dispatchEvent(new CustomEvent('memoSaved', { detail: result.memo ?? result.payload }));
         } catch {}
       } else {
         alert(result.error || 'メモの保存に失敗しました。');

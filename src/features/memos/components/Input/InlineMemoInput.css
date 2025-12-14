@@ -1,0 +1,131 @@
+.inline-memo-input {
+    width: 100%;
+    padding: 16px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e6e6e6);
+    border-radius: 10px;
+    margin: 12px 0;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.03);
+    position: relative; /* for absolute positioned action buttons */
+    padding-bottom: 72px; /* room for bottom-right action area */
+ }
+
+.inline-memo-input h2 {
+    margin-bottom: 10px;
+}
+
+.inline-memo-input .row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.inline-memo-input input,
+.inline-memo-input textarea {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--border, #e6e6e6);
+        border-radius: 8px;
+        background: var(--input-bg, #fff);
+        font-size: 14px;
+}
+
+.inline-memo-input .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.inline-memo-input .tag {
+    background: var(--tag-bg, #f2f2f2);
+    padding: 6px 10px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+}
+
+.inline-memo-input .tag button {
+        margin-left: 8px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+}
+
+.inline-memo-input .tag-input-wrapper {
+    position: relative;
+    min-width: 200px;
+}
+
+.inline-memo-input .tag-suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e6e6e6);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+    z-index: 40;
+    max-height: 200px;
+    overflow: auto;
+}
+
+.inline-memo-input .tag-suggestion {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.inline-memo-input .tag-suggestion:hover {
+    background: rgba(0,0,0,0.04);
+}
+
+.inline-memo-input .actions {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10;
+}
+
+.inline-memo-input .action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.inline-memo-input .action-buttons button {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.inline-memo-input .action-buttons button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsive: on narrow screens keep buttons in flow under the form */
+@media (max-width: 640px) {
+    .inline-memo-input {
+        padding-bottom: 16px; /* no fixed action area */
+    }
+    .inline-memo-input .actions {
+        position: static;
+        margin-top: 8px;
+        justify-content: flex-end;
+    }
+    .inline-memo-input .action-buttons {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .inline-memo-input .action-buttons button {
+        min-width: 96px;
+    }
+}
