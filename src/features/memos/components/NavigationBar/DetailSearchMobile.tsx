@@ -1,8 +1,8 @@
 import React from 'react';
 import './DetailSearchMobile.css';
 import { SearchTag } from '../../types/searchTag';
-import TagChips from './TagChips';
-import DatePickerInput from './DatePickerInput';
+import TagChips from '~/components/TagChips';
+import DatePickerInput from '~/components/DatePickerInput';
 
 interface DetailSearchMobileProps {
   filterTags: SearchTag[];

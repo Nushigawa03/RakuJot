@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FilterBase, FilterTerm } from '../../types/filterTypes';
 import { useTagSuggestions } from '../../hooks/useTagSuggestions';
-import { TagSuggestionInput } from '../TagSuggestionInput';
+import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './FilterEditor.css';
 import tagExpressionService from '../../services/tagExpressionService';
 

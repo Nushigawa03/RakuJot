@@ -1,0 +1,15 @@
+.tag-suggestion-input { position:relative; display:inline-block; width:100%; }
+.tag-input { width:100%; padding:0.5rem; border:1px solid var(--color-border); border-radius:var(--radius-sm); font-size:0.9rem; transition: border-color 0.2s, box-shadow 0.2s; background:var(--color-bg); color:var(--color-text); }
+.tag-input:focus { outline:none; border-color:var(--color-primary); box-shadow:0 0 0 2px rgba(var(--color-primary-rgb),0.12); }
+.tag-input:disabled { background:var(--color-neutral-bg); cursor:not-allowed; }
+.suggestions-dropdown { position:absolute; top:100%; left:0; right:0; background:var(--color-bg); border:1px solid var(--color-border); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+.suggestion-item { padding:0.75rem; cursor:pointer; border-bottom:1px solid var(--color-border); transition: background-color 0.2s; }
+.suggestion-item:last-child { border-bottom:none; }
+.suggestion-item:hover, .suggestion-item.selected { background:var(--color-neutral-bg); }
+.suggestion-item.selected { background:rgba(var(--color-primary-rgb),0.12); }
+.tag-name { font-weight:500; color:var(--color-text); margin-bottom:0.25rem; }
+.tag-description { font-size:0.8rem; color:#666; line-height:1.3; }
+.no-suggestions { padding:0.75rem; text-align:center; color:#666; font-style:italic; }
+.suggestions-loading { padding:0.75rem; text-align:center; color:#666; }
+.keyboard-help { font-size:0.7rem; color:#999; margin-top:0.25rem; text-align:center; }
+@media (max-width:768px){ .suggestions-dropdown{ max-height:150px; } .suggestion-item{ padding:0.5rem; } .tag-name{ font-size:0.9rem; } .tag-description{ font-size:0.75rem; } }

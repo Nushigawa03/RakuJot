@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import useCreateQuickMemo from '../hooks/useCreateQuickMemo';
 import './QuickMemoInput.css';
+import { Button } from '~/components';
 
 const QuickMemoInput: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -43,11 +44,16 @@ const QuickMemoInput: React.FC = () => {
         onKeyDown={onKeyDown}
         disabled={isSaving}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {error && <div style={{ color: '#dc2626', fontSize: 12 }}>⚠ {error}</div>}
-        <button className="save" onClick={handleSave} disabled={isSaving || !title.trim()}>
+      <div className="quick-memo-actions">
+        {error && <div className="quick-memo-error">⚠ {error}</div>}
+        <Button
+          variant="primary"
+          full
+          onClick={handleSave}
+          disabled={isSaving || !title.trim()}
+        >
           {isSaving ? '保存中...' : '保存'}
-        </button>
+        </Button>
       </div>
     </div>
   );

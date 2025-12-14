@@ -5,6 +5,57 @@
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+:root {
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+
+  /* Base colors */
+  --color-text: #111827;
+  --color-bg: #ffffff;
+
+  /* Primary */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1e4fd8;
+  --color-primary-contrast: #ffffff;
+  --color-primary-rgb: 37,99,235;
+
+  /* Neutral */
+  --color-neutral-bg: #e5e7eb;
+  --color-neutral-fg: #111827;
+
+  /* Danger */
+  --color-danger: #e74c3c;
+  --color-danger-contrast: #ffffff;
+
+  /* Warning */
+  --color-warning: #ff9800;
+  --color-warning-contrast: #ffffff;
+
+  /* Success */
+  --color-success: #4CAF50;
+  --color-success-hover: #45a049;
+  --color-success-contrast: #ffffff;
+  --color-success-bg: #e8f5e9;
+  --color-success-fg: #2e7d32;
+  --color-success-border: #c8e6c9;
+  --color-success-rgb: 76,175,80;
+
+  /* Info */
+  --color-info: #007bff;
+  --color-info-hover: #0056b3;
+  --color-info-contrast: #ffffff;
+
+  /* Borders & Surfaces */
+  --color-border: #e6e6e6;
+  --color-border-focus: rgba(76, 175, 80, 0.6);
+  --color-surface: #fafafa;
+  --color-surface-bg: #f0f0f0;
+
+  /* Misc */
+  --kbd-height: 0px;
+}
+
 html,
 body {
   @apply bg-white dark:bg-gray-950;

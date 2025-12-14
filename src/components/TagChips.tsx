@@ -1,6 +1,6 @@
 import React from 'react';
 import './TagChips.css';
-import { SearchTag } from '../../types/searchTag';
+import type { SearchTag } from "~/features/memos/types/searchTag";
 
 interface TagChipsProps {
   tags: SearchTag[];

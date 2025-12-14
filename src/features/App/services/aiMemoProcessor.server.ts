@@ -1,8 +1,11 @@
-// Lightweight AI processor that calls OpenAI Chat Completions to extract title/tags/date
+// AI processor for extracting structured data (title, tags, date) from memo content
 // Returns an object like: { title?: string, tags?: string[], date?: string | null }
+// This is a shared service used across the application, not specific to memos.
+
 import { GoogleGenAI } from "@google/genai";
 import { buildMemoExtractionInstruction } from "./aiPromptBuilder.server";
-import type { Tag } from "../types/tags";
+
+import type { Tag } from "~/features/memos/types/tags";
 
 export type AiResult = { title?: string; tags?: string[]; date?: string | null };
 

@@ -80,6 +80,6 @@
 }
 
 .tag.highlight {
-  background-color: #007bff;
-  color: white;
+  background-color: var(--color-info);
+  color: var(--color-info-contrast);
 }

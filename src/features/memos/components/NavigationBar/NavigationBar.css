@@ -91,15 +91,15 @@
   .new-memo-button {
     flex-shrink: 0;
     padding: 6px 12px;
-    background-color: #007bff;
-    color: white;
+    background-color: var(--color-info);
+    color: var(--color-info-contrast);
     border: none;
     border-radius: 4px;
     cursor: pointer;
   }
   
   .new-memo-button:hover {
-    background-color: #0056b3;
+    background-color: var(--color-info-hover);
   }
 
   .search-bar-container .tag button {

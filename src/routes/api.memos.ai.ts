@@ -1,5 +1,5 @@
 import type { ActionFunction } from "react-router";
-import { aiMemoProcessor } from "~/features/memos/utils/aiMemoProcessor.server";
+import { aiMemoProcessor } from "~/features/App/services/aiMemoProcessor.server";
 import { getTags } from "~/features/memos/models/tag.server";
 
 export const action: ActionFunction = async ({ request }) => {

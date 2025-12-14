@@ -1,4 +1,4 @@
-import type { Tag } from "../types/tags";
+import type { Tag } from "~/features/memos/types/tags";
 
 /**
  * Build a systemInstruction string for the AI that includes current time and available tags.

@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Tag } from '../hooks/useTagSuggestions';
-import '~/components/TagSuggestionInput.css';
+import React, { useEffect, useRef, useState } from 'react';
+import './TagSuggestionInput.css';
+
+export type Tag = { id: string; name: string; description?: string };
 
 interface TagSuggestionInputProps {
   value: string;
@@ -26,7 +27,6 @@ export const TagSuggestionInput: React.FC<TagSuggestionInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // 入力値が変更されたときの処理
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
@@ -34,78 +34,65 @@ export const TagSuggestionInput: React.FC<TagSuggestionInputProps> = ({
     setSelectedIndex(-1);
   };
 
-  // キーボード操作の処理
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) {
       if (e.key === 'Enter') {
-        e.preventDefault();
-        if (value.trim()) {
-          // 新規タグの場合、一時的なIDを生成
-          const tempId = `new-tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          onSelect(tempId, value.trim());
-        }
+        // Enter で確定（候補がない場合は何もしない）
       }
       return;
     }
 
     switch (e.key) {
       case 'ArrowDown':
+        setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
         e.preventDefault();
-        setSelectedIndex(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : 0
-        );
         break;
       case 'ArrowUp':
+        setSelectedIndex((prev) => Math.max(prev - 1, 0));
         e.preventDefault();
-        setSelectedIndex(prev => 
-          prev > 0 ? prev - 1 : suggestions.length - 1
-        );
         break;
       case 'Enter':
-        e.preventDefault();
         if (selectedIndex >= 0) {
-          onSelect(suggestions[selectedIndex].id, suggestions[selectedIndex].name);
-        } else if (value.trim()) {
-          // 新規タグの場合、一時的なIDを生成
-          const tempId = `new-tag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          onSelect(tempId, value.trim());
+          const tag = suggestions[selectedIndex];
+          onSelect(tag.id, tag.name);
+          setShowSuggestions(false);
         }
+        e.preventDefault();
         break;
       case 'Escape':
         setShowSuggestions(false);
-        setSelectedIndex(-1);
         break;
     }
   };
 
-  // サジェスション項目がクリックされたときの処理
   const handleSuggestionClick = (tag: Tag) => {
     onSelect(tag.id, tag.name);
   };
 
-  // 入力フィールドがフォーカスされたときの処理
   const handleFocus = () => {
     setShowSuggestions(true);
   };
 
-  // 入力フィールドがフォーカスを失ったときの処理
   const handleBlur = () => {
-    // 少し遅延させてサジェスションクリックを可能にする
     setTimeout(() => {
       setShowSuggestions(false);
-      setSelectedIndex(-1);
     }, 200);
   };
 
-  // 選択されたインデックスが変更されたときのスクロール処理
   useEffect(() => {
     if (selectedIndex >= 0 && suggestionsRef.current) {
-      const selectedElement = suggestionsRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedElement) {
-        selectedElement.scrollIntoView({
-          block: 'nearest',
-          behavior: 'smooth'
-        });
+      const container = suggestionsRef.current;
+      const item = container.children[selectedIndex] as HTMLElement | undefined;
+      if (item) {
+        const itemTop = item.offsetTop;
+        const itemBottom = itemTop + item.offsetHeight;
+        const containerTop = container.scrollTop;
+        const containerBottom = containerTop + container.clientHeight;
+        if (itemTop < containerTop) {
+          container.scrollTop = itemTop;
+        } else if (itemBottom > containerBottom) {
+          container.scrollTop = itemBottom - container.clientHeight;
+        }
       }
     }
   }, [selectedIndex]);
@@ -124,14 +111,13 @@ export const TagSuggestionInput: React.FC<TagSuggestionInputProps> = ({
         disabled={disabled}
         className="tag-input"
       />
-      
       {showSuggestions && suggestions.length > 0 && (
-        <div ref={suggestionsRef} className="suggestions-dropdown">
+        <div className="suggestions-dropdown" ref={suggestionsRef}>
           {suggestions.map((tag, index) => (
             <div
               key={tag.id}
-              className={`suggestion-item ${index === selectedIndex ? 'selected' : ''}`}
-              onClick={() => handleSuggestionClick(tag)}
+              className={`suggestion-item ${selectedIndex === index ? 'selected' : ''}`}
+              onMouseDown={() => handleSuggestionClick(tag)}
             >
               <div className="tag-name">{tag.name}</div>
               {tag.description && (
@@ -139,8 +125,14 @@ export const TagSuggestionInput: React.FC<TagSuggestionInputProps> = ({
               )}
             </div>
           ))}
+          <div className="keyboard-help">↑↓で選択 / Enterで決定 / Escで閉じる</div>
         </div>
+      )}
+      {showSuggestions && suggestions.length === 0 && (
+        <div className="no-suggestions">候補がありません</div>
       )}
     </div>
   );
-};
+}
+
+export default TagSuggestionInput;

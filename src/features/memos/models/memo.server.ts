@@ -2,7 +2,7 @@ import prismaPackage from "@prisma/client";
 const { PrismaClientInitializationError, PrismaClientKnownRequestError } = prismaPackage;
 import { prisma } from "~/db.server";
 import { mockMemos, shouldUseMockDatabase } from "./mock/mockData";
-import { computeMemoEmbedding } from "../services/embeddingService";
+import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
 import { normalizeTagName } from "../utils/normalizeTagName";
 
 export const getMemo = async (id: string) => {

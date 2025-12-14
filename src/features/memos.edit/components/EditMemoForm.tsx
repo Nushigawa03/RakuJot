@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '~/components';
 import './EditMemoForm.css';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import { useNavigate } from 'react-router';
@@ -224,34 +225,35 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
   return (
     <div className="edit-memo-container full-screen">
       <div className="top-actions sticky">
-        <button type="button" className="back-button" onClick={() => navigate(-1)}>
+        <Button type="button" className="back-button" variant="secondary" onClick={() => navigate(-1)}>
           ← 戻る
-        </button>
+        </Button>
         <div className="top-actions-right">
-          <button 
+          <Button 
             type="button" 
             className="discard-button"
+            variant="secondary"
             onClick={handleDiscardChanges}
             disabled={historyIndex === 0}
-            title="変更を破棄"
           >
             🔄 破棄
-          </button>
-          <button 
+          </Button>
+          <Button 
             type="button" 
             className="delete-button-top"
+            variant="secondary"
             onClick={handleDeleteClick}
-            title="削除"
           >
             🗑️ 削除
-          </button>
-          <button 
+          </Button>
+          <Button 
             type="button" 
             className="mode-toggle-button"
+            variant="secondary"
             onClick={() => setEditMode(!editMode)}
           >
             {editMode ? '📖 閲覧モード' : '✏️ 詳細編集'}
-          </button>
+          </Button>
         </div>
       </div>
       {lastSaved && (
@@ -293,12 +295,12 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
               <div className="header-top">
                 <h3>✨ 気が向いたら編集できます</h3>
                 <div className="history-controls">
-                  <button className="btn-undo" onClick={handleUndo} disabled={historyIndex <= 0} title="元に戻す">
+                  <Button className="btn-undo" variant="secondary" onClick={handleUndo} disabled={historyIndex <= 0}>
                     ↶
-                  </button>
-                  <button className="btn-redo" onClick={handleRedo} disabled={historyIndex >= history.length - 1} title="やり直す">
+                  </Button>
+                  <Button className="btn-redo" variant="secondary" onClick={handleRedo} disabled={historyIndex >= history.length - 1}>
                     ↷
-                  </button>
+                  </Button>
                 </div>
               </div>
               <p className="quick-edit-description">
@@ -347,12 +349,12 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
                   </div>
                 </div>
                 <div className="suggestion-buttons actions-fixed">
-                  <button className="btn-apply" onClick={(e) => { e.preventDefault(); handleApplySuggestion(); }}>
+                  <Button className="btn-apply" variant="primary" onClick={handleApplySuggestion}>
                     ✓ この内容を適用
-                  </button>
-                  <button className="btn-reject" onClick={(e) => { e.preventDefault(); handleRejectSuggestion(); }}>
+                  </Button>
+                  <Button className="btn-reject" variant="secondary" onClick={handleRejectSuggestion}>
                     ✗ キャンセル
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -366,13 +368,14 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
                   rows={8}
                   disabled={isAiProcessing}
                 />
-                <button 
+                <Button 
                   className="btn-ai-suggest"
+                  variant="primary"
                   onClick={handleAiSuggest}
                   disabled={!quickEditContent.trim() || isAiProcessing}
                 >
                   {isAiProcessing ? '処理中...' : 'クイック編集'}
-                </button>
+                </Button>
               </>
             )}
 
@@ -469,12 +472,8 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
           </div>
           
           <div className="form-actions">
-            <button type="submit" className="save-primary">
-              💾 保存
-            </button>
-            <button type="button" className="delete-secondary" onClick={handleDeleteClick}>
-              🗑️ 削除
-            </button>
+            <Button type="submit" variant="primary">💾 保存</Button>
+            <Button type="button" variant="secondary" onClick={handleDeleteClick}>🗑️ 削除</Button>
           </div>
         </form>
       )}

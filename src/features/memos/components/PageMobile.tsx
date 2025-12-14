@@ -4,7 +4,7 @@ import NavigationBarMobile from "./NavigationBar/NavigationBarMobile";
 import MemoList from "./MemoList";
 import QuickMemoInput from "./QuickMemoInput";
 import FullScreenMemoInput from "./FullScreenMemoInput";
-import "./PagePC.css";
+import "./PageMobile.css";
 import SwipeArea from "src/components/SwipeArea";
 import { useFilter } from "../hooks/useFilter";
 import { Filter } from "../types/filters";
@@ -135,27 +135,12 @@ const PageMobile: React.FC = () => {
 
   return (
     <SwipeArea className="mobile-page" onSwipeUp={handleSwipeUp} onSwipeDown={handleSwipeDown} axis="vertical">
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100dvh' }}>
-        <header onClick={handleTopTap} style={{ touchAction: 'manipulation', flexShrink: 0 }}>
+      <div className="page-mobile">
+        <header className="page-mobile__header" onClick={handleTopTap}>
           {mode === 'input' ? (
-            <div
-              className="input-header"
-              style={{
-                height: 56,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0 12px',
-                background: 'var(--bg, #fff)',
-                borderBottom: '1px solid rgba(0,0,0,0.06)',
-                userSelect: 'none',
-              }}
-            >
-              <div style={{ width: 64, height: 6, borderRadius: 4, background: '#e6e6e6', marginBottom: 6 }} />
-              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)', lineHeight: 1 }}>
-                タップでメモ一覧を表示
-              </div>
+            <div className="page-mobile__handle-card">
+              <div className="page-mobile__handle" />
+              <div className="page-mobile__handle-text">タップでメモ一覧を表示</div>
             </div>
           ) : (
             <NavigationBarMobile
@@ -171,35 +156,19 @@ const PageMobile: React.FC = () => {
           )}
         </header>
 
-        <main style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <main className="page-mobile__main">
           {mode === 'input' ? (
-            // フルスクリーン入力: よりゴージャスな FullScreenMemoInput を中央に表示
-            <section className="quick-input full-screen-input" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <section className="quick-input full-screen-input page-mobile__quick-input">
               <FullScreenMemoInput />
             </section>
           ) : (
-            // 一覧モード: 上部に戻る UI とアクティブフィルター表示
-            <section className="memo-list" style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-              {/* Active Filter UI with search and category buttons */}
-              <div style={{ marginBottom: 12 }}>
-                {/* Categories and Filters as buttons */}
-                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: 4 }}>
-                  {/* Date search clear button (shown when dateQuery is active) */}
+            <section className="memo-list page-mobile__list">
+              <div className="page-mobile__filters">
+                <div className="page-mobile__pill-row">
                   {dateQuery && (
                     <button
                       onClick={() => setDateQuery('')}
-                      style={{
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '4px',
-                        border: '1px solid #fca5a5',
-                        background: '#fee2e2',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        display: 'inline-flex',
-                        flex: '0 0 auto',
-                        fontWeight: 500,
-                        color: '#991b1b',
-                      }}
+                      className="page-mobile__pill page-mobile__pill--danger"
                       title="日付検索をクリア"
                     >
                       📅 {dateQuery} ✕
@@ -209,17 +178,7 @@ const PageMobile: React.FC = () => {
                     <button
                       key={category.id}
                       onClick={() => handleFilterClick(category)}
-                      style={{
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '4px',
-                        border: activeFilter === category.id ? '2px solid #2563eb' : '1px solid #e5e7eb',
-                        background: activeFilter === category.id ? '#e0e7ff' : '#fff',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        // borderLeft: category.color ? `4px solid ${category.color}` : undefined,
-                        display: 'inline-flex',
-                        flex: '0 0 auto',
-                      }}
+                      className={`page-mobile__pill ${activeFilter === category.id ? 'page-mobile__pill--active' : ''}`}
                     >
                       {category.name}
                     </button>
@@ -228,18 +187,7 @@ const PageMobile: React.FC = () => {
                     <button
                       key={filter.id}
                       onClick={() => handleFilterClick(filter)}
-                      style={{
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '4px',
-                        border: activeFilter === filter.id ? '2px solid #2563eb' : '1px solid #e5e7eb',
-                        background: activeFilter === filter.id ? '#e0e7ff' : '#fff',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        display: 'inline-flex',
-                        flex: '0 0 auto',
-                        alignItems: 'center', // テキストを縦中央揃え
-                        lineHeight: 1.2, // テキストの上下余白を抑える
-                      }}
+                      className={`page-mobile__pill ${activeFilter === filter.id ? 'page-mobile__pill--active' : ''}`}
                     >
                       {formatLogicalText(generateFilterName(filter.orTerms))}
                     </button>
@@ -251,8 +199,6 @@ const PageMobile: React.FC = () => {
           )}
         </main>
 
-        {/* QuickMemoInput は入力専用の UI を画面中央に出しているのでフッターは必要ないが、
-            追加の操作を残したければここに置ける */}
         {mode === 'input' ? null : (
           <footer className="fixed bottom-0 left-0 right-0 bg-white border-t">
             <QuickMemoInput />

@@ -1,6 +1,6 @@
 import React from 'react';
-import ToggleSwitch from './ToggleSwitch';
-import DatePickerInput from './DatePickerInput';
+import ToggleSwitch from '~/components/ToggleSwitch';
+import DatePickerInput from '~/components/DatePickerInput';
 import './DetailSearch.css';
 
 interface DetailSearchProps {

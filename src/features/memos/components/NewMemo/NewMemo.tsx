@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './NewMemo.css';
+import { Button, DatePickerInput } from '~/components';
 import { Memo } from '../../types/memo';
 
 interface NewMemoProps {
@@ -84,11 +85,11 @@ const NewMemo: React.FC<NewMemoProps> = ({ onSave, onCancel }) => {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
-      <input
-        type="text"
-        placeholder="日付を入力 (例: 2025-03-23)"
-        value={date || ''}
-        onChange={(e) => setDate(e.target.value)}
+      <DatePickerInput
+        label="日付"
+        value={date ?? null}
+        onChange={(v) => setDate(v || undefined)}
+        placeholder="日付やキーワード（空欄でもOK）"
       />
       <div className="tags">
         {tags.map((tag) => (
@@ -116,8 +117,8 @@ const NewMemo: React.FC<NewMemoProps> = ({ onSave, onCancel }) => {
         onInput={handleTextareaResize} // テキストエリアの高さを調整
       />
       <div className="actions">
-        <button onClick={handleSave}>保存</button>
-        <button onClick={onCancel}>キャンセル (escキー)</button>
+        <Button variant="primary" onClick={handleSave}>保存</Button>
+        <Button variant="secondary" onClick={onCancel}>キャンセル (escキー)</Button>
       </div>
     </div>
   );

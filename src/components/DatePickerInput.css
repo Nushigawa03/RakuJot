@@ -1,0 +1,7 @@
+.date-with-picker { position:relative; display:flex; align-items:center; gap:8px; }
+.date-with-picker input.date { flex:1; padding:8px; border:1px solid var(--color-border); border-radius:4px; font-size:14px; background:var(--color-bg); color:var(--color-text); }
+.date-with-picker input.date:focus { outline:none; border-color:var(--color-primary); box-shadow:0 0 0 2px rgba(var(--color-primary-rgb), 0.1); }
+.date-picker-btn { padding:8px 12px; border:1px solid var(--color-border); border-radius:4px; background:var(--color-bg); cursor:pointer; font-size:16px; transition: background-color 0.2s; }
+.date-picker-btn:hover { background:var(--color-neutral-bg); }
+.date-picker-btn:active { background:rgba(0,0,0,0.05); }
+.date-picker-hidden { position:absolute; right:12px; top:50%; transform:translateY(-50%); width:36px; height:36px; opacity:0; border:none; padding:0; margin:0; background:transparent; }

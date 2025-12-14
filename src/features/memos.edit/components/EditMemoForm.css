@@ -52,28 +52,28 @@
 
 .back-button {
   background: transparent;
-  color: #333;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 6px 10px;
   font-size: 13px;
 }
 .back-button:hover {
-  background: #f5f5f5;
+  background: var(--color-surface);
 }
 
 .discard-button {
-  background: #fff;
-  color: #ff9800;
-  border: 1px solid #ff9800;
-  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
 }
 .discard-button:hover:not(:disabled) {
-  background: #ff9800;
-  color: white;
+  background: var(--color-warning);
+  color: var(--color-warning-contrast);
 }
 .discard-button:disabled {
   opacity: 0.4;
@@ -81,41 +81,41 @@
 }
 
 .delete-button-top {
-  background: #fff;
-  color: #e74c3c;
-  border: 1px solid #e74c3c;
-  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
 }
 .delete-button-top:hover {
-  background: #e74c3c;
-  color: white;
+  background: var(--color-danger);
+  color: var(--color-danger-contrast);
 }
 
 .mode-toggle-button {
-  background: #4CAF50;
-  color: white;
+  background: var(--color-success);
+  color: var(--color-success-contrast);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
 }
 .mode-toggle-button:hover {
-  background: #45a049;
+  background: var(--color-success-hover);
 }
 
 /* 自動保存インジケーター */
 .auto-save-indicator {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--color-success-bg);
+  color: var(--color-success-fg);
   padding: 6px 12px;
   text-align: center;
   font-size: 0.85rem;
   font-weight: 500;
-  border-bottom: 1px solid #c8e6c9;
+  border-bottom: 1px solid var(--color-success-border);
 }
 
 .saving-indicator {
@@ -166,20 +166,20 @@
 .edit-memo-form textarea {
   width: 100%;
   padding: 7px 9px;
-  border: 1px solid #e6e6e6;
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-  background-color: #fff;
+  background-color: var(--color-bg);
 }
 
 .edit-memo-form input:not(.tag-input):focus,
 .edit-memo-form textarea:focus {
   outline: none;
-  border-color: rgba(76, 175, 80, 0.6);
-  background-color: #fff;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.12);
+  border-color: var(--color-border-focus);
+  background-color: var(--color-bg);
+  box-shadow: 0 0 0 2px rgba(var(--color-success-rgb), 0.12);
 }
 
 .edit-memo-form input:not(.tag-input)::placeholder,
@@ -199,31 +199,31 @@
   flex-wrap: wrap;
   gap: 6px;
   padding: 6px 8px;
-  border: 1px solid #e6e6e6; /* 点線から実線へ */
-  border-radius: 6px;
-  background-color: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
   min-height: 40px;
   align-items: center;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 .tags-container:focus-within {
-  border-color: rgba(76, 175, 80, 0.6);
-  background-color: #fff;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.12);
+  border-color: var(--color-border-focus);
+  background-color: var(--color-bg);
+  box-shadow: 0 0 0 2px rgba(var(--color-success-rgb), 0.12);
 }
 
 .tag-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f6fbf7;
-  color: #2c5f31;
+  background: var(--color-success-bg);
+  color: var(--color-success-fg);
   padding: 3px 8px;
   border-radius: 14px;
   font-size: 0.82rem;
   font-weight: 500;
-  border: 1px solid rgba(76, 175, 80, 0.28);
+  border: 1px solid rgba(var(--color-success-rgb), 0.28);
 }
 
 /* 軽量な動きで負荷を減らす: アニメーション除去 */
@@ -231,7 +231,7 @@
 .tag-remove-button {
   background: transparent;
   border: none;
-  color: #2c5f31;
+  color: var(--color-success-fg);
   cursor: pointer;
   padding: 0 2px;
   width: 18px;
@@ -245,7 +245,7 @@
 }
 
 .tag-remove-button:hover {
-  background: rgba(76, 175, 80, 0.08);
+  background: rgba(var(--color-success-rgb), 0.08);
 }
 
 .tag-input-wrapper {
@@ -272,9 +272,9 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid rgba(76, 175, 80, 0.45);
-  border-radius: 6px;
+  background: var(--color-bg);
+  border: 1px solid rgba(var(--color-success-rgb), 0.45);
+  border-radius: var(--radius-sm);
   margin-top: 4px;
   max-height: 160px;
   overflow-y: auto;
@@ -290,65 +290,20 @@
 }
 
 .tag-suggestion:hover {
-  background: #f4fbf5;
+  background: var(--color-success-bg);
 }
 
 .tag-suggestion:not(:last-child) {
   border-bottom: 1px solid #f4f4f4;
 }
 
-/* ボタンスタイル */
+/* ボタンスタイル（shared Buttonに準拠） */
 .form-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
   gap: 10px;
   padding-bottom: 20px;
-}
-
-button {
-  padding: 10px 18px;
-  font-size: 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
-  border: none;
-  letter-spacing: 0.3px;
-}
-
-.save-primary {
-  background: #4CAF50;
-  color: white;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
-}
-
-.save-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 12px rgba(76, 175, 80, 0.25);
-  background: #45a049;
-}
-
-.save-primary:active {
-  transform: translateY(0);
-}
-
-.delete-secondary {
-  background: #fff;
-  color: #e74c3c;
-  border: 2px solid #e74c3c;
-  box-shadow: 0 1px 6px rgba(231, 76, 60, 0.1);
-}
-
-.delete-secondary:hover {
-  background: #e74c3c;
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 12px rgba(231, 76, 60, 0.2);
-}
-
-.delete-secondary:active {
-  transform: translateY(0);
 }
 
 /* レスポンシブ対応 */
@@ -366,11 +321,6 @@ button {
     flex-direction: row;
     gap: 6px;
   }
-
-  button {
-    padding: 9px 16px;
-    font-size: 13px;
-  }
 }
 
 /* 閲覧モード */
@@ -384,8 +334,8 @@ button {
 
 .memo-display {
   padding: 20px 16px;
-  background: #ffffff;
-  border-bottom: 1px solid #e6e6e6;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
   overflow-y: auto;
   max-height: 50vh;
   flex-shrink: 0;
@@ -415,13 +365,13 @@ button {
 .tag-badge {
   display: inline-flex;
   align-items: center;
-  background: #f6fbf7;
-  color: #2c5f31;
+  background: var(--color-success-bg);
+  color: var(--color-success-fg);
   padding: 4px 10px;
   border-radius: 14px;
   font-size: 0.82rem;
   font-weight: 500;
-  border: 1px solid rgba(76, 175, 80, 0.28);
+  border: 1px solid rgba(var(--color-success-rgb), 0.28);
 }
 
 .memo-body {
@@ -444,7 +394,7 @@ button {
   min-height: 0;
   position: relative;
   padding: 16px 12px 24px; /* 下部ボタンなしで余白削減 */
-  background: #fafafa;
+  background: var(--color-surface);
 }
 
 .quick-edit-header {
@@ -461,7 +411,7 @@ button {
 .quick-edit-header h3 {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #2c5f31;
+  color: var(--color-success-fg);
   margin: 0;
 }
 
@@ -480,21 +430,21 @@ button {
 .quick-edit .quick-body {
   width: 100%;
   padding: 10px 12px;
-  border: 2px solid #e6e6e6;
+  border: 2px solid var(--color-border);
   border-radius: 8px;
   font-size: 14px;
   margin-bottom: 8px;
   resize: vertical;
   min-height: 120px;
-  background: white;
+  background: var(--color-bg);
   font-family: inherit;
   line-height: 1.6;
 }
 
 .quick-edit .quick-body:focus {
   outline: none;
-  border-color: #4CAF50;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 3px rgba(var(--color-success-rgb), 0.1);
 }
 
 .quick-edit .quick-body:disabled {
@@ -649,41 +599,6 @@ button {
   right: 12px;
   bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
   z-index: 25; /* 保存削除より優先 */
-}
-
-.btn-apply,
-.btn-reject {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-}
-
-.btn-apply {
-  background: #4CAF50;
-  color: white;
-  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
-}
-
-.btn-apply:hover {
-  background: #45a049;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
-}
-
-.btn-reject {
-  background: white;
-  color: #e74c3c;
-  border: 2px solid #e74c3c;
-}
-
-.btn-reject:hover {
-  background: #e74c3c;
-  color: white;
-  transform: translateY(-1px);
 }
 
 .quick-edit .actions {

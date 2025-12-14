@@ -17,6 +17,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const getCategoryClassName = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
+
   const handleDeleteFilter = async (filterId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // 親要素のクリックイベントを停止
     
@@ -52,6 +54,29 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
     }
   };
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const styleId = 'sidebar-category-color-styles';
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    const rules = categories
+      .filter((category) => category.color)
+      .map(
+        (category) =>
+          `.category-color--${getCategoryClassName(category.id)} { --category-color: ${category.color}; }`
+      )
+      .join('\n');
+
+    styleEl.textContent = rules;
+  }, [categories]);
+
   const handleSettingsDataChange = () => {
     // 設定モーダルでデータが変更された時にリロード
     loadData();
@@ -86,11 +111,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
           {categories.map((category) => (
             <li
               key={category.id}
-              className={`category ${activeFilter === category.id ? 'active' : ''}`}
+              className={`category ${category.color ? 'has-color' : ''} ${activeFilter === category.id ? 'active' : ''} ${category.color ? `category-color--${getCategoryClassName(category.id)}` : ''}`}
               onClick={() => handleFilterClick(category)}
-              style={{ borderLeft: category.color ? `4px solid ${category.color}` : undefined }}
             >
-              {category.name}
+              <span className="category-label">
+                <span className="category-name">{category.name}</span>
+              </span>
             </li>
           ))}
           {filters.map((filter) => (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Category } from '../../types/categories';
 import { useTagSuggestions } from '../../hooks/useTagSuggestions';
-import { TagSuggestionInput } from '../TagSuggestionInput';
+import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './CategoryEditor.css';
 import tagExpressionService from '../../services/tagExpressionService';
 
@@ -24,9 +24,32 @@ const CategoryEditor: React.FC = () => {
   // タグサジェスト機能
   const { getSuggestions, tagExists } = useTagSuggestions();
 
+  // Generate a class-safe identifier for per-category styling.
+  const getCategoryClassName = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
+
   useEffect(() => {
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const styleId = 'category-color-styles';
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    const rules = categories
+      .filter((category) => category.color)
+      .map((category) => `.category-color--${getCategoryClassName(category.id)} { --category-color: ${category.color}; }`)
+      .join('\n');
+
+    styleEl.textContent = rules;
+  }, [categories]);
 
   const loadCategories = async () => {
     try {
@@ -234,10 +257,13 @@ const CategoryEditor: React.FC = () => {
                       )}
                     </h5>
                     {category.color && (
-                      <div 
-                        className="category-color"
-                        style={{ backgroundColor: category.color }}
+                      <div
+                        className={`category-color category-color--${getCategoryClassName(category.id)}`}
+                        aria-hidden="true"
                       />
+                    )}
+                    {category.color && (
+                      <span className="category-color-code">{category.color}</span>
                     )}
                   </div>
                 </div>

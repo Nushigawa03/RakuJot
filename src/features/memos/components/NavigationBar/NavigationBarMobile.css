@@ -50,15 +50,15 @@
   height: 36px;
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-neutral-bg);
   outline: none;
   font-size: 14px;
-  background: #fff;
+  background: var(--color-bg);
 }
 
 .nav-search:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .nav-search::placeholder {
@@ -82,11 +82,11 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
+  background: var(--color-bg);
   border-top: none;
-  border-right: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
-  border-left: 1px solid #e5e7eb;
+  border-right: 1px solid var(--color-neutral-bg);
+  border-bottom: 1px solid var(--color-neutral-bg);
+  border-left: 1px solid var(--color-neutral-bg);
   border-radius: 0 0 8px 8px;
   max-height: 200px;
   overflow-y: auto;

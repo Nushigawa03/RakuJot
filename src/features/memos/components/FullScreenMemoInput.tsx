@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Button } from '~/components';
 import useCreateQuickMemo from '../hooks/useCreateQuickMemo';
 import './FullScreenMemoInput.css';
 
@@ -81,7 +82,9 @@ const FullScreenMemoInput: React.FC = () => {
         <textarea className="content" placeholder="メモを入力..." value={content} onChange={e => setContent(e.target.value)} />
       </div>
       <div className="actions">
-        <button className="save" onClick={handleSave} disabled={isSaving}>{isSaving ? '保存中...' : '保存'}</button>
+        <Button variant="primary" full onClick={handleSave} disabled={isSaving || !content.trim()}>
+          {isSaving ? '保存中...' : '保存'}
+        </Button>
       </div>
     </div>
   );

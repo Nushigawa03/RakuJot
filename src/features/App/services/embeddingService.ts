@@ -2,7 +2,9 @@ import { GoogleGenAI } from "@google/genai";
 
 /**
  * Embedding service - centralized place to handle all embedding-related API calls.
- * Manages Google Gemini embeddings for memos.
+ * Manages Google Gemini embeddings for text content across the application.
+ * 
+ * This is a shared service used by multiple features, not specific to memos.
  */
 
 const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";

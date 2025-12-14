@@ -1,7 +1,7 @@
 .memo-preview-container {
   height: 100%;
-  background: #ffffff;
-  border-left: 1px solid #e6e6e6;
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -32,8 +32,8 @@
 
 .preview-header {
   padding: 20px;
-  border-bottom: 1px solid #e6e6e6;
-  background: #fafafa;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
   flex-shrink: 0;
 }
 
@@ -60,13 +60,13 @@
 .preview-tag {
   display: inline-flex;
   align-items: center;
-  background: #f6fbf7;
-  color: #2c5f31;
+  background: var(--color-success-bg);
+  color: var(--color-success-fg);
   padding: 3px 10px;
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 500;
-  border: 1px solid rgba(76, 175, 80, 0.28);
+  border: 1px solid rgba(var(--color-success-rgb), 0.28);
 }
 
 .preview-body {

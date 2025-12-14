@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Button } from '~/components';
 import './DeleteConfirmModal.css';
 
 interface DeleteConfirmModalProps {
@@ -40,12 +41,12 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
           <p className="warning-text">この操作は取り消せません。</p>
         </div>
         <div className="modal-footer">
-          <button className="cancel-button" onClick={onCancel}>
+          <Button variant="secondary" className="cancel-button" onClick={onCancel}>
             キャンセル
-          </button>
-          <button className="confirm-button" onClick={onConfirm}>
+          </Button>
+          <Button variant="primary" className="confirm-button" onClick={onConfirm}>
             削除する
-          </button>
+          </Button>
         </div>
       </div>
     </div>
