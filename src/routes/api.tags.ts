@@ -1,5 +1,5 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { getTags } from "~/features/drafts/models/tag.server";
+import { getTags } from "~/features/memos/models/tag.server";
 import { prisma } from "~/db.server";
 
 export const loader: LoaderFunction = async () => {

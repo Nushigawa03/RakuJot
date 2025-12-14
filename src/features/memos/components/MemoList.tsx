@@ -100,7 +100,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
         {sortedMemos.map((memo) => (
           <li 
             key={memo.id} 
-            onClick={() => navigate(`/drafts/edit/${memo.id}`)}
+            onClick={() => navigate(`/app/edit/${memo.id}`)}
             onMouseEnter={() => {
               window.dispatchEvent(
                 new CustomEvent('memoHover', {

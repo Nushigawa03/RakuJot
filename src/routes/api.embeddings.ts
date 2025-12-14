@@ -1,5 +1,5 @@
 import type { ActionFunction } from "react-router";
-import { computeEmbeddingsBatch } from "~/features/drafts/services/embeddingService";
+import { computeEmbeddingsBatch } from "~/features/memos/services/embeddingService";
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {

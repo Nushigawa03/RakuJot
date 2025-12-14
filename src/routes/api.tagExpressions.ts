@@ -1,6 +1,6 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { getFilters } from "~/features/drafts/models/filter.server";
-import { getCategories } from "~/features/drafts/models/category.server";
+import { getFilters } from "~/features/memos/models/filter.server";
+import { getCategories } from "~/features/memos/models/category.server";
 import { prisma } from "~/db.server";
 
 export const loader: LoaderFunction = async () => {

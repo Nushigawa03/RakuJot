@@ -53,7 +53,7 @@ const Page: React.FC<PageProps> = ({ memo, availableTags }) => {
         },
         body: JSON.stringify({ id: memo.id }),
       });
-      navigate("/drafts");
+      navigate("/app");
     } catch (err) {
       setError("削除中にエラーが発生しました。");
     }

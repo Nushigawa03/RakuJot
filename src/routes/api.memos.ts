@@ -1,5 +1,5 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { getMemos, createMemo, deleteMemo, updateMemo } from "~/features/drafts/models/memo.server";
+import { getMemos, createMemo, deleteMemo, updateMemo } from "~/features/memos/models/memo.server";
 
 export const loader: LoaderFunction = async () => {
   try {

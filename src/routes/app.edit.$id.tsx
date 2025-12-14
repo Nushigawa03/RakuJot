@@ -1,8 +1,8 @@
 import { useLoaderData } from "react-router";
 import type { LoaderFunction } from "react-router";
-import { getMemo } from "~/features/drafts/models/memo.server";
-import { getTags } from "~/features/drafts/models/tag.server";
-import Page from '~/features/drafts.edit/components/Page';
+import { getMemo } from "~/features/memos/models/memo.server";
+import { getTags } from "~/features/memos/models/tag.server";
+import Page from '~/features/memos.edit/components/Page';
 
 export const loader: LoaderFunction = async ({ params }) => {
   const { id } = params;
