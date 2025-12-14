@@ -1,13 +1,11 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { getFilters, createFilter, updateFilter, deleteFilter } from "~/features/memos/models/filter.server";
-import { getCategories, createCategory, updateCategory, deleteCategory } from "~/features/memos/models/category.server";
+import { getTagExpressions, createTagExpression, updateTagExpression, deleteTagExpression } from "~/features/memos/models/tagExpression.server";
 
 export const loader: LoaderFunction = async () => {
   try {
     // フロントは name の有無でフィルタ/カテゴリを振り分けるため、
-    // 匿名の TagExpression (filters) と名前付きの TagExpression (categories) を両方返す
-    const [filters, categories] = await Promise.all([getFilters(), getCategories()]);
-    const combined = [...filters, ...categories];
+    // 統合された TagExpression をそのまま返す
+    const combined = await getTagExpressions();
     return Response.json(combined);
   } catch (error) {
     console.error("API tagExpressions loader error:", error);
@@ -22,38 +20,19 @@ export const action: ActionFunction = async ({ request }) => {
     switch (request.method) {
       case "POST": {
         const { orTerms, name, color, icon } = body;
-        // name が与えられていたらカテゴリ扱い、無ければ匿名 filter
-        const newExpr = name 
-          ? await createCategory({ orTerms, name, color, icon })
-          : await createFilter({ orTerms });
+        const newExpr = await createTagExpression({ orTerms, name: name ?? null, color, icon });
         return Response.json({ success: true, tagExpression: newExpr });
       }
 
       case "PUT": {
         const { id: updateId, orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon } = body;
-        // 既存の tagExpression を取得してカテゴリかフィルタか判定
-        const combined = [...await getFilters(), ...await getCategories()];
-        const existing = combined.find(e => e.id === updateId);
-        const isCategory = existing && 'name' in existing && existing.name;
-        
-        const updatedExpr = isCategory
-          ? await updateCategory(updateId, { orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon })
-          : await updateFilter(updateId, { orTerms: updateOrTerms });
+        const updatedExpr = await updateTagExpression(updateId, { orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon });
         return Response.json({ success: true, tagExpression: updatedExpr });
       }
 
       case "DELETE": {
         const { id } = body;
-        // 既存の tagExpression を取得してカテゴリかフィルタか判定
-        const combined = [...await getFilters(), ...await getCategories()];
-        const existing = combined.find(e => e.id === id);
-        const isCategory = existing && 'name' in existing && existing.name;
-        
-        if (isCategory) {
-          await deleteCategory(id);
-        } else {
-          await deleteFilter(id);
-        }
+        await deleteTagExpression(id);
         return Response.json({ success: true });
       }
 

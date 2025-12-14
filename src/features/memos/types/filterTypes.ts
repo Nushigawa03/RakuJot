@@ -22,4 +22,7 @@ export interface TagExpressionBase {
 export type FilterTerm = TagExpressionTerm;
 export type FilterBase = TagExpressionBase;
 
+// 新しい主名称（将来的にこちらを使う）
+export type TagExpression = TagExpressionBase;
+
 // 将来的に命名を切り替えたい場合は TagExpression* を使ってください。

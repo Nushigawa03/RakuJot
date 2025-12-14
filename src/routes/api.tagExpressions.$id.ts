@@ -1,6 +1,5 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { getFilter, updateFilter, deleteFilter } from "~/features/memos/models/filter.server";
-import { getCategory, updateCategory, deleteCategory } from "~/features/memos/models/category.server";
+import { getTagExpression, updateTagExpression, deleteTagExpression } from "~/features/memos/models/tagExpression.server";
 
 export const loader: LoaderFunction = async ({ params }) => {
   try {
@@ -9,17 +8,10 @@ export const loader: LoaderFunction = async ({ params }) => {
       return Response.json({ error: "IDが指定されていません" }, { status: 400 });
     }
 
-    // カテゴリまたはフィルタを取得
-    const category = await getCategory(id);
-    if (category) {
-      return Response.json(category);
+    const expr = await getTagExpression(id);
+    if (expr) {
+      return Response.json(expr);
     }
-
-    const filter = await getFilter(id);
-    if (filter) {
-      return Response.json(filter);
-    }
-
     return Response.json({ error: "tagExpression が見つかりません" }, { status: 404 });
   } catch (error) {
     console.error("API tagExpression loader error:", error);
@@ -38,27 +30,12 @@ export const action: ActionFunction = async ({ request, params }) => {
       case "PUT": {
         const body = await request.json();
         const { orTerms, name, color, icon } = body;
-        
-        // 既存の tagExpression を取得してカテゴリかフィルタか判定
-        const category = await getCategory(id);
-        const isCategory = !!category;
-        
-        const updated = isCategory
-          ? await updateCategory(id, { orTerms, name, color, icon })
-          : await updateFilter(id, { orTerms });
+        const updated = await updateTagExpression(id, { orTerms, name, color, icon });
         return Response.json({ success: true, tagExpression: updated });
       }
 
       case "DELETE": {
-        // 既存の tagExpression を取得してカテゴリかフィルタか判定
-        const category = await getCategory(id);
-        const isCategory = !!category;
-        
-        if (isCategory) {
-          await deleteCategory(id);
-        } else {
-          await deleteFilter(id);
-        }
+        await deleteTagExpression(id);
         return Response.json({ success: true });
       }
 

@@ -28,7 +28,7 @@
 3. **ロジック（重要: レイヤー分離原則）**
    - **API Route 層** (`src/routes/api.*`): HTTP リクエスト/レスポンスの処理のみ。薄いレイヤーとして保つ。
    - **Models 層** (`src/features/*/models/*.server.ts`): **データベースCRUD操作**を担当。Prisma を直接使用し、DB操作の責務を集約する。
-     - 例: `memo.server.ts`, `tag.server.ts`, `filter.server.ts`, `category.server.ts`
+     - 例: `memo.server.ts`, `tag.server.ts`, `tagExpression.server.ts`
      - API Route はデータ操作時は**必ず Models 層経由**で行う。
    - **Services 層** (`src/features/*/services/*.ts`): **外部API連携・複雑なビジネスロジック**を担当。
      - 例: `aiMemoProcessor.server.ts` (Google AI API), `embeddingService.ts` (AI Embeddings API)
