@@ -1,5 +1,5 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { prisma } from "~/db.server";
+import { getTag, updateTag, deleteTag } from "~/features/memos/models/tag.server";
 
 export const loader: LoaderFunction = async ({ params }) => {
   try {
@@ -8,19 +8,13 @@ export const loader: LoaderFunction = async ({ params }) => {
       return Response.json({ error: "IDが指定されていません" }, { status: 400 });
     }
 
-    const tag = await prisma.tag.findUnique({
-      where: { id },
-    });
+    const tag = await getTag(id);
 
     if (!tag) {
       return Response.json({ error: "タグが見つかりません" }, { status: 404 });
     }
 
-    return Response.json({
-      id: tag.id,
-      name: tag.name,
-      description: tag.description ?? undefined
-    });
+    return Response.json(tag);
   } catch (error) {
     console.error("API tag loader error:", error);
     return Response.json({ error: "タグの取得に失敗しました" }, { status: 500 });
@@ -38,27 +32,22 @@ export const action: ActionFunction = async ({ request, params }) => {
       case "PUT":
         const body = await request.json();
         const { name, description } = body;
-        const updatedTag = await prisma.tag.update({
-          where: { id },
-          data: {
-            name,
-            description: description || null,
-          },
-        });
+        const updatedTag = await updateTag(id, { name, description });
         return Response.json({ 
           success: true, 
-          tag: {
-            id: updatedTag.id,
-            name: updatedTag.name,
-            description: updatedTag.description ?? undefined
-          }
+          tag: updatedTag
         });
 
       case "DELETE":
-        await prisma.tag.delete({
-          where: { id },
-        });
-        return Response.json({ success: true });
+        try {
+          await deleteTag(id);
+          return Response.json({ success: true });
+        } catch (error) {
+          if (error instanceof Error && error.message.includes("使用されている")) {
+            return Response.json({ error: error.message }, { status: 400 });
+          }
+          throw error;
+        }
 
       default:
         return Response.json({ error: "サポートされていないメソッドです" }, { status: 405 });

@@ -1,7 +1,6 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { getFilters } from "~/features/memos/models/filter.server";
-import { getCategories } from "~/features/memos/models/category.server";
-import { prisma } from "~/db.server";
+import { getFilters, createFilter, updateFilter, deleteFilter } from "~/features/memos/models/filter.server";
+import { getCategories, createCategory, updateCategory, deleteCategory } from "~/features/memos/models/category.server";
 
 export const loader: LoaderFunction = async () => {
   try {
@@ -21,35 +20,42 @@ export const action: ActionFunction = async ({ request }) => {
     const body = await request.json();
 
     switch (request.method) {
-      case "POST":
+      case "POST": {
         const { orTerms, name, color, icon } = body;
         // name が与えられていたらカテゴリ扱い、無ければ匿名 filter
-        const newExpr = await (prisma as any).tagExpression.create({
-          data: {
-            orTerms: orTerms || [],
-            name: name ?? null,
-            color: color || null,
-            icon: icon || null,
-          },
-        });
+        const newExpr = name 
+          ? await createCategory({ orTerms, name, color, icon })
+          : await createFilter({ orTerms });
         return Response.json({ success: true, tagExpression: newExpr });
+      }
 
-      case "PUT":
-        const { id: updateId, orTerms: updateOrTerms } = body;
-        const updatedExpr = await (prisma as any).tagExpression.update({
-          where: { id: updateId },
-          data: {
-            orTerms: updateOrTerms,
-          },
-        });
+      case "PUT": {
+        const { id: updateId, orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon } = body;
+        // 既存の tagExpression を取得してカテゴリかフィルタか判定
+        const combined = [...await getFilters(), ...await getCategories()];
+        const existing = combined.find(e => e.id === updateId);
+        const isCategory = existing && 'name' in existing && existing.name;
+        
+        const updatedExpr = isCategory
+          ? await updateCategory(updateId, { orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon })
+          : await updateFilter(updateId, { orTerms: updateOrTerms });
         return Response.json({ success: true, tagExpression: updatedExpr });
+      }
 
-      case "DELETE":
+      case "DELETE": {
         const { id } = body;
-        await (prisma as any).tagExpression.delete({
-          where: { id },
-        });
+        // 既存の tagExpression を取得してカテゴリかフィルタか判定
+        const combined = [...await getFilters(), ...await getCategories()];
+        const existing = combined.find(e => e.id === id);
+        const isCategory = existing && 'name' in existing && existing.name;
+        
+        if (isCategory) {
+          await deleteCategory(id);
+        } else {
+          await deleteFilter(id);
+        }
         return Response.json({ success: true });
+      }
 
       default:
         return Response.json({ error: "サポートされていないメソッドです" }, { status: 405 });

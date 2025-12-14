@@ -32,3 +32,50 @@ export const getFilter = async (id: string): Promise<FilterBase | null> => {
     return null;
   }
 };
+
+export const createFilter = async (data: { orTerms: FilterBase['orTerms'] }): Promise<FilterBase> => {
+  try {
+    const newExpr = await (prisma as any).tagExpression.create({
+      data: {
+        orTerms: data.orTerms || [],
+        name: null, // フィルタは匿名
+      },
+    });
+    return {
+      id: newExpr.id,
+      orTerms: newExpr.orTerms
+    };
+  } catch (error) {
+    console.error("フィルタの作成エラー:", error);
+    throw error;
+  }
+};
+
+export const updateFilter = async (id: string, data: { orTerms: FilterBase['orTerms'] }): Promise<FilterBase> => {
+  try {
+    const updatedExpr = await (prisma as any).tagExpression.update({
+      where: { id },
+      data: {
+        orTerms: data.orTerms,
+      },
+    });
+    return {
+      id: updatedExpr.id,
+      orTerms: updatedExpr.orTerms
+    };
+  } catch (error) {
+    console.error("フィルタの更新エラー:", error);
+    throw error;
+  }
+};
+
+export const deleteFilter = async (id: string): Promise<void> => {
+  try {
+    await (prisma as any).tagExpression.delete({
+      where: { id },
+    });
+  } catch (error) {
+    console.error("フィルタの削除エラー:", error);
+    throw error;
+  }
+};

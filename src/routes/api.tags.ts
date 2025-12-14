@@ -1,6 +1,5 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
-import { getTags } from "~/features/memos/models/tag.server";
-import { prisma } from "~/db.server";
+import { getTags, createTag, updateTag, deleteTag } from "~/features/memos/models/tag.server";
 
 export const loader: LoaderFunction = async () => {
   try {
@@ -19,50 +18,28 @@ export const action: ActionFunction = async ({ request }) => {
     switch (request.method) {
       case "POST":
         const { name, description } = body;
-        const newTag = await prisma.tag.create({
-          data: {
-            name,
-            description: description || null,
-          },
-        });
+        const newTag = await createTag({ name, description });
         return Response.json({ 
           success: true, 
-          tag: {
-            id: newTag.id,
-            name: newTag.name,
-            description: newTag.description ?? undefined
-          }
+          tag: newTag
         });
 
       case "PUT":
         const { id, ...updateData } = body;
-        const updatedTag = await prisma.tag.update({
-          where: { id },
-          data: updateData,
-        });
+        const updatedTag = await updateTag(id, updateData);
         return Response.json({ success: true, tag: updatedTag });
 
       case "DELETE":
         const { id: deleteId } = body;
-        // タグを使用しているメモがないか確認
-        const memoCount = await prisma.memo.count({
-          where: {
-            tags: {
-              some: { id: deleteId }
-            }
+        try {
+          await deleteTag(deleteId);
+          return Response.json({ success: true });
+        } catch (error) {
+          if (error instanceof Error && error.message.includes("使用されている")) {
+            return Response.json({ error: error.message }, { status: 400 });
           }
-        });
-        
-        if (memoCount > 0) {
-          return Response.json({ 
-            error: `このタグは${memoCount}個のメモで使用されているため削除できません` 
-          }, { status: 400 });
+          throw error;
         }
-        
-        await prisma.tag.delete({
-          where: { id: deleteId },
-        });
-        return Response.json({ success: true });
 
       default:
         return Response.json({ error: "サポートされていないメソッドです" }, { status: 405 });

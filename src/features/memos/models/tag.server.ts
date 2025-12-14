@@ -44,3 +44,66 @@ export const getTagById = async (id: string): Promise<string> => {
     return id;
   }
 };
+
+export const createTag = async (data: { name: string; description?: string }): Promise<Tag> => {
+  try {
+    const newTag = await prisma.tag.create({
+      data: {
+        name: data.name,
+        description: data.description || null,
+      },
+    });
+    return {
+      id: newTag.id,
+      name: newTag.name,
+      description: newTag.description ?? undefined
+    };
+  } catch (error) {
+    console.error("タグの作成エラー:", error);
+    throw error;
+  }
+};
+
+export const updateTag = async (id: string, data: { name?: string; description?: string }): Promise<Tag> => {
+  try {
+    const updatedTag = await prisma.tag.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description || null }),
+      },
+    });
+    return {
+      id: updatedTag.id,
+      name: updatedTag.name,
+      description: updatedTag.description ?? undefined
+    };
+  } catch (error) {
+    console.error("タグの更新エラー:", error);
+    throw error;
+  }
+};
+
+export const deleteTag = async (id: string): Promise<void> => {
+  try {
+    // タグを使用しているメモがないか確認
+    const memoCount = await prisma.memo.count({
+      where: {
+        tags: {
+          some: { id }
+        }
+      }
+    });
+    
+    if (memoCount > 0) {
+      throw new Error(`このタグは${memoCount}個のメモで使用されているため削除できません`);
+    }
+    
+    await prisma.tag.delete({
+      where: { id },
+    });
+  } catch (error) {
+    console.error("タグの削除エラー:", error);
+    throw error;
+  }
+};
