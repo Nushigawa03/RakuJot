@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './Sidebar.css';
 import { SidebarProps } from '../../types/sidebar';
-import { Filter } from '../../types/filters';
-import { Category } from '../../types/categories';
+import { TagExpression } from '../../types/tagExpressions';
 import { generateExpressionName } from '../../utils/tagExpressionUtils';
 import { useTagExpression } from '../../hooks/useTagExpression';
 import { formatLogicalText } from '../../utils/logicalTextFormatter';
@@ -12,26 +11,20 @@ import { initializeTags } from '../../utils/tagUtils';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const { activeExpression, activeQuery, handleExpressionClick } = useTagExpression(onFilterChange);
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [expressions, setExpressions] = useState<TagExpression[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getCategoryClassName = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const getExpressionClassName = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
 
-      const handleDeleteFilter = async (filterId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // 親要素のクリックイベントを停止
-    
+  const handleDeleteExpression = async (expressionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
-      await tagExpressionService.delete(filterId);
-      // フィルタリストから削除
-      setFilters(filters.filter(f => f.id !== filterId));
-      // アクティブな式の場合はリセット
-      if (activeExpression === filterId) {
-        onFilterChange('');
-      }
+      await tagExpressionService.delete(expressionId);
+      setExpressions(expressions.filter(x => x.id !== expressionId));
+      if (activeExpression === expressionId) onFilterChange('');
     } catch (error) {
-      console.error('フィルタ削除エラー:', error);
+      console.error('式削除エラー:', error);
     }
   };
 
@@ -42,13 +35,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      // タグを最初に初期化してからフィルタ/カテゴリを読み込む
       await initializeTags();
-      const { filters: f, categories: c } = await tagExpressionService.load();
-      setFilters(f);
-      setCategories(c);
+      const exprs = await tagExpressionService.load();
+      setExpressions(exprs || []);
     } catch (error) {
-      console.error('フィルタ・カテゴリの読み込みエラー:', error);
+      console.error('TagExpression の読み込みエラー:', error);
     } finally {
       setIsLoading(false);
     }
@@ -66,19 +57,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
       document.head.appendChild(styleEl);
     }
 
-    const rules = categories
-      .filter((category) => category.color)
-      .map(
-        (category) =>
-          `.category-color--${getCategoryClassName(category.id)} { --category-color: ${category.color}; }`
-      )
+    const named = expressions.filter(e => e.name);
+    const rules = named
+      .filter((e) => e.color)
+      .map((e) => `.category-color--${getExpressionClassName(e.id)} { --category-color: ${e.color}; }`)
       .join('\n');
 
     styleEl.textContent = rules;
-  }, [categories]);
+  }, [expressions]);
 
   const handleSettingsDataChange = () => {
-    // 設定モーダルでデータが変更された時にリロード
     loadData();
   };
 
@@ -86,68 +74,70 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
     <div className="sidebar">
       <div className="sidebar-header">
         <h3>
-          タグ・カテゴリ
+          タグと式
           <span className="tooltip">
             <span className="tooltip-icon">?</span>
             <span className="tooltip-text">
               タグはメモに直接付けられたラベルです。
               <br />
-              カテゴリは複数のタグ検索条件をまとめたものです。
+              式は複数のタグ検索条件をまとめたものです。
             </span>
           </span>
         </h3>
-        <button 
+        <button
           className="settings-button"
           onClick={() => setIsSettingsOpen(true)}
-          title="タグ・フィルタ・カテゴリを編集"
+          title="タグと式を編集"
         >
           ⚙️
         </button>
       </div>
+
       {isLoading ? (
         <div className="sidebar-loading">読み込み中...</div>
       ) : (
         <ul>
-          {categories.map((category) => (
+          {expressions.filter(e => e.name).map((expr) => (
             <li
-              key={category.id}
-              className={`category ${category.color ? 'has-color' : ''} ${activeExpression === category.id ? 'active' : ''} ${category.color ? `category-color--${getCategoryClassName(category.id)}` : ''}`}
-              onClick={() => handleExpressionClick(category)}
+              key={expr.id}
+              className={`category ${expr.color ? 'has-color' : ''} ${activeExpression === expr.id ? 'active' : ''} ${expr.color ? `category-color--${getExpressionClassName(expr.id)}` : ''}`}
+              onClick={() => handleExpressionClick(expr)}
             >
               <span className="category-label">
-                <span className="category-name">{category.name}</span>
+                <span className="category-name">{expr.name}</span>
               </span>
             </li>
           ))}
-          {filters.map((filter) => (
-          <li
-            key={filter.id}
-            className={`filter ${activeExpression === filter.id ? 'active' : ''}`}
-            onClick={() => handleExpressionClick(filter)}
-          >
-            <span className="filter-name">
-              {formatLogicalText(generateExpressionName(filter.orTerms))}
-            </span>
-            <button 
-              className="delete-filter-button"
-              onClick={(e) => handleDeleteFilter(filter.id, e)}
-              title="フィルタを削除"
+
+          {expressions.filter(e => !e.name).map((expr) => (
+            <li
+              key={expr.id}
+              className={`filter ${activeExpression === expr.id ? 'active' : ''}`}
+              onClick={() => handleExpressionClick(expr)}
             >
-              ×
-            </button>
-          </li>
-        ))}
+              <span className="filter-name">
+                {formatLogicalText(generateExpressionName(expr.orTerms))}
+              </span>
+              <button
+                className="delete-filter-button"
+                onClick={(e) => handleDeleteExpression(expr.id, e)}
+                title="式を削除"
+              >
+                ×
+              </button>
+            </li>
+          ))}
         </ul>
       )}
 
       {activeQuery && (
-        <div className="filter-details">
+        <div className="expression-details">
           <h4>詳細</h4>
           <p>{formatLogicalText(activeQuery)}</p>
         </div>
       )}
 
-      <SidebarSettingsModal 
+      <SidebarSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onDataChange={handleSettingsDataChange}

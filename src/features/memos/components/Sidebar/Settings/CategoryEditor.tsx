@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Category } from '../../../types/categories';
+import { TagExpression } from '../../../types/tagExpressions';
 import { useTagSuggestions } from '../../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './CategoryEditor.css';
 import tagExpressionService from '../../../services/tagExpressionService';
 
 const CategoryEditor: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categories, setCategories] = useState<TagExpression[]>([]);
+  const [editingCategory, setEditingCategory] = useState<TagExpression | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;
@@ -54,8 +54,9 @@ const CategoryEditor: React.FC = () => {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const { categories: cats } = await tagExpressionService.load();
-      setCategories(cats);
+      const exprs = await tagExpressionService.load();
+      const cats = exprs.filter((e: any) => !!e.name);
+      setCategories(cats as any);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
@@ -70,7 +71,7 @@ const CategoryEditor: React.FC = () => {
     setError(null);
   };
 
-  const handleEditCategory = (category: Category) => {
+  const handleEditCategory = (category: TagExpression) => {
     // モックデータ（mock-で始まるID）の場合は編集できない旨を表示
     if (category.id.startsWith('mock-')) {
       setError('モックデータは編集できません');

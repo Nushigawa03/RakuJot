@@ -1,36 +1,13 @@
-import { FilterTerm } from '../types/filterTypes';
-import type { Filter } from '../types/filters';
-import type { Category } from '../types/categories';
-
-// タグがフィルタ条件でハイライトされるべきかを判定
+// タグが現在の検索クエリでハイライトされるべきかを判定
+// シンプル化: このユーティリティはタグID、任意の文字列クエリ、およびメモ内タグ配列のみを受け取る
 export const shouldHighlightTag = (
-  tagId: string, 
-  filterQuery: string, 
-  memoTags: string[], 
-  filters: Filter[] = [], 
-  categories: Category[] = []
+  tagId: string,
+  query: string,
+  memoTags: string[]
 ): boolean => {
-  if (!filterQuery) return false;
-  
-  // フィルタIDまたはカテゴリIDでフィルタリング
-  const filter = filters.find(f => f.id === filterQuery);
-  const category = categories.find(c => c.id === filterQuery);
-  
-  if (filter) {
-    return isTagInFilterExpression(tagId, filter.orTerms);
-  }
-  
-  if (category) {
-    return isTagInFilterExpression(tagId, category.orTerms);
-  }
-  
-  // 従来のクエリ文字列形式の場合
-  return filterQuery.includes(tagId);
-};
+  if (!query) return false;
 
-// タグがフィルタ表現に含まれているかチェック
-function isTagInFilterExpression(tagId: string, orTerms: FilterTerm[]): boolean {
-  return orTerms.some(term => 
-    term.include.includes(tagId) || term.exclude.includes(tagId)
-  );
-}
+  // 現在はクエリがタグIDを含むかどうかを基準にハイライト
+  // 将来的にクエリが TagExpression ID の場合は別途評価できるよう拡張可能
+  return query.includes(tagId);
+};

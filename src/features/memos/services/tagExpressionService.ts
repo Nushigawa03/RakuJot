@@ -1,24 +1,18 @@
-import type { Filter } from "../types/filters";
-import type { Category } from "../types/categories";
-import type { FilterTerm } from "../types/filterTypes";
+import type { TagExpression, TagExpressionTerm } from "../types/tagExpressions";
 import { evaluateExpression } from "../utils/tagExpressionUtils";
 import { extractTagIds } from '../utils/tagUtils';
 
 export type TagExpressionRaw = any;
 
 class TagExpressionService {
-  async load(): Promise<{ filters: Filter[]; categories: Category[] }> {
+  async load(): Promise<TagExpression[]> {
     const resp = await fetch('/api/tagExpressions');
     if (!resp.ok) throw new Error('tagExpressions の取得に失敗しました');
     const data = await resp.json();
-
-    const filters = (data as any[]).filter(d => !d.name) as Filter[];
-    const categories = (data as any[]).filter(d => !!d.name) as Category[];
-
-    return { filters, categories };
+    return data as TagExpression[];
   }
 
-  async create(data: { orTerms: FilterTerm[]; name?: string | null; color?: string | null; icon?: string | null }) {
+  async create(data: { orTerms: TagExpressionTerm[]; name?: string | null; color?: string | null; icon?: string | null }) {
     const resp = await fetch('/api/tagExpressions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -28,7 +22,7 @@ class TagExpressionService {
     return resp.json();
   }
 
-  async update(id: string, data: { orTerms?: FilterTerm[]; name?: string | null; color?: string | null; icon?: string | null }) {
+  async update(id: string, data: { orTerms?: TagExpressionTerm[]; name?: string | null; color?: string | null; icon?: string | null }) {
     const resp = await fetch(`/api/tagExpressions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -48,27 +42,21 @@ class TagExpressionService {
     return resp.json();
   }
 
-  findFilterById(filters: Filter[], id: string): Filter | undefined {
-    return filters.find(f => f.id === id);
-  }
-
-  findCategoryById(categories: Category[], id: string): Category | undefined {
-    return categories.find(c => c.id === id);
+  findExpressionById(expressions: TagExpression[], id: string): TagExpression | undefined {
+    return expressions.find(e => e.id === id);
   }
 
   // memo.tags が string[] あるいは Tag[] のどちらでも受け取れるようにする
-  matchesExpression(memoTags: Array<string | { id?: string } | any>, orTerms: FilterTerm[] | undefined): boolean {
+  matchesExpression(memoTags: Array<string | { id?: string } | any>, orTerms: TagExpressionTerm[] | undefined): boolean {
     if (!orTerms || orTerms.length === 0) return true;
     const ids = extractTagIds(memoTags);
-    return evaluateExpression(ids, orTerms as FilterTerm[]);
+    return evaluateExpression(ids, orTerms as TagExpressionTerm[]);
   }
 
-  isMemoMatchingByExpressionId(memoTags: Array<string | { id?: string } | any>, id: string, filters: Filter[], categories: Category[]): boolean {
-    const f = this.findFilterById(filters, id);
-    if (f) return this.matchesExpression(memoTags, f.orTerms);
-    const c = this.findCategoryById(categories, id);
-    if (c) return this.matchesExpression(memoTags, c.orTerms);
-    return false;
+  isMemoMatchingByExpressionId(memoTags: Array<string | { id?: string } | any>, id: string, expressions: TagExpression[]): boolean {
+    const expr = this.findExpressionById(expressions, id);
+    if (!expr) return false;
+    return this.matchesExpression(memoTags, expr.orTerms);
   }
 }
 

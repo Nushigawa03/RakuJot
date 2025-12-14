@@ -7,8 +7,7 @@ import FullScreenMemoInput from "./Input/FullScreenMemoInput";
 import "./PageMobile.css";
 import SwipeArea from "src/components/SwipeArea";
 import { useTagExpression } from "../hooks/useTagExpression";
-import { Filter } from "../types/filters";
-import { Category } from "../types/categories";
+import { TagExpression } from "../types/tagExpressions";
 import { SearchTag } from "../types/searchTag";
 import { generateExpressionName } from "../utils/tagExpressionUtils";
 import { formatLogicalText } from "../utils/logicalTextFormatter";
@@ -21,8 +20,7 @@ const PageMobile: React.FC = () => {
   const [filterTags, setFilterTags] = useState<SearchTag[]>([]);
   const [mode, setMode] = useState<'input' | 'list'>('input');
   const { activeExpression, handleExpressionClick } = useTagExpression((query) => setFilterQuery(query));
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [expressions, setExpressions] = useState<TagExpression[]>([]);
 
   const navigate = useNavigate();
 
@@ -125,11 +123,10 @@ const PageMobile: React.FC = () => {
 
   const loadFiltersAndCategories = async () => {
     try {
-      const { filters: f, categories: c } = await tagExpressionService.load();
-      setFilters(f);
-      setCategories(c);
+      const exprs = await tagExpressionService.load();
+      setExpressions(exprs as any);
     } catch (error) {
-      console.error('フィルタ・カテゴリの読み込みエラー:', error);
+      console.error('TagExpression の読み込みエラー:', error);
     }
   };
 
@@ -174,24 +171,28 @@ const PageMobile: React.FC = () => {
                       📅 {dateQuery} ✕
                     </button>
                   )}
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => handleExpressionClick(category)}
-                      className={`page-mobile__pill ${activeExpression === category.id ? 'page-mobile__pill--active' : ''}`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                  {filters.map((filter) => (
-                    <button
-                      key={filter.id}
-                      onClick={() => handleExpressionClick(filter)}
-                      className={`page-mobile__pill ${activeExpression === filter.id ? 'page-mobile__pill--active' : ''}`}
-                    >
-                      {formatLogicalText(generateExpressionName(filter.orTerms))}
-                    </button>
-                  ))}
+                  {expressions
+                    .filter(e => !!e.name)
+                    .map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => handleExpressionClick(category)}
+                        className={`page-mobile__pill ${activeExpression === category.id ? 'page-mobile__pill--active' : ''}`}
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                  {expressions
+                    .filter(e => !e.name)
+                    .map((filter) => (
+                      <button
+                        key={filter.id}
+                        onClick={() => handleExpressionClick(filter)}
+                        className={`page-mobile__pill ${activeExpression === filter.id ? 'page-mobile__pill--active' : ''}`}
+                      >
+                        {formatLogicalText(generateExpressionName(filter.orTerms))}
+                      </button>
+                    ))}
                 </div>
               </div>
               <MemoList filterQuery={filterQuery} dateQuery={dateQuery} queryEmbedding={queryEmbedding} filterTags={filterTags} />

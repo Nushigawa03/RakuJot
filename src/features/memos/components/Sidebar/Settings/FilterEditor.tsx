@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { FilterBase, FilterTerm } from '../../../types/filterTypes';
+import { TagExpression, TagExpressionTerm } from '../../../types/tagExpressions';
 import { useTagSuggestions } from '../../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './FilterEditor.css';
 import tagExpressionService from '../../../services/tagExpressionService';
 
 const FilterEditor: React.FC = () => {
-  const [filters, setFilters] = useState<FilterBase[]>([]);
-  const [editingFilter, setEditingFilter] = useState<FilterBase | null>(null);
+  const [filters, setFilters] = useState<TagExpression[]>([]);
+  const [editingFilter, setEditingFilter] = useState<TagExpression | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<{
-    orTerms: FilterTerm[];
+    orTerms: TagExpressionTerm[];
   }>({
     orTerms: []
   });
@@ -44,9 +44,9 @@ const FilterEditor: React.FC = () => {
   const loadFilters = async () => {
     try {
       setLoading(true);
-      const { filters: f, categories: c } = await tagExpressionService.load();
+      const exprs = await tagExpressionService.load();
       // 旧来の挙動を保つため、全ての TagExpression をまとめてセット
-      setFilters([...f, ...c] as any);
+      setFilters(exprs as any);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
     } finally {
@@ -70,7 +70,7 @@ const FilterEditor: React.FC = () => {
     setError(null);
   };
 
-  const handleEditFilter = (filter: FilterBase) => {
+  const handleEditFilter = (filter: TagExpression) => {
     // モックデータ（mock-で始まるID）の場合は編集できない旨を表示
     if (filter.id.startsWith('mock-')) {
       setError('モックデータは編集できません');
@@ -174,7 +174,7 @@ const FilterEditor: React.FC = () => {
       return;
     }
 
-    const newTerm: FilterTerm = {
+    const newTerm: TagExpressionTerm = {
       include: [...termForm.include],
       exclude: [...termForm.exclude]
     };

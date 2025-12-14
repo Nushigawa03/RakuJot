@@ -7,9 +7,6 @@ import { Memo, MemoListProps } from "../types/memo";
 import { memoService } from "../services/memoService";
 import { getTagNameById, initializeTags } from "../utils/tagUtils";
 import { shouldHighlightTag } from "../utils/tagHighlight";
-import type { Filter } from "../types/filters";
-import type { Category } from "../types/categories";
-import tagExpressionService from '../services/tagExpressionService';
 
 const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, filterTags }) => {
   // デバッグ用: タグを常に表示するかどうか
@@ -18,8 +15,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortKey, setSortKey] = useState<"date" | "title">("date");
   const [memos, setMemos] = useState<Memo[]>([]);
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // 全データを一括で取得
@@ -31,18 +27,12 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
         // タグを最初に初期化してから、並行して他のデータを取得
         await initializeTags();
         
-        const [memosData, exprsResult] = await Promise.all([
-          memoService.getMemos(),
-          tagExpressionService.load(),
-        ]);
+        const memosData = await memoService.getMemos();
 
         console.log("Number of memos:", memosData.length);
         setMemos(memosData);
         
-        if (exprsResult) {
-          setFilters(exprsResult.filters);
-          setCategories(exprsResult.categories);
-        }
+        // expression lists are no longer stored here
         
         setIsDataLoaded(true);
       } catch (error) {
@@ -153,13 +143,13 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
             <span className="memo-title">{memo.title}</span>
             {(DEBUG_ALWAYS_SHOW_TAGS || filterQuery) && (
               <span className="memo-tags">
-                {(memo.tags || []).map((tag: any) => {
+                  {(memo.tags || []).map((tag: any) => {
                   // tagがオブジェクト(Tag)ならidを、文字列ならそのまま
                   const tagId = typeof tag === 'string' ? tag : tag.id;
                   return (
                     <span
                       key={tagId}
-                      className={`tag ${shouldHighlightTag(tagId, filterQuery, memo.tags, filters, categories) ? "highlight" : ""}`}
+                      className={`tag ${shouldHighlightTag(tagId, filterQuery, memo.tags) ? "highlight" : ""}`}
                     >
                       {getTagNameById(tagId)}
                     </span>

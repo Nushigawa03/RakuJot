@@ -1,6 +1,6 @@
 import { mockFilters, mockCategories, shouldUseMockDatabase } from "./mock/mockData";
 import { prisma } from "../../../db.server";
-import type { TagExpression } from "../types/filterTypes";
+import type { TagExpression } from "../types/tagExpressions";
 
 export const getTagExpressions = async (): Promise<TagExpression[]> => {
   try {

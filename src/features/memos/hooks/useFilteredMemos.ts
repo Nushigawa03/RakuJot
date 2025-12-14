@@ -1,25 +1,22 @@
 import { Memo } from '../types/memo';
 import { SearchTag } from '../types/searchTag';
-import { FilterTerm } from '../types/filterTypes';
+import { TagExpressionTerm } from '../types/tagExpressions';
 import { evaluateExpression } from '../utils/tagExpressionUtils';
 import { evaluateDateQuery, type DateQueryEvalConfig } from '../utils/dateQueryEvaluator';
 import { useEffect, useState } from 'react';
-import type { Filter } from '../types/filters';
-import type { Category } from '../types/categories';
+import type { TagExpression } from '../types/tagExpressions';
 import tagExpressionService from '../services/tagExpressionService';
 
 export const useFilteredMemos = (memos: Memo[], filterQuery: string, dateQuery?: string, queryEmbedding?: number[], filterTags?: SearchTag[]): Memo[] => {
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [expressions, setExpressions] = useState<TagExpression[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const { filters: f, categories: c } = await tagExpressionService.load();
-        setFilters(f);
-        setCategories(c);
+        const exprs = await tagExpressionService.load();
+        setExpressions(exprs);
       } catch (error) {
-        console.error('フィルタ・カテゴリの読み込みエラー:', error);
+        console.error('TagExpression の読み込みエラー:', error);
       }
     };
 
@@ -37,7 +34,7 @@ export const useFilteredMemos = (memos: Memo[], filterQuery: string, dateQuery?:
       const memoTags = memo.tags || [];
 
       // まず TagExpression サービス経由で判定
-      const matched = tagExpressionService.isMemoMatchingByExpressionId(memoTags, filterQuery, filters, categories);
+      const matched = tagExpressionService.isMemoMatchingByExpressionId(memoTags, filterQuery, expressions);
       if (matched) return true;
 
       // 従来のクエリ文字列形式もサポート（後方互換性）

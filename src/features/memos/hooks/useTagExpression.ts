@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TagExpression, FilterTerm } from '../types/filterTypes';
+import { TagExpression } from '../types/tagExpressions';
 import { getTagNameById, initializeTags } from '../utils/tagUtils';
 import { generateExpressionName } from '../utils/tagExpressionUtils';
 

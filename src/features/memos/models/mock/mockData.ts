@@ -1,6 +1,5 @@
 import type { Tag } from "../../types/tags";
-import type { Filter } from "../../types/filters";
-import type { Category } from "../../types/categories";
+import type { TagExpression } from "../../types/tagExpressions";
 
 // モックメモデータ
 export const mockMemos = [
@@ -61,7 +60,7 @@ export const mockTags: Tag[] = [
 ];
 
 // モックフィルタデータ
-export const mockFilters: Filter[] = [
+export const mockFilters: TagExpression[] = [
   {
     id: 'work',
     orTerms: [{ include: ['work'], exclude: [] }]
@@ -84,7 +83,7 @@ export const mockFilters: Filter[] = [
 ];
 
 // モックカテゴリデータ
-export const mockCategories: Category[] = [
+export const mockCategories: TagExpression[] = [
   { 
     id: 'important_idea', 
     name: '重要なアイデア', 

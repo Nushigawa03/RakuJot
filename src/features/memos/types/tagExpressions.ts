@@ -6,7 +6,7 @@ export interface TagExpressionTerm {
   exclude: string[]; // AND で結合（含まないタグID）
 }
 
-export interface TagExpressionBase {
+export interface TagExpression {
   id: string;
   // Prisma 側では Json 型で保存されるため、読み書き時に変換して扱います
   orTerms: TagExpressionTerm[];
@@ -17,12 +17,3 @@ export interface TagExpressionBase {
   createdAt?: string | null;
   updatedAt?: string | null;
 }
-
-// 互換性のため既存の名前をエイリアスとして残す
-export type FilterTerm = TagExpressionTerm;
-export type FilterBase = TagExpressionBase;
-
-// 新しい主名称（将来的にこちらを使う）
-export type TagExpression = TagExpressionBase;
-
-// 将来的に命名を切り替えたい場合は TagExpression* を使ってください。
