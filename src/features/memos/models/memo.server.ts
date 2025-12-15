@@ -3,7 +3,7 @@ const { PrismaClientInitializationError, PrismaClientKnownRequestError } = prism
 import { prisma } from "~/db.server";
 import { mockMemos, shouldUseMockDatabase } from "./mock/mockData";
 import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
-import { normalizeTagName } from "../utils/normalizeTagName";
+import { ensureTags } from "./tag.server";
 
 // Helper function to convert Prisma objects to JSON-serializable format
 const serializeMemo = (memo: any) => {
@@ -83,24 +83,15 @@ export const getMemos = async () => {
 
 export const createMemo = async (data: any) => {
   try {
-    if (!data.title) {
-      return { error: "タイトルが必要です。" };
+    // サーバー側バリデーション
+    const v = validateMemoInput(data, false);
+    if (!v.ok) {
+      return { error: "入力が無効です。", details: v.errors };
     }
 
-    // 既存タグ一覧を取得
-    const existingTags = await prisma.tag.findMany();
-    const normalizedExisting = existingTags.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
-    const tagsToConnect: { name: string }[] = [];
-    const tagsToCreate: { name: string }[] = [];
-    (data.tags || []).forEach((tagName: string) => {
-      const norm = normalizeTagName(tagName);
-      const found = normalizedExisting.find(t => t._norm === norm);
-      if (found) {
-        tagsToConnect.push({ name: found.name });
-      } else {
-        tagsToCreate.push({ name: tagName });
-      }
-    });
+    // タグを確実に存在させ、接続用オブジェクトを作る（ensureTags で責務を分離）
+    const ensuredTags = await ensureTags(data.tags || []);
+    const tagsToConnect = ensuredTags.map(t => ({ id: t.id }));
 
     const newMemo = await prisma.memo.create({
       data: {
@@ -108,7 +99,6 @@ export const createMemo = async (data: any) => {
         date: data.date || "",
         tags: {
           connect: tagsToConnect,
-          create: tagsToCreate,
         },
         body: data.body || "",
         createdAt: new Date().toISOString(),
@@ -187,37 +177,20 @@ export const updateMemo = async (id: string, data: any) => {
     
     // タグが指定されている場合の処理
     if (tags !== undefined) {
-      // 既存タグ一覧を取得
-      const existingTags = await prisma.tag.findMany();
-      const normalizedExisting = existingTags.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
-      const tagsToConnect: { name: string }[] = [];
-      const tagsToCreate: { name: string }[] = [];
-      
-      (tags || []).forEach((tagName: string) => {
-        const norm = normalizeTagName(tagName);
-        const found = normalizedExisting.find(t => t._norm === norm);
-        if (found) {
-          tagsToConnect.push({ name: found.name });
-        } else {
-          tagsToCreate.push({ name: tagName });
-        }
-      });
+      // タグを確実に存在させ、接続用オブジェクトを作る（ensureTags で責務を分離）
+      const ensuredTags = await ensureTags(tags || []);
+      const tagsToConnect = ensuredTags.map(t => ({ id: t.id }));
 
-      // 現在のメモに紐づいているタグをクリア
-      await prisma.memo.update({
-        where: { id },
-        data: {
-          tags: {
-            set: [], // すべてのタグをクリア
-          }
-        }
-      });
-
-      // 新しいタグを設定
+      // メモのタグを置換（原子的に置き換え）
       updateData.tags = {
-        connect: tagsToConnect,
-        create: tagsToCreate,
+        set: tagsToConnect,
       };
+    }
+
+    // Validate partial input
+    const v = validateMemoInput(updateData, true);
+    if (!v.ok) {
+      return { error: "入力が無効です。", details: v.errors };
     }
 
     // If title, date, or body are being updated, recalculate embedding
@@ -235,11 +208,14 @@ export const updateMemo = async (id: string, data: any) => {
       }
     }
 
-    const updated = await prisma.memo.update({
-      where: { id },
-      data: updateData,
-      include: { tags: true },
-    });
+    // Apply update in a transaction for atomicity
+    const [updated] = await prisma.$transaction([
+      prisma.memo.update({
+        where: { id },
+        data: updateData,
+        include: { tags: true },
+      }),
+    ]);
 
     // Convert Date fields to ISO strings for JSON serialization
     return serializeMemo(updated);
@@ -247,4 +223,44 @@ export const updateMemo = async (id: string, data: any) => {
     console.error("データベースエラー:", error);
     return { error: "メモの更新に失敗しました。" };
   }
+};
+
+// Server-side input validation for memo create/update
+const validateMemoInput = (data: any, partial = false) => {
+  const errors: Record<string, string> = {};
+
+  if (!partial || data.title !== undefined) {
+    if (data.title === undefined || typeof data.title !== 'string' || !data.title.trim()) {
+      errors.title = 'タイトルは必須です';
+    } else if (data.title.length > 200) {
+      errors.title = 'タイトルは200文字以内で入力してください';
+    }
+  }
+
+  if (!partial || data.body !== undefined) {
+    if (data.body !== undefined && typeof data.body !== 'string') {
+      errors.body = '本文は文字列である必要があります';
+    } else if (typeof data.body === 'string' && data.body.length > 10000) {
+      errors.body = '本文が長すぎます';
+    }
+  }
+
+  if (!partial || data.tags !== undefined) {
+    if (data.tags !== undefined) {
+      if (!Array.isArray(data.tags)) {
+        errors.tags = 'tags は配列である必要があります';
+      } else {
+        for (let i = 0; i < data.tags.length; i++) {
+          const t = data.tags[i];
+          if (typeof t !== 'string' || !t.trim()) {
+            errors[`tags[${i}]`] = 'タグは空でない文字列である必要があります';
+          } else if (t.length > 100) {
+            errors[`tags[${i}]`] = 'タグが長すぎます';
+          }
+        }
+      }
+    }
+  }
+
+  return Object.keys(errors).length ? { ok: false, errors } : { ok: true };
 };

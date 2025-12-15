@@ -1,6 +1,7 @@
 import { mockTags, shouldUseMockDatabase } from "./mock/mockData";
 import { prisma } from "../../../db.server";
 import type { Tag } from "../types/tags";
+import { normalizeTagName } from "../utils/normalizeTagName";
 
 export const getTags = async (): Promise<Tag[]> => {
   try {
@@ -106,4 +107,36 @@ export const deleteTag = async (id: string): Promise<void> => {
     console.error("タグの削除エラー:", error);
     throw error;
   }
+};
+
+export const ensureTags = async (names: string[]): Promise<Tag[]> => {
+  if (!names || names.length === 0) return [];
+
+  const uniqueNames = Array.from(new Set(names.map(n => (n || "").trim()).filter(Boolean)));
+
+  // 既存タグを取得して正規化で比較
+  const existingTags = await prisma.tag.findMany();
+  const normalizedExisting = existingTags.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
+
+  const toCreate: string[] = [];
+  const ensured: Tag[] = [];
+
+  uniqueNames.forEach(name => {
+    const norm = normalizeTagName(name);
+    const found = normalizedExisting.find(t => t._norm === norm);
+    if (found) {
+      ensured.push({ id: found.id, name: found.name, description: found.description ?? undefined });
+    } else {
+      toCreate.push(name);
+    }
+  });
+
+  if (toCreate.length > 0) {
+    // create をトランザクションでまとめる
+    const creates = toCreate.map(n => prisma.tag.create({ data: { name: n, description: null } }));
+    const created = await prisma.$transaction(creates);
+    created.forEach(t => ensured.push({ id: t.id, name: t.name, description: t.description ?? undefined }));
+  }
+
+  return ensured;
 };
