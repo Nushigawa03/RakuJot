@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { TagEditor } from './Settings/TagEditor';
-import { FilterEditor } from './Settings/FilterEditor';
-import { CategoryEditor } from './Settings/CategoryEditor';
+import { ExpressionEditor } from './Settings/ExpressionEditor';
 import './SidebarSettingsModal.css';
 
 interface SidebarSettingsModalProps {
@@ -10,7 +9,7 @@ interface SidebarSettingsModalProps {
   onDataChange?: () => void; // データが変更された時のコールバック
 }
 
-type TabType = 'tags' | 'filters' | 'categories';
+type TabType = 'tags' | 'expressions';
 
 export const SidebarSettingsModal: React.FC<SidebarSettingsModalProps> = ({
   isOpen,
@@ -48,23 +47,16 @@ export const SidebarSettingsModal: React.FC<SidebarSettingsModalProps> = ({
             タグ
           </button>
           <button
-            className={`tab-button ${activeTab === 'filters' ? 'active' : ''}`}
-            onClick={() => handleTabChange('filters')}
+            className={`tab-button ${activeTab === 'expressions' ? 'active' : ''}`}
+            onClick={() => handleTabChange('expressions')}
           >
-            フィルタ
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'categories' ? 'active' : ''}`}
-            onClick={() => handleTabChange('categories')}
-          >
-            カテゴリ
+            分類
           </button>
         </div>
 
         <div className="sidebar-settings-modal-content">
           {activeTab === 'tags' && <TagEditor />}
-          {activeTab === 'filters' && <FilterEditor />}
-          {activeTab === 'categories' && <CategoryEditor />}
+          {activeTab === 'expressions' && <ExpressionEditor />}
         </div>
       </div>
     </div>

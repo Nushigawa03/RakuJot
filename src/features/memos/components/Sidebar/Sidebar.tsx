@@ -74,13 +74,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
     <div className="sidebar">
       <div className="sidebar-header">
         <h3>
-          タグと式
+          タグ分類
           <span className="tooltip">
             <span className="tooltip-icon">?</span>
             <span className="tooltip-text">
-              タグはメモに直接付けられたラベルです。
-              <br />
-              式は複数のタグ検索条件をまとめたものです。
+              検索条件は命名可能です。
             </span>
           </span>
         </h3>
