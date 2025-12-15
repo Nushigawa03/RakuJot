@@ -67,6 +67,13 @@ export const initializeTags = async (): Promise<void> => {
   await fetchTags();
 };
 
+// 強制的にタグキャッシュを再取得する
+export const refreshTags = async (): Promise<void> => {
+  // キャッシュフラグをクリアしてfetchTagsを呼ぶ
+  isTagsCached = false;
+  await fetchTags();
+};
+
 // 与えられた tags フィールドから ID の配列を取り出すユーティリティ
 export const extractTagIds = (tags: Array<string | { id?: string; name?: string } | any> | undefined): string[] => {
   if (!tags) return [];

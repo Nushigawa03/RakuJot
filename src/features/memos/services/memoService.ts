@@ -1,6 +1,7 @@
 import type { Memo } from "../types/memo";
 import { tagService } from './tagService';
 import { normalizeTagName } from '../utils/normalizeTagName';
+import { refreshTags } from '../utils/tagUtils';
 export type AiResult = { title?: string; tags?: string[]; date?: string; [k: string]: any };
 export type MemoPayload = { title: string; body: string; tags: string[]; date?: string };
 
@@ -38,6 +39,13 @@ export class MemoService {
       }
       // return created memo object when available
       const d = await resp.json().catch(() => null);
+      // try to refresh tag cache so UI/components see newly created tags
+      try {
+        await refreshTags();
+      } catch (e) {
+        // don't fail memo creation if tag refresh fails
+        console.warn('refreshTags failed after createMemo:', e);
+      }
       return { ok: true, memo: d };
     } catch (e: any) {
       return { ok: false, error: e?.message || '保存中にエラーが発生しました' };

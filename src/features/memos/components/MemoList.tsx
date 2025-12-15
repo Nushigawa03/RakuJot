@@ -44,9 +44,11 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
     loadAllData();
 
     // 新規メモ作成時のイベントリスナー
-    const handleMemoSaved = (event: any) => {
+    const handleMemoSaved = async (event: any) => {
       const newMemo = event.detail;
       if (newMemo) {
+        // 新しいタグが追加されている可能性があるので、タグ一覧を更新
+        await initializeTags();
         setMemos((prevMemos) => {
           // 既に存在するメモなら更新、なければ追加
           const existingIndex = prevMemos.findIndex((m) => m.id === newMemo.id);

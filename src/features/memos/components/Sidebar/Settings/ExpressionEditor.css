@@ -228,26 +228,82 @@
   color: #666;
 }
 
-.tag-condition-form {
+.help-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.must-condition-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.condition-group {
+.must-section,
+.must-not-section {
   background-color: #f8f9fa;
   padding: 1rem;
   border-radius: 8px;
   border: 1px solid #e9ecef;
 }
 
-.condition-group h6 {
+.must-section h6,
+.must-not-section h6 {
   margin: 0 0 1rem 0;
   color: #495057;
   font-size: 1rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.must-section {
+  border-left: 4px solid #28a745;
+}
+
+.must-not-section {
+  border-left: 4px solid #dc3545;
+}
+
+.tag-chip.must-chip {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border-color: #c8e6c9;
+}
+
+.tag-chip.must-not-chip {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-color: #ffcdd2;
+}
+
+.condition-preview {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+  border: 1px solid #e9ecef;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.condition-preview .preview-icon {
+  font-size: 1.2rem;
+  margin-top: 0.1rem;
+}
+
+.condition-preview .preview-text {
+  flex: 1;
+  color: #495057;
+}
+
+.condition-preview .preview-text strong {
+  color: #333;
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 .tag-input-area {
@@ -297,9 +353,49 @@
   padding: 0.3rem 0.6rem;
 }
 
-.tag-chip.tiny {
+.tag-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 0.5rem;
+}
+
+.main-tag-chip {
+  align-self: flex-start;
+}
+
+.alternative-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-left: 1rem;
+}
+
+.alt-label {
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.tag-chip.alt-chip {
   font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  padding: 0.3rem 0.5rem;
+  opacity: 0.8;
+}
+
+.add-alternative {
+  margin-left: 1rem;
+  max-width: 200px;
+}
+
+.add-alternative input {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
 }
 
 .tag-icon {

@@ -5,12 +5,89 @@ import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './ExpressionEditor.css';
 import tagExpressionService from '../../../services/tagExpressionService';
 
+// 直積計算関数
+function cartesianProduct<T>(arrays: T[][]): T[][] {
+  if (arrays.length === 0) return [[]];
+  return arrays.reduce<T[][]>((acc, arr) => {
+    const res: T[][] = [];
+    for (const a of acc) {
+      for (const v of arr) res.push([...a, v]);
+    }
+    return res;
+  }, [[]]);
+}
+
+// must/mustNot を orTerms に変換
+function mustMustNotToOrTerms(must: string[][], mustNot: string[], maxTerms = 200): TagExpressionTerm[] {
+  const effective = must.filter(bucket => bucket && bucket.length > 0);
+  if (effective.length === 0) {
+    return [{ include: [], exclude: mustNot }];
+  }
+  const combos = cartesianProduct(effective);
+  if (combos.length > maxTerms) {
+    throw new Error(`条件の組み合わせが多すぎます（${combos.length} > ${maxTerms}）。グループ/タグ数を減らしてください。`);
+  }
+  return combos.map(combo => ({ include: combo, exclude: [...mustNot] }));
+}
+
+// 新規タグ作成と置換
+async function resolveNewTagPlaceholders(
+  terms: TagExpressionTerm[],
+  newTagNames: Record<string, string>
+): Promise<TagExpressionTerm[]> {
+  const placeholderIds = new Set<string>();
+  for (const t of terms) {
+    for (const id of [...t.include, ...t.exclude]) {
+      if (typeof id === 'string' && id.startsWith('new-tag-')) placeholderIds.add(id);
+    }
+  }
+  const mapping: Record<string, string> = {};
+  for (const ph of placeholderIds) {
+    const name = newTagNames[ph] || ph;
+    const res = await fetch('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    if (!res.ok) throw new Error(`タグ「${name}」の作成に失敗しました`);
+    const j = await res.json();
+    mapping[ph] = j.tag.id;
+  }
+  return terms.map(t => ({
+    include: t.include.map(id => mapping[id] || id),
+    exclude: t.exclude.map(id => mapping[id] || id),
+  }));
+}
+
 export const ExpressionEditor: React.FC = () => {
   const [expressions, setExpressions] = useState<TagExpression[]>([]);
   const [editingExpr, setEditingExpr] = useState<TagExpression | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [formData, setFormData] = useState<{ name?: string; color?: string; icon?: string; orTerms: TagExpressionTerm[] }>({ name: '', color: '', icon: '', orTerms: [] });
-  const [termForm, setTermForm] = useState<any>({ include: [], exclude: [], includeNames: [], excludeNames: [], newIncludeTag: '', newExcludeTag: '', newTagNames: {} });
+  const [formData, setFormData] = useState<{
+    name?: string;
+    color?: string;
+    icon?: string;
+    must: Array<{
+      main: string;
+      mainName: string;
+      alternatives: string[];
+      alternativeNames: string[];
+    }>;
+    newMustTag: string;
+    mustNot: Array<{
+      main: string;
+      mainName: string;
+      alternatives: string[];
+      alternativeNames: string[];
+    }>;
+    newMustNotTag: string;
+  }>({
+    name: '',
+    color: '',
+    icon: '',
+    must: [],
+    newMustTag: '',
+    mustNot: [],
+    newMustNotTag: ''
+  });
+  const [newTagInputs, setNewTagInputs] = useState<Record<string, string>>({});
+  const [newTagNames, setNewTagNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,8 +112,17 @@ export const ExpressionEditor: React.FC = () => {
   const handleCreate = () => {
     setEditingExpr(null);
     setIsCreating(true);
-    setFormData({ name: '', color: '', icon: '', orTerms: [] });
-    setTermForm({ include: [], exclude: [], includeNames: [], excludeNames: [], newIncludeTag: '', newExcludeTag: '', newTagNames: {} });
+    setFormData({
+      name: '',
+      color: '',
+      icon: '',
+      must: [],
+      newMustTag: '',
+      mustNot: [],
+      newMustNotTag: ''
+    });
+    setNewTagInputs({});
+    setNewTagNames({});
     setError(null);
   };
 
@@ -47,81 +133,244 @@ export const ExpressionEditor: React.FC = () => {
     }
     setEditingExpr(expr);
     setIsCreating(false);
-    setFormData({ name: expr.name || '', color: expr.color || '', icon: expr.icon || '', orTerms: [...expr.orTerms] });
-    setTermForm({ include: [], exclude: [], includeNames: [], excludeNames: [], newIncludeTag: '', newExcludeTag: '', newTagNames: {} });
+    // orTermsからmust/mustNotを逆変換（簡易版：最初のtermのincludeをmust、excludeをmustNotとする）
+    const must: Array<{
+      main: string;
+      mainName: string;
+      alternatives: string[];
+      alternativeNames: string[];
+    }> = [];
+    const mustNot: Array<{
+      main: string;
+      mainName: string;
+      alternatives: string[];
+      alternativeNames: string[];
+    }> = [];
+
+    if (expr.orTerms.length > 0) {
+      const firstTerm = expr.orTerms[0];
+      // includeタグをmustに変換（最初のタグをメイン、それ以外を代替として扱う）
+      if (firstTerm.include.length > 0) {
+        must.push({
+          main: firstTerm.include[0],
+          mainName: getTagName(firstTerm.include[0]),
+          alternatives: firstTerm.include.slice(1),
+          alternativeNames: firstTerm.include.slice(1).map(id => getTagName(id))
+        });
+      }
+      // excludeタグをmustNotに変換
+      if (firstTerm.exclude.length > 0) {
+        mustNot.push({
+          main: firstTerm.exclude[0],
+          mainName: getTagName(firstTerm.exclude[0]),
+          alternatives: firstTerm.exclude.slice(1),
+          alternativeNames: firstTerm.exclude.slice(1).map(id => getTagName(id))
+        });
+      }
+    }
+
+    setFormData({
+      name: expr.name || '',
+      color: expr.color || '',
+      icon: expr.icon || '',
+      must,
+      newMustTag: '',
+      mustNot,
+      newMustNotTag: ''
+    });
+    setNewTagInputs({});
+    setNewTagNames({});
     setError(null);
   };
 
-  const handleAddIncludeTag = (tagId: string, tagName: string) => {
+  const handleAddMustTag = (tagId: string, tagName: string) => {
     if (!tagId.trim()) return;
     const trimmed = tagId.trim();
-    if (termForm.include.includes(trimmed)) { setError('そのタグは既に追加されています'); return; }
-    if (termForm.exclude.includes(trimmed)) { setError('そのタグは除外タグに含まれています'); return; }
-    setTermForm((prev: any) => ({ ...prev, include: [...prev.include, trimmed], includeNames: [...prev.includeNames, tagName], newTagNames: { ...prev.newTagNames, ...(trimmed.startsWith('new-tag-') ? { [trimmed]: tagName } : {}) }, newIncludeTag: '' }));
+    // 既に存在するかチェック
+    if (formData.must.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは既に追加されています');
+      return;
+    }
+    if (formData.mustNot.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは除外タグに含まれています');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      must: [...prev.must, {
+        main: trimmed,
+        mainName: tagName,
+        alternatives: [],
+        alternativeNames: []
+      }],
+      newMustTag: ''
+    }));
+    setNewTagNames(prev => ({ ...prev, ...(trimmed.startsWith('new-tag-') ? { [trimmed]: tagName } : {}) }));
     setError(null);
   };
 
-  const handleAddExcludeTag = (tagId: string, tagName: string) => {
+  const handleRemoveMust = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      must: prev.must.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddMustAlternative = (mustIndex: number, tagId: string, tagName: string) => {
     if (!tagId.trim()) return;
     const trimmed = tagId.trim();
-    if (termForm.exclude.includes(trimmed)) { setError('そのタグは既に追加されています'); return; }
-    if (termForm.include.includes(trimmed)) { setError('そのタグは含むタグに含まれています'); return; }
-    setTermForm((prev: any) => ({ ...prev, exclude: [...prev.exclude, trimmed], excludeNames: [...prev.excludeNames, tagName], newTagNames: { ...prev.newTagNames, ...(trimmed.startsWith('new-tag-') ? { [trimmed]: tagName } : {}) }, newExcludeTag: '' }));
+    // 既に存在するかチェック
+    if (formData.must.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは既に追加されています');
+      return;
+    }
+    if (formData.mustNot.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは除外タグに含まれています');
+      return;
+    }
+    setFormData(prev => {
+      const newMust = [...prev.must];
+      newMust[mustIndex] = {
+        ...newMust[mustIndex],
+        alternatives: [...newMust[mustIndex].alternatives, trimmed],
+        alternativeNames: [...newMust[mustIndex].alternativeNames, tagName]
+      };
+      return { ...prev, must: newMust };
+    });
+    setNewTagNames(prev => ({ ...prev, ...(trimmed.startsWith('new-tag-') ? { [trimmed]: tagName } : {}) }));
     setError(null);
   };
 
-  const handleRemoveInclude = (index: number) => setTermForm((prev: any) => ({ ...prev, include: prev.include.filter((_: any, i: number) => i !== index), includeNames: prev.includeNames.filter((_: any, i: number) => i !== index) }));
-  const handleRemoveExclude = (index: number) => setTermForm((prev: any) => ({ ...prev, exclude: prev.exclude.filter((_: any, i: number) => i !== index), excludeNames: prev.excludeNames.filter((_: any, i: number) => i !== index) }));
+  const handleRemoveMustAlternative = (mustIndex: number, altIndex: number) => {
+    setFormData(prev => {
+      const newMust = [...prev.must];
+      newMust[mustIndex] = {
+        ...newMust[mustIndex],
+        alternatives: newMust[mustIndex].alternatives.filter((_, i) => i !== altIndex),
+        alternativeNames: newMust[mustIndex].alternativeNames.filter((_, i) => i !== altIndex)
+      };
+      return { ...prev, must: newMust };
+    });
+  };
 
-  const handleAddTerm = () => {
-    if (termForm.include.length === 0 && termForm.exclude.length === 0) { setError('含むタグまたは除外するタグを最低1つ指定してください'); return; }
-    const newTerm: TagExpressionTerm = { include: [...termForm.include], exclude: [...termForm.exclude] };
-    setFormData((prev) => ({ ...prev, orTerms: [...prev.orTerms, newTerm] }));
-    setTermForm({ include: [], exclude: [], includeNames: [], excludeNames: [], newIncludeTag: '', newExcludeTag: '', newTagNames: {} });
+  const handleAddMustNotTag = (tagId: string, tagName: string) => {
+    if (!tagId.trim()) return;
+    const trimmed = tagId.trim();
+    if (formData.mustNot.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは既に追加されています');
+      return;
+    }
+    if (formData.must.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは必須タグに含まれています');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      mustNot: [...prev.mustNot, {
+        main: trimmed,
+        mainName: tagName,
+        alternatives: [],
+        alternativeNames: []
+      }],
+      newMustNotTag: ''
+    }));
+    setNewTagNames(prev => ({ ...prev, ...(trimmed.startsWith('new-tag-') ? { [trimmed]: tagName } : {}) }));
     setError(null);
   };
 
-  const handleRemoveTerm = (index: number) => setFormData((prev) => ({ ...prev, orTerms: prev.orTerms.filter((_: any, i: number) => i !== index) }));
+  const handleRemoveMustNot = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      mustNot: prev.mustNot.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddMustNotAlternative = (mustNotIndex: number, tagId: string, tagName: string) => {
+    if (!tagId.trim()) return;
+    const trimmed = tagId.trim();
+    // 既に存在するかチェック
+    if (formData.mustNot.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは既に追加されています');
+      return;
+    }
+    if (formData.must.some(item => item.main === trimmed || item.alternatives.includes(trimmed))) {
+      setError('そのタグは必須タグに含まれています');
+      return;
+    }
+    setFormData(prev => {
+      const newMustNot = [...prev.mustNot];
+      newMustNot[mustNotIndex] = {
+        ...newMustNot[mustNotIndex],
+        alternatives: [...newMustNot[mustNotIndex].alternatives, trimmed],
+        alternativeNames: [...newMustNot[mustNotIndex].alternativeNames, tagName]
+      };
+      return { ...prev, mustNot: newMustNot };
+    });
+    setNewTagNames(prev => ({ ...prev, ...(trimmed.startsWith('new-tag-') ? { [trimmed]: tagName } : {}) }));
+    setError(null);
+  };
+
+  const handleRemoveMustNotAlternative = (mustNotIndex: number, altIndex: number) => {
+    setFormData(prev => {
+      const newMustNot = [...prev.mustNot];
+      newMustNot[mustNotIndex] = {
+        ...newMustNot[mustNotIndex],
+        alternatives: newMustNot[mustNotIndex].alternatives.filter((_, i) => i !== altIndex),
+        alternativeNames: newMustNot[mustNotIndex].alternativeNames.filter((_, i) => i !== altIndex)
+      };
+      return { ...prev, mustNot: newMustNot };
+    });
+  };
 
   const handleSave = async () => {
-    if (formData.orTerms.length === 0) { setError('最低1つの検索条件を追加してください'); return; }
+    if (formData.must.length === 0 && formData.mustNot.length === 0) {
+      setError('最低1つの条件を設定してください');
+      return;
+    }
     try {
       setLoading(true);
-      // create any new tags referenced in new-tag-* placeholders
-      const processedOrTerms = await Promise.all(formData.orTerms.map(async (term: TagExpressionTerm) => {
-        const processedInclude = await Promise.all(term.include.map(async (tagId) => {
-          if (tagId.startsWith('new-tag-')) {
-            const tagName = termForm.newTagNames[tagId] || tagId;
-            const res = await fetch('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: tagName }) });
-            if (!res.ok) throw new Error(`タグ「${tagName}」の作成に失敗しました`);
-            const j = await res.json();
-            return j.tag.id;
-          }
-          return tagId;
-        }));
-        const processedExclude = await Promise.all(term.exclude.map(async (tagId) => {
-          if (tagId.startsWith('new-tag-')) {
-            const tagName = termForm.newTagNames[tagId] || tagId;
-            const res = await fetch('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: tagName }) });
-            if (!res.ok) throw new Error(`タグ「${tagName}」の作成に失敗しました`);
-            const j = await res.json();
-            return j.tag.id;
-          }
-          return tagId;
-        }));
-        return { include: processedInclude, exclude: processedExclude };
-      }));
+      // must/mustNot を orTerms に変換
+      const includeTags: string[][] = [];
+      const excludeTags: string[] = [];
+
+      // mustタグを処理：各mustは[main, ...alternatives]のORグループ
+      formData.must.forEach(mustItem => {
+        includeTags.push([mustItem.main, ...mustItem.alternatives]);
+      });
+
+      // mustNotタグを処理：各mustNotは[main, ...alternatives]のORグループ
+      formData.mustNot.forEach(mustNotItem => {
+        excludeTags.push(...[mustNotItem.main, ...mustNotItem.alternatives]);
+      });
+
+      // デカルト積で全組み合わせを生成
+      const orTerms = mustMustNotToOrTerms(includeTags, excludeTags);
+
+      // 新規タグを解決
+      const processedOrTerms = await resolveNewTagPlaceholders(orTerms, newTagNames);
 
       if (editingExpr) {
-        await tagExpressionService.update(editingExpr.id, { orTerms: processedOrTerms, name: formData.name || undefined, color: formData.color || undefined, icon: formData.icon || undefined });
+        await tagExpressionService.update(editingExpr.id, {
+          orTerms: processedOrTerms,
+          name: formData.name || undefined,
+          color: formData.color || undefined,
+          icon: formData.icon || undefined
+        });
       } else {
-        await tagExpressionService.create({ orTerms: processedOrTerms, name: formData.name || undefined, color: formData.color || undefined, icon: formData.icon || undefined });
+        await tagExpressionService.create({
+          orTerms: processedOrTerms,
+          name: formData.name || undefined,
+          color: formData.color || undefined,
+          icon: formData.icon || undefined
+        });
       }
 
       await loadExpressions();
       setEditingExpr(null);
       setIsCreating(false);
-      setFormData({ name: '', color: '', icon: '', orTerms: [] });
+      setFormData({ name: '', color: '', icon: '', must: [], newMustTag: '', mustNot: [], newMustNotTag: '' });
+      setNewTagInputs({});
+      setNewTagNames({});
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました');
@@ -147,8 +396,17 @@ export const ExpressionEditor: React.FC = () => {
   const handleCancel = () => {
     setEditingExpr(null);
     setIsCreating(false);
-    setFormData({ name: '', color: '', icon: '', orTerms: [] });
-    setTermForm({ include: [], exclude: [], includeNames: [], excludeNames: [], newIncludeTag: '', newExcludeTag: '', newTagNames: {} });
+    setFormData({
+      name: '',
+      color: '',
+      icon: '',
+      must: [],
+      newMustTag: '',
+      mustNot: [],
+      newMustNotTag: ''
+    });
+    setNewTagInputs({});
+    setNewTagNames({});
     setError(null);
   };
 
@@ -176,13 +434,6 @@ export const ExpressionEditor: React.FC = () => {
         <div className="filter-form">
           <div className="form-header">
             <h4>{editingExpr ? '分類を編集' : '新しい分類を作成'}</h4>
-            <div className="form-steps">
-              <span className="step active">1. 基本情報</span>
-              <span className="step-arrow">→</span>
-              <span className="step">2. 条件設定</span>
-              <span className="step-arrow">→</span>
-              <span className="step">3. 確認・保存</span>
-            </div>
           </div>
 
           <div className="form-section">
@@ -211,7 +462,7 @@ export const ExpressionEditor: React.FC = () => {
                 </div>
                 <small>分類を視覚的に区別するための色</small>
               </div>
-              <div className="form-group">
+              {/* <div className="form-group">
                 <label>アイコン <span className="optional">(任意)</span></label>
                 <input
                   value={formData.icon || ''}
@@ -221,149 +472,150 @@ export const ExpressionEditor: React.FC = () => {
                   maxLength={2}
                 />
                 <small>絵文字などで分類を表すアイコン</small>
-              </div>
+              </div> */}
             </div>
           </div>
 
           <div className="form-section">
-            <h5>🔍 検索条件の設定</h5>
+            <h5>🔍 条件設定</h5>
             <div className="condition-builder">
-              <div className="condition-help">
-                <p><strong>条件の作り方:</strong></p>
-                <ul>
-                  <li><strong>含むタグ:</strong> これらのタグのいずれかを含むメモ</li>
-                  <li><strong>除外タグ:</strong> これらのタグを含まないメモ</li>
-                  <li><strong>OR条件:</strong> 複数の条件グループを作成可能</li>
-                </ul>
-              </div>
-
-              <div className="tag-condition-form">
-                <div className="condition-group">
-                  <h6>✅ 含むタグ (この中のどれかを含む)</h6>
+              <div className="must-condition-form">
+                <div className="must-section">
+                  <h6>✅ 必須タグ (これらの組み合わせを含む)</h6>
                   <div className="tag-input-area">
                     <TagSuggestionInput
-                      value={termForm.newIncludeTag}
-                      onChange={(v) => setTermForm((p: any)=> ({ ...p, newIncludeTag: v }))}
-                      onSelect={handleAddIncludeTag}
-                      suggestions={getSuggestions(termForm.newIncludeTag)}
+                      value={formData.newMustTag}
+                      onChange={(v) => setFormData(prev => ({ ...prev, newMustTag: v }))}
+                      onSelect={handleAddMustTag}
+                      suggestions={getSuggestions(formData.newMustTag)}
                       placeholder="タグ名を入力して追加..."
                       disabled={loading}
                     />
                     <div className="tag-preview">
-                      {termForm.include.map((tagId: string, index: number) => (
-                        <div key={index} className="tag-chip include-chip">
-                          <span className="tag-icon">🏷️</span>
-                          <span className="tag-name">{termForm.includeNames[index]}</span>
-                          <span className="tag-status">{tagExists(tagId) ? '既存' : '新規'}</span>
-                          <button type="button" onClick={() => handleRemoveInclude(index)} disabled={loading} className="remove-tag">×</button>
+                      {formData.must.map((mustItem, index: number) => (
+                        <div key={index} className="tag-group must-group">
+                          <div className="main-tag-chip must-chip">
+                            <span className="tag-icon">🏷️</span>
+                            <span className="tag-name">{mustItem.mainName}</span>
+                            <button type="button" onClick={() => handleRemoveMust(index)} disabled={loading} className="remove-tag">×</button>
+                          </div>
+                          {mustItem.alternatives.length > 0 && (
+                            <div className="alternative-tags">
+                              <span className="alt-label">代替:</span>
+                              {mustItem.alternatives.map((altTagId, altIndex) => (
+                                <span key={altIndex} className="tag-chip alt-chip must-chip">
+                                  <span className="tag-name">{mustItem.alternativeNames[altIndex]}</span>
+                                  <button type="button" onClick={() => handleRemoveMustAlternative(index, altIndex)} disabled={loading} className="remove-tag">×</button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="add-alternative">
+                            <TagSuggestionInput
+                              value={formData.must[index]?.newAlternative || ''}
+                              onChange={(v) => setFormData(prev => {
+                                const newMust = [...prev.must];
+                                if (!newMust[index]) return prev;
+                                newMust[index] = { ...newMust[index], newAlternative: v };
+                                return { ...prev, must: newMust };
+                              })}
+                              onSelect={(tagId, tagName) => handleAddMustAlternative(index, tagId, tagName)}
+                              suggestions={getSuggestions(formData.must[index]?.newAlternative || '')}
+                              placeholder="代替タグを追加..."
+                              disabled={loading}
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="condition-group">
+                <div className="must-not-section">
                   <h6>❌ 除外タグ (これらを含まない)</h6>
                   <div className="tag-input-area">
                     <TagSuggestionInput
-                      value={termForm.newExcludeTag}
-                      onChange={(v) => setTermForm((p: any)=> ({ ...p, newExcludeTag: v }))}
-                      onSelect={handleAddExcludeTag}
-                      suggestions={getSuggestions(termForm.newExcludeTag)}
+                      value={formData.newMustNotTag}
+                      onChange={(v) => setFormData(prev => ({ ...prev, newMustNotTag: v }))}
+                      onSelect={handleAddMustNotTag}
+                      suggestions={getSuggestions(formData.newMustNotTag)}
                       placeholder="タグ名を入力して追加..."
                       disabled={loading}
                     />
                     <div className="tag-preview">
-                      {termForm.exclude.map((tagId: string, index: number) => (
-                        <div key={index} className="tag-chip exclude-chip">
-                          <span className="tag-icon">🚫</span>
-                          <span className="tag-name">{termForm.excludeNames[index]}</span>
-                          <span className="tag-status">{tagExists(tagId) ? '既存' : '新規'}</span>
-                          <button type="button" onClick={() => handleRemoveExclude(index)} disabled={loading} className="remove-tag">×</button>
+                      {formData.mustNot.map((mustNotItem, index: number) => (
+                        <div key={index} className="tag-group must-not-group">
+                          <div className="main-tag-chip must-not-chip">
+                            <span className="tag-icon">🚫</span>
+                            <span className="tag-name">{mustNotItem.mainName}</span>
+                            <button type="button" onClick={() => handleRemoveMustNot(index)} disabled={loading} className="remove-tag">×</button>
+                          </div>
+                          {mustNotItem.alternatives.length > 0 && (
+                            <div className="alternative-tags">
+                              <span className="alt-label">代替:</span>
+                              {mustNotItem.alternatives.map((altTagId, altIndex) => (
+                                <span key={altIndex} className="tag-chip alt-chip must-not-chip">
+                                  <span className="tag-name">{mustNotItem.alternativeNames[altIndex]}</span>
+                                  <button type="button" onClick={() => handleRemoveMustNotAlternative(index, altIndex)} disabled={loading} className="remove-tag">×</button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="add-alternative">
+                            <TagSuggestionInput
+                              value={formData.mustNot[index]?.newAlternative || ''}
+                              onChange={(v) => setFormData(prev => {
+                                const newMustNot = [...prev.mustNot];
+                                if (!newMustNot[index]) return prev;
+                                newMustNot[index] = { ...newMustNot[index], newAlternative: v };
+                                return { ...prev, mustNot: newMustNot };
+                              })}
+                              onSelect={(tagId, tagName) => handleAddMustNotAlternative(index, tagId, tagName)}
+                              suggestions={getSuggestions(formData.mustNot[index]?.newAlternative || '')}
+                              placeholder="代替タグを追加..."
+                              disabled={loading}
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="add-condition-actions">
-                  <button
-                    type="button"
-                    className="add-condition-button"
-                    onClick={handleAddTerm}
-                    disabled={loading || (termForm.include.length === 0 && termForm.exclude.length === 0)}
-                  >
-                    <span className="button-icon">➕</span>
-                    この条件グループを追加
-                  </button>
-                  {(termForm.include.length > 0 || termForm.exclude.length > 0) && (
-                    <small className="condition-preview">
-                      プレビュー: {termForm.include.length > 0 && `タグ「${termForm.includeNames.slice(0, 2).join('」または「')}」${termForm.include.length > 2 ? 'など' : ''}を含む`}
-                      {termForm.include.length > 0 && termForm.exclude.length > 0 && '、'}
-                      {termForm.exclude.length > 0 && `タグ「${termForm.excludeNames.slice(0, 2).join('」と「')}」${termForm.exclude.length > 2 ? 'など' : ''}を含まない`}
-                      メモ
-                    </small>
-                  )}
-                </div>
+                {(formData.must.length > 0 || formData.mustNot.length > 0) && (
+                  <div className="condition-preview">
+                    <div className="preview-icon">👁️</div>
+                    <div className="preview-text">
+                      <strong>条件プレビュー:</strong>
+                      {formData.must.length > 0 && (
+                        <span>
+                          {formData.must.map((item, i) => {
+                            const tags = [item.mainName, ...item.alternativeNames];
+                            return `(${tags.join(' OR ')})`;
+                          }).join(' AND ')}
+                        </span>
+                      )}
+                      {formData.must.length > 0 && formData.mustNot.length > 0 && ' AND '}
+                      {formData.mustNot.length > 0 && (
+                        <span>
+                          NOT {formData.mustNot.map((item, i) => {
+                            const tags = [item.mainName, ...item.alternativeNames];
+                            return `(${tags.join(' OR ')})`;
+                          }).join(' AND NOT ')}
+                        </span>
+                      )}
+                      のメモ
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="form-section">
-            <h5>📋 現在の条件一覧</h5>
-            {formData.orTerms.length === 0 ? (
-              <div className="empty-conditions">
-                <div className="empty-icon">📭</div>
-                <p>まだ条件が設定されていません</p>
-                <small>上の「条件グループを追加」から条件を追加してください</small>
-              </div>
-            ) : (
-              <div className="conditions-list">
-                {formData.orTerms.map((term, index) => (
-                  <div key={index} className="condition-card">
-                    <div className="condition-header">
-                      <span className="condition-number">条件 {index + 1}</span>
-                      <button type="button" className="remove-condition" onClick={() => handleRemoveTerm(index)} disabled={loading}>
-                        <span className="button-icon">🗑️</span>
-                        削除
-                      </button>
-                    </div>
-                    <div className="condition-content">
-                      {term.include.length > 0 && (
-                        <div className="condition-tags include-tags">
-                          <span className="condition-label">✅ 含む:</span>
-                          <div className="tag-chips">
-                            {term.include.map((tagId, tagIndex) => (
-                              <span key={tagIndex} className="tag-chip small include">{getTagName(tagId)}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {term.exclude.length > 0 && (
-                        <div className="condition-tags exclude-tags">
-                          <span className="condition-label">❌ 除外:</span>
-                          <div className="tag-chips">
-                            {term.exclude.map((tagId, tagIndex) => (
-                              <span key={tagIndex} className="tag-chip small exclude">{getTagName(tagId)}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                <div className="conditions-summary">
-                  <div className="summary-icon">🔗</div>
-                  <div className="summary-text">
-                    <strong>{formData.orTerms.length}個の条件グループ</strong>がOR条件で結合されます
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+
 
           <div className="form-actions">
-            <button className="save-button primary" onClick={handleSave} disabled={loading || formData.orTerms.length === 0}>
+            <button className="save-button primary" onClick={handleSave} disabled={loading || (formData.must.length === 0 && formData.mustNot.length === 0)}>
               <span className="button-icon">💾</span>
               {loading ? '保存中...' : '分類を保存'}
             </button>
