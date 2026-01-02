@@ -1,5 +1,6 @@
 import { login, logout, isLoggedIn } from "../utils/AuthManager";
 import { useState } from "react";
+import DarkModeToggle from "./DarkModeToggle";
 
 const AuthButtons = () => {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
@@ -15,7 +16,8 @@ const AuthButtons = () => {
   };
 
   return (
-    <div className="flex space-x-4">
+    <div className="flex space-x-4 items-center">
+      <DarkModeToggle />
       {loggedIn ? (
         <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded">
           Logout

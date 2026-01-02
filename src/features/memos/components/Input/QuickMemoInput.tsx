@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import useCreateQuickMemo from '../../hooks/useCreateQuickMemo';
 import './QuickMemoInput.css';
-import { Button } from '~/components';
+import { Button, Textarea } from '~/components';
 
 const QuickMemoInput: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -38,12 +38,14 @@ const QuickMemoInput: React.FC = () => {
 
   return (
     <div className="quick-memo-input">
-      <textarea
+      <Textarea
         placeholder="メモを入力..."
         value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        onChange={setTitle}
         onKeyDown={onKeyDown}
         disabled={isSaving}
+        autoResize={true}
+        showLines={false}
       />
       <div className="quick-memo-actions">
         {error && <div className="quick-memo-error">⚠ {error}</div>}

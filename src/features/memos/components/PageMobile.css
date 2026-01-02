@@ -19,7 +19,7 @@
   justify-content: center;
   padding: 0 12px;
   background: var(--color-bg);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--color-border);
   user-select: none;
 }
 
@@ -33,7 +33,7 @@
 
 .page-mobile__handle-text {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--color-muted);
   line-height: 1;
 }
 
@@ -72,14 +72,15 @@
 .page-mobile__pill {
   padding: 0.4rem 0.75rem;
   border-radius: 4px;
-  border: 1px solid var(--color-neutral-bg);
-  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   cursor: pointer;
   font-size: 0.875rem;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   line-height: 1.2;
+  color: var(--color-text);
 }
 
 .page-mobile__pill--active {
@@ -89,7 +90,22 @@
 
 .page-mobile__pill--danger {
   border: 1px solid var(--color-danger);
-  background: #fee2e2;
+  background: var(--color-danger-bg);
   color: var(--color-danger);
   font-weight: 500;
+}
+
+/* Ensure pill appearance in dark/light contexts even if .dark class isn't present immediately */
+:root .page-mobile__pill {
+  color: var(--color-text);
+}
+.dark .page-mobile__pill {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.page-mobile__footer {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
 }

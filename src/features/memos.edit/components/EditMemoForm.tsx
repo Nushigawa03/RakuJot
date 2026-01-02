@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '~/components';
+import { Button, Textarea } from '~/components';
 import './EditMemoForm.css';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import { useNavigate } from 'react-router';
@@ -401,10 +401,12 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
                   </div>
                   <div className="suggestion-field">
                     <label>内容:</label>
-                    <textarea 
+                    <Textarea
                       value={aiSuggestion.body}
-                      onChange={(e) => setAiSuggestion({...aiSuggestion, body: e.target.value})}
+                      onChange={(value) => setAiSuggestion({...aiSuggestion, body: value})}
                       rows={6}
+                      autoResize={false}
+                      showLines={true}
                     />
                   </div>
                 </div>
@@ -420,13 +422,15 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
             ) : (
               /* クイック編集入力 */
               <>
-                <textarea
+                <Textarea
                   className="quick-body"
                   placeholder="変更したい内容があれば、ここに書けます"
                   value={quickEditContent}
-                  onChange={(e) => setQuickEditContent(e.target.value)}
+                  onChange={setQuickEditContent}
                   rows={8}
                   disabled={isAiProcessing}
+                  autoResize={false}
+                  showLines={true}
                 />
                 <Button 
                   className="btn-ai-suggest"

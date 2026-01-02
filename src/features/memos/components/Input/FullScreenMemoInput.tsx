@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '~/components';
+import { Button, Textarea } from '~/components';
 import useCreateQuickMemo from '../../hooks/useCreateQuickMemo';
 import './FullScreenMemoInput.css';
 
@@ -33,7 +33,14 @@ const FullScreenMemoInput: React.FC = () => {
   return (
     <div className="full-screen-memo-input">
       <div className="inputs">
-        <textarea className="content" placeholder="メモを入力..." value={content} onChange={e => setContent(e.target.value)} />
+        <Textarea
+          className="content"
+          placeholder="メモを入力..."
+          value={content}
+          onChange={setContent}
+          autoResize={false}
+          showLines={true}
+        />
       </div>
       <div className="actions">
         <Button variant="primary" full onClick={handleSave} disabled={isSaving || !content.trim()}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './InlineMemoInput.css';
-import { Button, DatePickerInput } from '~/components';
+import { Button, DatePickerInput, Textarea } from '~/components';
 import { Memo } from '../../types/memo';
 import { searchService } from '../../services/searchService';
 
@@ -15,7 +15,6 @@ const InlineMemoInput: React.FC<InlineMemoInputProps> = ({ onSave, onCancel, aut
   const [tags, setTags] = useState<string[]>([]);
   const [date, setDate] = useState<string | undefined>(undefined);
   const [body, setBody] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [availableTags, setAvailableTags] = useState<Array<{ id?: string; name: string }>>([]);
   const [tagInput, setTagInput] = useState('');
@@ -64,13 +63,6 @@ const InlineMemoInput: React.FC<InlineMemoInputProps> = ({ onSave, onCancel, aut
     setLastSaved(new Date());
     setTagInput('');
     onSave(createdMemo ?? newMemo);
-  };
-
-  const handleTextareaResize = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
   };
 
   // fetch available tags for suggestions
@@ -148,7 +140,7 @@ const InlineMemoInput: React.FC<InlineMemoInputProps> = ({ onSave, onCancel, aut
           )}
         </div>
       </div>
-      <textarea ref={textareaRef} placeholder="本文を入力" value={body} onChange={(e) => setBody(e.target.value)} onInput={handleTextareaResize} />
+      <Textarea placeholder="本文を入力" value={body} onChange={setBody} autoResize={true} showLines={true} />
       <div className="actions">
         <div className="action-buttons">
           <Button variant="primary" onClick={handleSave} disabled={isSaving}>保存</Button>

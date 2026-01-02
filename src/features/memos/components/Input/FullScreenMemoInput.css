@@ -24,23 +24,11 @@
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
-  padding: 1rem;
-  border: none;
-  border-radius: 12px;
-  background: transparent;
-  background-image: linear-gradient(to bottom, transparent 0%, transparent calc(1.6em - 1px), rgba(0,0,0,0.1) calc(1.6em - 1px), rgba(0,0,0,0.1) 1.6em);
-  background-size: 100% 1.6em;
-  background-position: 0 1rem;
-  background-attachment: local;
-  outline: none;
-  font-size: 1rem;
-  line-height: 1.6;
   resize: none;
-  color: var(--text, #111827);
 }
 
-.full-screen-memo-input .content::placeholder {
-  color: rgba(0,0,0,0.5);
+.full-screen-memo-input .content:focus {
+  box-shadow: none;
 }
 
 .full-screen-memo-input .actions {

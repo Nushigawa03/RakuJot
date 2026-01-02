@@ -4,13 +4,12 @@ import NavigationBarMobile from "./NavigationBar/NavigationBarMobile";
 import MemoList from "./MemoList";
 import QuickMemoInput from "./Input/QuickMemoInput";
 import FullScreenMemoInput from "./Input/FullScreenMemoInput";
+import MemoFilters from "./MemoFilters";
 import "./PageMobile.css";
 import SwipeArea from "src/components/SwipeArea";
 import { useTagExpression } from "../hooks/useTagExpression";
 import { TagExpression } from "../types/tagExpressions";
 import { SearchTag } from "../types/searchTag";
-import { generateExpressionName } from "../utils/tagExpressionUtils";
-import { formatLogicalText } from "../utils/logicalTextFormatter";
 import tagExpressionService from '../services/tagExpressionService';
 
 const PageMobile: React.FC = () => {
@@ -207,48 +206,20 @@ const PageMobile: React.FC = () => {
             </section>
           ) : (
             <section className="memo-list page-mobile__list">
-              <div className="page-mobile__filters">
-                <div className="page-mobile__pill-row">
-                  {dateQuery && (
-                    <button
-                      onClick={() => setDateQuery('')}
-                      className="page-mobile__pill page-mobile__pill--danger"
-                      title="日付検索をクリア"
-                    >
-                      📅 {dateQuery} ✕
-                    </button>
-                  )}
-                  {expressions
-                    .filter(e => !!e.name)
-                    .map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => handleExpressionClick(category)}
-                        className={`page-mobile__pill ${activeExpression === category.id ? 'page-mobile__pill--active' : ''}`}
-                      >
-                        {category.name}
-                      </button>
-                    ))}
-                  {expressions
-                    .filter(e => !e.name)
-                    .map((filter) => (
-                      <button
-                        key={filter.id}
-                        onClick={() => handleExpressionClick(filter)}
-                        className={`page-mobile__pill ${activeExpression === filter.id ? 'page-mobile__pill--active' : ''}`}
-                      >
-                        {formatLogicalText(generateExpressionName(filter.orTerms))}
-                      </button>
-                    ))}
-                </div>
-              </div>
+              <MemoFilters
+                dateQuery={dateQuery}
+                setDateQuery={setDateQuery}
+                expressions={expressions}
+                activeExpression={activeExpression}
+                handleExpressionClick={handleExpressionClick}
+              />
               <MemoList filterQuery={filterQuery} dateQuery={dateQuery} queryEmbedding={queryEmbedding} filterTags={filterTags} />
             </section>
           )}
         </main>
 
         {mode === 'input' ? null : (
-          <footer className="fixed bottom-0 left-0 right-0 bg-white border-t">
+          <footer className="fixed bottom-0 left-0 right-0 page-mobile__footer">
             <QuickMemoInput />
           </footer>
         )}

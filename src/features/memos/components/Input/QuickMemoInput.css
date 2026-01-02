@@ -4,10 +4,15 @@
     padding: 10px;
   }
   
+  .quick-memo-input .textarea,
   .quick-memo-input textarea {
     resize: none;
     padding: 5px;
     margin-bottom: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
   }
   
   /* Save button uses shared <Button> styles; local overrides removed */

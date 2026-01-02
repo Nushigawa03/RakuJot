@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './TagEditor.css';
+import { Textarea } from '~/components';
 import { Tag } from '../../../types/tags';
 
 interface TagEditorProps {
@@ -168,13 +169,15 @@ const TagEditor: React.FC = () => {
           </div>
           <div className="form-group">
             <label htmlFor="tagDescription">説明</label>
-            <textarea
+            <Textarea
               id="tagDescription"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(value) => setFormData({ ...formData, description: value })}
               placeholder="タグの説明を入力..."
               rows={3}
               disabled={loading}
+              autoResize={false}
+              showLines={false}
             />
           </div>
           <div className="form-buttons">

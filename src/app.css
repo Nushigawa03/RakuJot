@@ -13,6 +13,7 @@
   /* Base colors */
   --color-text: #111827;
   --color-bg: #ffffff;
+  --color-text-rgb: 17,24,39;
 
   /* Primary */
   --color-primary: #2563eb;
@@ -51,14 +52,51 @@
   --color-border-focus: rgba(76, 175, 80, 0.6);
   --color-surface: #fafafa;
   --color-surface-bg: #f0f0f0;
+  /* Muted / subtle */
+  --color-muted: rgba(17,24,39,0.6);
+  /* Danger bg */
+  --color-danger-bg: #fee2e2;
 
   /* Misc */
   --kbd-height: 0px;
 }
 
+.dark {
+  /* Base colors */
+  --color-text: #f9fafb;
+  --color-bg: #1e293b;
+  --color-text-rgb: 249,250,251;
+
+  /* Neutral */
+  --color-neutral-bg: #374151;
+  --color-neutral-fg: #f9fafb;
+
+  /* Borders & Surfaces */
+  --color-border: #374151;
+  --color-surface: #1f2937;
+  --color-surface-bg: #374151;
+  --color-muted: rgba(249,250,251,0.65);
+  --color-danger-bg: #4c1111; /* subtle dark danger background */
+}
+
+/* Ensure CSS variables also follow system preference when JS hasn't run yet */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text: #f9fafb;
+    --color-bg: #1e293b;
+    --color-text-rgb: 249,250,251;
+
+    --color-neutral-bg: #374151;
+    --color-neutral-fg: #f9fafb;
+
+    --color-border: #374151;
+    --color-surface: #1f2937;
+    --color-surface-bg: #374151;
+  }
+}
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  @apply bg-white dark:bg-slate-800;
 
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
