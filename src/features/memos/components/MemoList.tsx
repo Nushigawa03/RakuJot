@@ -10,7 +10,7 @@ import { shouldHighlightTag } from "../utils/tagHighlight";
 
 const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, filterTags }) => {
   // デバッグ用: タグを常に表示するかどうか
-  const DEBUG_ALWAYS_SHOW_TAGS = true;
+  const DEBUG_ALWAYS_SHOW_TAGS = false;
   const navigate = useNavigate();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortKey, setSortKey] = useState<"date" | "title">("date");

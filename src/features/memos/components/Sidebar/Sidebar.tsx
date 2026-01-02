@@ -74,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
     <div className="sidebar">
       <div className="sidebar-header">
         <h3>
-          タグ分類
+          分類
           <span className="tooltip">
             <span className="tooltip-icon">?</span>
             <span className="tooltip-text">
@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
         <button
           className="settings-button"
           onClick={() => setIsSettingsOpen(true)}
-          title="タグと式を編集"
+          title="分類を編集"
         >
           ⚙️
         </button>

@@ -53,7 +53,7 @@ const QuickMemoInput: React.FC = () => {
           onClick={handleSave}
           disabled={isSaving || !title.trim()}
         >
-          {isSaving ? '保存中...' : '保存'}
+          {isSaving ? '保存中...' : '作成'}
         </Button>
       </div>
     </div>

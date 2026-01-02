@@ -35,7 +35,7 @@ export const SidebarSettingsModal: React.FC<SidebarSettingsModalProps> = ({
     <div className="sidebar-settings-modal-overlay" onClick={onClose}>
       <div className="sidebar-settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="sidebar-settings-modal-header">
-          <h2>タグ・フィルタ・カテゴリ設定</h2>
+          <h2>タグ設定</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
         

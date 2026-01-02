@@ -28,6 +28,10 @@
   border: none;
   border-radius: 12px;
   background: transparent;
+  background-image: linear-gradient(to bottom, transparent 0%, transparent calc(1.6em - 1px), rgba(0,0,0,0.1) calc(1.6em - 1px), rgba(0,0,0,0.1) 1.6em);
+  background-size: 100% 1.6em;
+  background-position: 0 1rem;
+  background-attachment: local;
   outline: none;
   font-size: 1rem;
   line-height: 1.6;
@@ -36,7 +40,7 @@
 }
 
 .full-screen-memo-input .content::placeholder {
-  color: rgba(0,0,0,0.35);
+  color: rgba(0,0,0,0.5);
 }
 
 .full-screen-memo-input .actions {
@@ -47,7 +51,7 @@
   right: 1rem;
   /* add keyboard inset variable; default 0 */
   /* add 12px extra gap so the button isn't flush to the very bottom */
-  bottom: calc(env(safe-area-inset-bottom, 1rem) + var(--kbd-height, 0px) + 12px);
+  bottom: calc(env(safe-area-inset-bottom, 1rem) + 12px);
 }
 
 .full-screen-memo-input .actions {

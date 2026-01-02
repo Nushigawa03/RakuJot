@@ -28,7 +28,7 @@ const PageMobile: React.FC = () => {
     console.debug("PageMobile.swipeUp");
     window.dispatchEvent(new CustomEvent("swipeUp"));
     try {
-      navigate(1);
+      // navigate(1);
     } catch (e) {
       console.debug("PageMobile.navigate.forward.failed", e);
     }
@@ -38,7 +38,7 @@ const PageMobile: React.FC = () => {
     console.debug("PageMobile.swipeDown");
     window.dispatchEvent(new CustomEvent("swipeDown"));
     try {
-      navigate(-1);
+      // navigate(-1);
     } catch (e) {
       console.debug("PageMobile.navigate.back.failed", e);
     }
@@ -129,6 +129,53 @@ const PageMobile: React.FC = () => {
       console.error('TagExpression の読み込みエラー:', error);
     }
   };
+
+  useEffect(() => {
+    // function to update CSS variable --kbd-height based on visualViewport
+    const updateKeyboardInset = () => {
+      try {
+        const vv = (window as any).visualViewport;
+        if (vv && typeof vv.height === 'number') {
+          // difference between layout viewport and visual viewport height is the keyboard height
+          const keyboardHeight = Math.max(0, window.innerHeight - vv.height);
+          document.documentElement.style.setProperty('--kbd-height', `${keyboardHeight}px`);
+        } else {
+          // fallback: no VisualViewport API
+          document.documentElement.style.setProperty('--kbd-height', `0px`);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    // update on visualViewport resize (keyboard show/hide) and on window resize
+    const vv = (window as any).visualViewport;
+    if (vv && typeof vv.addEventListener === 'function') {
+      vv.addEventListener('resize', updateKeyboardInset);
+      vv.addEventListener('scroll', updateKeyboardInset);
+    }
+    window.addEventListener('resize', updateKeyboardInset);
+    // also update when focusing inputs (some browsers change sizes on focus)
+    window.addEventListener('focusin', updateKeyboardInset);
+    window.addEventListener('focusout', updateKeyboardInset);
+
+    // initial call
+    updateKeyboardInset();
+
+    return () => {
+      try {
+        if (vv && typeof vv.removeEventListener === 'function') {
+          vv.removeEventListener('resize', updateKeyboardInset);
+          vv.removeEventListener('scroll', updateKeyboardInset);
+        }
+      } catch {}
+      window.removeEventListener('resize', updateKeyboardInset);
+      window.removeEventListener('focusin', updateKeyboardInset);
+      window.removeEventListener('focusout', updateKeyboardInset);
+      // reset variable
+      document.documentElement.style.setProperty('--kbd-height', `0px`);
+    };
+  }, []);
 
   return (
     <SwipeArea className="mobile-page" onSwipeUp={handleSwipeUp} onSwipeDown={handleSwipeDown} axis="vertical">

@@ -4,6 +4,8 @@ import { useTagSuggestions } from '../../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './ExpressionEditor.css';
 import tagExpressionService from '../../../services/tagExpressionService';
+import { generateExpressionName } from '../../../utils/tagExpressionUtils';
+import { formatLogicalText } from '../../../utils/logicalTextFormatter';
 
 // 直積計算関数
 function cartesianProduct<T>(arrays: T[][]): T[][] {
@@ -410,6 +412,15 @@ export const ExpressionEditor: React.FC = () => {
     setError(null);
   };
 
+  const sortedExpressions = React.useMemo(() => {
+    return [...expressions].sort((a, b) => {
+      const aNamed = Boolean(a.name && a.name.trim());
+      const bNamed = Boolean(b.name && b.name.trim());
+      if (aNamed === bNamed) return 0;
+      return aNamed ? -1 : 1;
+    });
+  }, [expressions]);
+
   return (
     <div className="filter-editor">
       <div className="filter-editor-header">
@@ -637,39 +648,23 @@ export const ExpressionEditor: React.FC = () => {
           </div>
         ) : (
           <div className="filter-items">
-            {expressions.map((expr) => (
+            {sortedExpressions.map((expr) => (
               <div key={expr.id} className="filter-item">
                 <div className="filter-info">
                   <div className="filter-header">
                     <div className="filter-name">
                       {expr.icon && <span className="filter-icon">{expr.icon}</span>}
-                      <h5>{expr.name || `分類 #${expr.id.slice(-4)}`}</h5>
+                      <h5>{expr.name || generateExpressionName(expr.orTerms) || '分類'}</h5>
                       {expr.color && <div className="color-indicator" style={{ backgroundColor: expr.color }}></div>}
                     </div>
                     {expr.id.startsWith('mock-') && <span className="mock-badge">サンプル</span>}
                   </div>
                   <div className="filter-conditions">
-                    {expr.orTerms.map((term, i) => (
-                      <div key={i} className="condition-summary">
-                        <div className="condition-number">条件 {i + 1}:</div>
-                        {term.include.length > 0 && (
-                          <div className="condition-tags">
-                            <span className="label">含む:</span>
-                            {term.include.map((tagId, tagIndex) => (
-                              <span key={tagIndex} className="tag-chip tiny include">{getTagName(tagId)}</span>
-                            ))}
-                          </div>
-                        )}
-                        {term.exclude.length > 0 && (
-                          <div className="condition-tags">
-                            <span className="label">除外:</span>
-                            {term.exclude.map((tagId, tagIndex) => (
-                              <span key={tagIndex} className="tag-chip tiny exclude">{getTagName(tagId)}</span>
-                            ))}
-                          </div>
-                        )}
+                    <div className="condition-summary compact">
+                      <div className="condition-preview-line">
+                        {formatLogicalText(generateExpressionName(expr.orTerms))}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
                 <div className="filter-actions">

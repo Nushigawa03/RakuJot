@@ -1,8 +1,9 @@
 .page-mobile {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  height: 100dvh;
+  min-height: calc(100dvh - var(--kbd-height, 0px));
+  height: calc(100dvh - var(--kbd-height, 0px));
+  overflow: hidden; /* prevent body scroll when keyboard lifts content */
 }
 
 .page-mobile__header {
