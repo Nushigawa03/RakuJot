@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './FullScreenMemoInput.css';
+import { memoService } from '../../memos/services/memoService';
 
 const FullScreenMemoInput: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -34,25 +35,20 @@ const FullScreenMemoInput: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const response = await fetch('/api/memos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim() || undefined,
-            body: body.trim() || undefined,
-            tags: tags,
-            // If the date text can be parsed to a valid Date, send ISO; otherwise send raw text
-            date: (() => {
-              const parsed = Date.parse(date);
-              if (!isNaN(parsed)) return new Date(parsed).toISOString();
-              return date || undefined;
-            })(),
-        }),
-      });
+      const payload = {
+        title: title.trim() || undefined,
+        body: body.trim() || undefined,
+        tags: tags,
+        date: (() => {
+          const parsed = Date.parse(date);
+          if (!isNaN(parsed)) return new Date(parsed).toISOString();
+          return date || undefined;
+        })(),
+      };
 
-      if (!response.ok) {
-        const error = await response.json();
-        alert(error?.error || '保存に失敗しました。');
+      const res = await memoService.createMemo(payload);
+      if (!res.ok) {
+        alert(res.error || '保存に失敗しました。');
         return;
       }
 

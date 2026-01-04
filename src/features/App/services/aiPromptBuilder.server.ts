@@ -137,3 +137,54 @@ export function buildMemoExtractionInstruction(tags?: Tag[]): string {
 
   return sb;
 }
+
+/**
+ * Build a systemInstruction for editing an existing memo based on a user instruction.
+ * The AI receives the original memo content and a short edit instruction,
+ * then returns updated title, tags, date, and body.
+ */
+export function buildMemoEditInstruction(tags?: Tag[]): string {
+  const now = new Date();
+  const iso = now.toISOString();
+  let local = '';
+  try {
+    local = now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  } catch {
+    local = now.toString();
+  }
+
+  let sb = '';
+  sb += `Current server time (ISO): ${iso}. Local (Asia/Tokyo): ${local}.\n\n`;
+
+  sb += 'Available tags (name: description):\n';
+  if (!tags || tags.length === 0) {
+    sb += '  (no predefined tags)\n';
+  } else {
+    for (const t of tags) {
+      const desc = t.description ? `: ${t.description}` : '';
+      sb += `  - ${t.name}${desc}\n`;
+    }
+  }
+
+  sb += '\nYour task:\n';
+  sb += '  - You will receive two parts in the input text:\n';
+  sb += '      ORIGINAL: (the existing memo content)\n';
+  sb += '      INSTRUCTION: (a short edit instruction from the user, e.g. "明後日に変更")\n';
+  sb += '  - Apply the INSTRUCTION to the ORIGINAL memo and produce an updated memo.\n';
+  sb += '  - Extract: title (string), body (string, the updated memo content), tags (string[], use available tags when appropriate), date (YYYY-MM-DD in Japan time or null).\n';
+  sb += '  - Return ONLY valid JSON with keys: title, body, tags, date.\n';
+  sb += '  - If the instruction mentions a date change (e.g. "明後日に変更"), update the date field accordingly using current server time and Asia/Tokyo rules.\n';
+  sb += '  - If the instruction does not mention date changes, preserve or infer the date from the original.\n';
+  sb += '  - Example input:\n';
+  sb += '      ORIGINAL:\n明日は仕事\n\n';
+  sb += '      INSTRUCTION:\n明後日に変更\n\n';
+  sb += '  - Example output JSON:\n';
+  sb += '      { "title": "明後日は仕事", "body": "明後日は仕事", "tags": ["仕事"], "date": "2026-01-07" }\n\n';
+
+  sb += 'Output format rules (VERY IMPORTANT):\n';
+  sb += '  - Return ONLY valid JSON (no markdown, no backticks, no surrounding text).\n';
+  sb += '  - JSON keys: title (string), body (string), tags (string[]), date (YYYY-MM-DD or null).\n';
+  sb += '  - Always include all keys. Example: { "title": "...", "body": "...", "tags": [], "date": null }\n\n';
+
+  return sb;
+}

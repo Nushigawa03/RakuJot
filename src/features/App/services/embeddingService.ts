@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { embedContent } from "./genaiClient";
 
 /**
  * Embedding service - centralized place to handle all embedding-related API calls.
@@ -7,11 +7,7 @@ import { GoogleGenAI } from "@google/genai";
  * This is a shared service used by multiple features, not specific to memos.
  */
 
-const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
-if (!apiKey) {
-  console.warn("[embeddingService] No API key found. Set GOOGLE_API_KEY or GEMINI_API_KEY environment variable.");
-}
-const genAI = new GoogleGenAI({ apiKey });
+// GenAI client centralized in `genaiClient.ts`
 
 /**
  * Compute embedding vector for given text content.
@@ -24,7 +20,7 @@ export async function computeEmbedding(text: string): Promise<number[] | null> {
       return null;
     }
 
-    const response = await genAI.models.embedContent({
+    const response = await embedContent({
       model: "text-embedding-004",
       contents: [{ role: "user", parts: [{ text: text.trim() }] }],
     });

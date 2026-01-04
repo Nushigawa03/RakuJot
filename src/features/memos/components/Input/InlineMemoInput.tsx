@@ -3,6 +3,7 @@ import './InlineMemoInput.css';
 import { Button, DatePickerInput, Textarea } from '~/components';
 import { Memo } from '../../types/memo';
 import { searchService } from '../../services/searchService';
+import { memoService } from '../../../memos/services/memoService';
 
 interface InlineMemoInputProps {
   onSave: (memo: Omit<Memo, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -34,24 +35,13 @@ const InlineMemoInput: React.FC<InlineMemoInputProps> = ({ onSave, onCancel, aut
     setIsSaving(true);
     let createdMemo: any = null;
     try {
-      const response = await fetch('/api/memos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMemo),
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        alert(error.error || 'メモの保存に失敗しました。');
+      const res = await memoService.createMemo(newMemo);
+      if (!res.ok) {
+        alert(res.error || 'メモの保存に失敗しました。');
         setIsSaving(false);
         return;
       }
-      // サーバーが返す作成済みメモ（id 等）を取得して onSave に渡す
-      try {
-        createdMemo = await response.json();
-      } catch (e) {
-        // JSON でない場合はフォールバックで newMemo を使う
-        createdMemo = null;
-      }
+      createdMemo = res.memo ?? null;
     } catch (err) {
       console.error('メモの保存中にエラーが発生しました:', err);
       alert('メモの保存中にエラーが発生しました。');

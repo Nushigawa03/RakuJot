@@ -3,6 +3,7 @@ import { Button, Textarea } from '~/components';
 import './EditMemoForm.css';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import { useNavigate } from 'react-router';
+import { memoService } from '../../memos/services/memoService';
 
 interface Tag {
   id: string;
@@ -17,7 +18,7 @@ interface EditMemoFormProps {
     date?: string;
     tags?: Tag[];
   };
-  onSubmit: (title: string, body: string, tags: string[], date: string) => Promise<void>;
+  onSubmit: (title: string, body: string, tags: string[], date: string) => Promise<boolean>;
   onDelete: () => Promise<void>;
   error: string | null;
   availableTags: Tag[];
@@ -84,8 +85,10 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
-      await onSubmit(title, body, selectedTags, date);
-      setLastSaved(new Date());
+      const ok = await onSubmit(title, body, selectedTags, date);
+      if (ok) {
+        setLastSaved(new Date());
+      }
     } catch (error) {
       console.error("保存エラー:", error);
     } finally {
@@ -100,14 +103,16 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
       // 保存をまず実行
       setIsSaving(true);
       try {
-        await onSubmit(initial.title, initial.body, initial.tags, initial.date);
+        const ok = await onSubmit(initial.title, initial.body, initial.tags, initial.date);
         // 保存成功後に state を更新
-        setTitle(initial.title);
-        setBody(initial.body);
-        setSelectedTags(initial.tags);
-        setDate(initial.date);
-        setHistoryIndex(0);
-        setLastSaved(new Date());
+        if (ok) {
+          setTitle(initial.title);
+          setBody(initial.body);
+          setSelectedTags(initial.tags);
+          setDate(initial.date);
+          setHistoryIndex(0);
+          setLastSaved(new Date());
+        }
       } catch (error) {
         console.error("保存エラー:", error);
       } finally {
@@ -166,14 +171,16 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
       // 保存をまず実行
       setIsSaving(true);
       try {
-        await onSubmit(prevState.title, prevState.body, prevState.tags, prevState.date);
+        const ok = await onSubmit(prevState.title, prevState.body, prevState.tags, prevState.date);
         // 保存成功後に state を更新
-        setTitle(prevState.title);
-        setBody(prevState.body);
-        setSelectedTags(prevState.tags);
-        setDate(prevState.date);
-        setHistoryIndex(historyIndex - 1);
-        setLastSaved(new Date());
+        if (ok) {
+          setTitle(prevState.title);
+          setBody(prevState.body);
+          setSelectedTags(prevState.tags);
+          setDate(prevState.date);
+          setHistoryIndex(historyIndex - 1);
+          setLastSaved(new Date());
+        }
       } catch (error) {
         console.error("保存エラー:", error);
       } finally {
@@ -189,14 +196,16 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
       // 保存をまず実行
       setIsSaving(true);
       try {
-        await onSubmit(nextState.title, nextState.body, nextState.tags, nextState.date);
+        const ok = await onSubmit(nextState.title, nextState.body, nextState.tags, nextState.date);
         // 保存成功後に state を更新
-        setTitle(nextState.title);
-        setBody(nextState.body);
-        setSelectedTags(nextState.tags);
-        setDate(nextState.date);
-        setHistoryIndex(historyIndex + 1);
-        setLastSaved(new Date());
+        if (ok) {
+          setTitle(nextState.title);
+          setBody(nextState.body);
+          setSelectedTags(nextState.tags);
+          setDate(nextState.date);
+          setHistoryIndex(historyIndex + 1);
+          setLastSaved(new Date());
+        }
       } catch (error) {
         console.error("保存エラー:", error);
       } finally {
@@ -210,31 +219,34 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
     
     setIsAiProcessing(true);
     try {
-      // TODO: AI APIを呼ぶ
-      // 仮の実装
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // サービスに委託してサーバー側でAIを呼び、提案ペイロードを受け取る
+      // Provide the original memo body together with the quick edit instruction
+      const aiPayload = await memoService.suggestEditForContent(memo.body || '', quickEditContent, { tagLimit: 10 });
+
       const suggestion = {
-        title: title || "AIが提案するタイトル",
-        body: quickEditContent,
-        tags: [...selectedTags, "AI提案"],
-        date: date || new Date().toLocaleDateString('ja-JP')
+        title: aiPayload.title || title || 'AIが提案するタイトル',
+        body: aiPayload.body || quickEditContent,
+        // merge existing selectedTags with suggested tags, preserving order and uniqueness
+        tags: Array.from(new Set([...selectedTags, ...(aiPayload.tags || [])])),
+        date: aiPayload.date || date || new Date().toLocaleDateString('ja-JP'),
       };
       
       if (autoApplySuggestions) {
         // 即時適用・自動保存
         setIsSaving(true);
         try {
-          await onSubmit(suggestion.title, suggestion.body, suggestion.tags, suggestion.date);
+          const ok = await onSubmit(suggestion.title, suggestion.body, suggestion.tags, suggestion.date);
           // 保存成功後に state を更新
-          saveToHistory(suggestion);
-          setTitle(suggestion.title);
-          setBody(suggestion.body);
-          setSelectedTags(suggestion.tags);
-          setDate(suggestion.date);
-          setQuickEditContent("");
-          setAiSuggestion(null);
-          setLastSaved(new Date());
+          if (ok) {
+            saveToHistory(suggestion);
+            setTitle(suggestion.title);
+            setBody(suggestion.body);
+            setSelectedTags(suggestion.tags);
+            setDate(suggestion.date);
+            setQuickEditContent("");
+            setAiSuggestion(null);
+            setLastSaved(new Date());
+          }
         } catch (error) {
           console.error("保存エラー:", error);
         } finally {
@@ -257,16 +269,18 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
     // 保存をまず実行
     setIsSaving(true);
     try {
-      await onSubmit(aiSuggestion.title, aiSuggestion.body, aiSuggestion.tags, aiSuggestion.date);
+      const ok = await onSubmit(aiSuggestion.title, aiSuggestion.body, aiSuggestion.tags, aiSuggestion.date);
       // 保存成功後に state を更新
-      saveToHistory(aiSuggestion);
-      setTitle(aiSuggestion.title);
-      setBody(aiSuggestion.body);
-      setSelectedTags(aiSuggestion.tags);
-      setDate(aiSuggestion.date);
-      setAiSuggestion(null);
-      setQuickEditContent("");
-      setLastSaved(new Date());
+      if (ok) {
+        saveToHistory(aiSuggestion);
+        setTitle(aiSuggestion.title);
+        setBody(aiSuggestion.body);
+        setSelectedTags(aiSuggestion.tags);
+        setDate(aiSuggestion.date);
+        setAiSuggestion(null);
+        setQuickEditContent("");
+        setLastSaved(new Date());
+      }
     } catch (error) {
       console.error("保存エラー:", error);
     } finally {
@@ -286,15 +300,20 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
         </Button>
         
         <div className="top-actions-center">
-          {isSaving && (
+          {isSaving ? (
             <div className="saving-indicator">
               💾 保存中...
             </div>
-          )}
-          {!isSaving && lastSaved && (
-            <div className="auto-save-indicator">
-              ✓ {lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み
+          ) : error ? (
+            <div className="auto-save-indicator error">
+              エラー: {error}
             </div>
+          ) : (
+            lastSaved && (
+              <div className="auto-save-indicator">
+                ✓ {lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み
+              </div>
+            )
           )}
         </div>
 
@@ -326,7 +345,7 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
           </Button>
         </div>
       </div>
-      {error && <div className="error-message">エラー: {error}</div>}
+      {/* エラーメッセージは上部の auto-save 表示と同じ位置・サイズで表示するため移動しました */}
       
       {!editMode ? (
         /* 閲覧モード */
@@ -353,7 +372,7 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
           <div className="quick-edit">
             <div className="quick-edit-header">
               <div className="header-top">
-                <h3>✨ 気が向いたら編集できます</h3>
+                <h3>✨ 手軽に編集</h3>
                 <div className="history-controls">
                   <Button className="btn-undo" variant="secondary" onClick={handleUndo} disabled={historyIndex <= 0}>
                     ↶
@@ -364,7 +383,7 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
                 </div>
               </div>
               <p className="quick-edit-description">
-                何か変更したいことがあれば、ここに書くとAIがお手伝いします
+                メモを改善したいアイデアがあれば、ここに書くとAIが提案します
               </p>
             </div>
             
@@ -424,7 +443,7 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
               <>
                 <Textarea
                   className="quick-body"
-                  placeholder="変更したい内容があれば、ここに書けます"
+                  placeholder="改善したい点を教えてください"
                   value={quickEditContent}
                   onChange={setQuickEditContent}
                   rows={8}
@@ -438,7 +457,7 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
                   onClick={handleAiSuggest}
                   disabled={!quickEditContent.trim() || isAiProcessing}
                 >
-                  {isAiProcessing ? '処理中...' : 'クイック編集'}
+                  {isAiProcessing ? '処理中...' : 'OK'}
                 </Button>
               </>
             )}

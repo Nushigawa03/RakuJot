@@ -86,6 +86,15 @@ export const createMemo = async (data: any) => {
     // サーバー側バリデーション
     const v = validateMemoInput(data, false);
     if (!v.ok) {
+      // 開発時に検証エラーの詳細をサーバーログに出す（本番では抑制）
+      try {
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('validateMemoInput failed (createMemo):', v.errors);
+        }
+      } catch (e) {
+        // 念のためログ出力で例外が起きても処理を続行
+        console.error('ログ出力エラー:', e);
+      }
       return { error: "入力が無効です。", details: v.errors };
     }
 
@@ -134,7 +143,7 @@ export const createMemo = async (data: any) => {
         id: `mock-${Date.now()}`,
         title: data.title,
         body: data.body || "",
-        date: data.data || "",
+        date: data.date || "",
         tags: data.tags || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -172,7 +181,23 @@ export const updateMemo = async (id: string, data: any) => {
       return;
     }
 
-    // タグの処理を分離
+    // Validate partial input on the original incoming data BEFORE we transform it
+    // (e.g. converting tags to Prisma `{ set: [...] }`), otherwise the validator
+    // will see non-array structures and fail (tags must be an array).
+    const v = validateMemoInput(data, true);
+    if (!v.ok) {
+      // 開発時に検証エラーの詳細をサーバーログに出す（本番では抑制）
+      try {
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('validateMemoInput failed (updateMemo):', v.errors);
+        }
+      } catch (e) {
+        console.error('ログ出力エラー:', e);
+      }
+      return { error: "入力が無効です。", details: v.errors };
+    }
+
+    // タグの処理を分離（検証は済んでいるのでここで DB 操作を行う）
     const { tags, ...updateData } = data;
     
     // タグが指定されている場合の処理
@@ -185,12 +210,6 @@ export const updateMemo = async (id: string, data: any) => {
       updateData.tags = {
         set: tagsToConnect,
       };
-    }
-
-    // Validate partial input
-    const v = validateMemoInput(updateData, true);
-    if (!v.ok) {
-      return { error: "入力が無効です。", details: v.errors };
     }
 
     // If title, date, or body are being updated, recalculate embedding
@@ -247,13 +266,16 @@ const validateMemoInput = (data: any, partial = false) => {
 
   if (!partial || data.tags !== undefined) {
     if (data.tags !== undefined) {
+      // Expect tags to be an array of non-empty strings (string[]).
       if (!Array.isArray(data.tags)) {
-        errors.tags = 'tags は配列である必要があります';
+        const actualType = data.tags === null ? 'null' : typeof data.tags;
+        errors.tags = `tags は文字列の配列 (string[]) である必要があります。現在の型: ${actualType}`;
       } else {
         for (let i = 0; i < data.tags.length; i++) {
           const t = data.tags[i];
+          const tType = t === null ? 'null' : typeof t;
           if (typeof t !== 'string' || !t.trim()) {
-            errors[`tags[${i}]`] = 'タグは空でない文字列である必要があります';
+            errors[`tags[${i}]`] = `タグは空でない文字列である必要があります（現在の型: ${tType}）`;
           } else if (t.length > 100) {
             errors[`tags[${i}]`] = 'タグが長すぎます';
           }
