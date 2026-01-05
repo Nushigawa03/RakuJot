@@ -1,4 +1,5 @@
 import { purgeOldTrashedMemos } from '../models/memo.server';
+import { getDevUserId } from '~/features/auth/utils/devUser.server';
 
 /**
  * ゴミ箱の古いメモを自動削除するクリーンアップスクリプト
@@ -8,7 +9,8 @@ export async function runTrashCleanup(days: number = 30) {
     console.log(`Running trash cleanup (deleting items older than ${days} days)...`);
 
     try {
-        const result = await purgeOldTrashedMemos(days);
+        const userId = await getDevUserId();
+        const result = await purgeOldTrashedMemos(days, userId);
 
         if (result && 'error' in result) {
             console.error('Trash cleanup failed:', result.error);

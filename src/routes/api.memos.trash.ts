@@ -1,9 +1,11 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTrashedMemos, restoreMemo, permanentlyDeleteMemo } from "~/features/memos/models/memo.server";
+import { getDevUserId } from "~/features/auth/utils/devUser.server";
 
 export const loader: LoaderFunction = async () => {
     try {
-        const trashedMemos = await getTrashedMemos();
+        const userId = await getDevUserId();
+        const trashedMemos = await getTrashedMemos(userId);
 
         // エラーオブジェクトが返された場合の処理
         if (trashedMemos && typeof trashedMemos === 'object' && 'error' in trashedMemos) {
@@ -20,6 +22,7 @@ export const loader: LoaderFunction = async () => {
 
 export const action: ActionFunction = async ({ request }) => {
     try {
+        const userId = await getDevUserId();
         const data = await request.json();
         const { id, originalId, action: actionType } = data;
 
@@ -28,7 +31,7 @@ export const action: ActionFunction = async ({ request }) => {
                 if (!originalId) {
                     return Response.json({ error: 'originalIDが必要です' }, { status: 400 });
                 }
-                const restoreResult = await restoreMemo(originalId);
+                const restoreResult = await restoreMemo(originalId, userId);
                 if (restoreResult && typeof restoreResult === 'object' && 'error' in restoreResult) {
                     return Response.json({ error: restoreResult.error }, { status: 500 });
                 }
@@ -38,7 +41,7 @@ export const action: ActionFunction = async ({ request }) => {
                 if (!id) {
                     return Response.json({ error: 'IDが必要です' }, { status: 400 });
                 }
-                const deleteResult = await permanentlyDeleteMemo(id);
+                const deleteResult = await permanentlyDeleteMemo(id, userId);
                 if (deleteResult && typeof deleteResult === 'object' && 'error' in deleteResult) {
                     return Response.json({ error: deleteResult.error }, { status: 500 });
                 }

@@ -1,9 +1,11 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTags, createTag, updateTag, deleteTag } from "~/features/memos/models/tag.server";
+import { getDevUserId } from "~/features/auth/utils/devUser.server";
 
 export const loader: LoaderFunction = async () => {
   try {
-    const tags = await getTags();
+    const userId = await getDevUserId();
+    const tags = await getTags(userId);
     return Response.json(tags);
   } catch (error) {
     console.error("API tags loader error:", error);
@@ -13,26 +15,27 @@ export const loader: LoaderFunction = async () => {
 
 export const action: ActionFunction = async ({ request }) => {
   try {
+    const userId = await getDevUserId();
     const body = await request.json();
 
     switch (request.method) {
       case "POST":
         const { name, description } = body;
-        const newTag = await createTag({ name, description });
-        return Response.json({ 
-          success: true, 
+        const newTag = await createTag({ name, description }, userId);
+        return Response.json({
+          success: true,
           tag: newTag
         });
 
       case "PUT":
         const { id, ...updateData } = body;
-        const updatedTag = await updateTag(id, updateData);
+        const updatedTag = await updateTag(id, updateData, userId);
         return Response.json({ success: true, tag: updatedTag });
 
       case "DELETE":
         const { id: deleteId } = body;
         try {
-          await deleteTag(deleteId);
+          await deleteTag(deleteId, userId);
           return Response.json({ success: true });
         } catch (error) {
           if (error instanceof Error && error.message.includes("使用されている")) {

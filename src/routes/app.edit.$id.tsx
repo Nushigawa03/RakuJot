@@ -3,6 +3,7 @@ import type { LoaderFunction } from "react-router";
 import { getMemo } from "~/features/memos/models/memo.server";
 import { getTags } from "~/features/memos/models/tag.server";
 import Page from '~/features/memos.edit/components/Page';
+import { getDevUserId } from "~/features/auth/utils/devUser.server";
 
 export const loader: LoaderFunction = async ({ params }) => {
   const { id } = params;
@@ -11,15 +12,16 @@ export const loader: LoaderFunction = async ({ params }) => {
     return Response.json({ error: "メモIDが指定されていません。" }, { status: 400 });
   }
 
+  const userId = await getDevUserId();
   const [memo, availableTags] = await Promise.all([
-    getMemo(id),
-    getTags()
+    getMemo(id, userId),
+    getTags(userId)
   ]);
 
   if (!memo) {
     return Response.json({ error: "メモが見つかりません。" }, { status: 404 });
   }
-  
+
   return Response.json({ memo, availableTags });
 };
 

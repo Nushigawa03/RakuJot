@@ -1,11 +1,13 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTagExpressions, createTagExpression, updateTagExpression, deleteTagExpression } from "~/features/memos/models/tagExpression.server";
+import { getDevUserId } from "~/features/auth/utils/devUser.server";
 
 export const loader: LoaderFunction = async () => {
   try {
+    const userId = await getDevUserId();
     // フロントは name の有無でフィルタ/カテゴリを振り分けるため、
     // 統合された TagExpression をそのまま返す
-    const combined = await getTagExpressions();
+    const combined = await getTagExpressions(userId);
     return Response.json(combined);
   } catch (error) {
     console.error("API tagExpressions loader error:", error);
@@ -15,24 +17,25 @@ export const loader: LoaderFunction = async () => {
 
 export const action: ActionFunction = async ({ request }) => {
   try {
+    const userId = await getDevUserId();
     const body = await request.json();
 
     switch (request.method) {
       case "POST": {
         const { orTerms, name, color, icon } = body;
-        const newExpr = await createTagExpression({ orTerms, name: name ?? null, color, icon });
+        const newExpr = await createTagExpression({ orTerms, name: name ?? null, color, icon }, userId);
         return Response.json({ success: true, tagExpression: newExpr });
       }
 
       case "PUT": {
         const { id: updateId, orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon } = body;
-        const updatedExpr = await updateTagExpression(updateId, { orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon });
+        const updatedExpr = await updateTagExpression(updateId, { orTerms: updateOrTerms, name: updateName, color: updateColor, icon: updateIcon }, userId);
         return Response.json({ success: true, tagExpression: updatedExpr });
       }
 
       case "DELETE": {
         const { id } = body;
-        await deleteTagExpression(id);
+        await deleteTagExpression(id, userId);
         return Response.json({ success: true });
       }
 

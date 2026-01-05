@@ -1,5 +1,6 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTagExpression, updateTagExpression, deleteTagExpression } from "~/features/memos/models/tagExpression.server";
+import { getDevUserId } from "~/features/auth/utils/devUser.server";
 
 export const loader: LoaderFunction = async ({ params }) => {
   try {
@@ -8,7 +9,8 @@ export const loader: LoaderFunction = async ({ params }) => {
       return Response.json({ error: "IDが指定されていません" }, { status: 400 });
     }
 
-    const expr = await getTagExpression(id);
+    const userId = await getDevUserId();
+    const expr = await getTagExpression(id, userId);
     if (expr) {
       return Response.json(expr);
     }
@@ -26,16 +28,18 @@ export const action: ActionFunction = async ({ request, params }) => {
       return Response.json({ error: "IDが指定されていません" }, { status: 400 });
     }
 
+    const userId = await getDevUserId();
+
     switch (request.method) {
       case "PUT": {
         const body = await request.json();
         const { orTerms, name, color, icon } = body;
-        const updated = await updateTagExpression(id, { orTerms, name, color, icon });
+        const updated = await updateTagExpression(id, { orTerms, name, color, icon }, userId);
         return Response.json({ success: true, tagExpression: updated });
       }
 
       case "DELETE": {
-        await deleteTagExpression(id);
+        await deleteTagExpression(id, userId);
         return Response.json({ success: true });
       }
 

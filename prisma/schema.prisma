@@ -12,8 +12,25 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String?
+  picture         String?         // Google profile picture URL
+  googleId        String          @unique
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  memos           Memo[]
+  tags            Tag[]
+  tagExpressions  TagExpression[]
+  trashedMemos    TrashedMemo[]
+}
+
 model Memo {
   id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title      String
   date       String?  // 日付はオプション
   tags       Tag[]    @relation("MemoTags")
@@ -21,28 +38,41 @@ model Memo {
   embedding  Json?    // 埋め込みベクトル（Gemini embedding-001の場合、768次元、JSON配列で保存）
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  
+  @@index([userId])
 }
 
 model Tag {
   id          String @id @default(cuid())
-  name        String @unique
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
   description String?
   memos       Memo[] @relation("MemoTags")
+  
+  @@unique([name, userId])
+  @@index([userId])
 }
 
 model TagExpression {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   orTerms   Json      // TagExpressionTerm[]をJSONで保存
   name      String?   // 保存されない場合はnull
   color     String?
   icon      String?
   createdAt DateTime? 
   updatedAt DateTime? 
+  
+  @@index([userId])
 }
 
 model TrashedMemo {
   id         String   @id @default(cuid())
-  originalId String   @unique // 元のMemoのID
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalId String   // 元のMemoのID
   title      String
   date       String?
   tagNames   String[] // タグ名の配列
@@ -52,5 +82,7 @@ model TrashedMemo {
   updatedAt  String   // 元の更新日時（ISO文字列）
   deletedAt  DateTime @default(now()) // ゴミ箱に移動した日時
   
+  @@unique([originalId, userId])
+  @@index([userId])
   @@index([deletedAt]) // 自動削除クエリの高速化
 }

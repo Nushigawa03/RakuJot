@@ -1,9 +1,11 @@
 import type { ActionFunction } from "react-router";
 import { aiMemoProcessor, aiMemoEditor } from "~/features/App/services/aiMemoProcessor.server";
 import { getTags } from "~/features/memos/models/tag.server";
+import { getDevUserId } from "~/features/auth/utils/devUser.server";
 
 export const action: ActionFunction = async ({ request }) => {
   try {
+    const userId = await getDevUserId();
     const url = new URL(request.url);
     const data = await request.json();
 
@@ -18,7 +20,7 @@ export const action: ActionFunction = async ({ request }) => {
 
       console.debug('[api.memos.ai/edit] received original:', original);
       console.debug('[api.memos.ai/edit] received instruction:', instruction);
-      const tags = await getTags();
+      const tags = await getTags(userId);
       console.debug('[api.memos.ai/edit] tags count:', tags.length);
       const ai = await aiMemoEditor(original, instruction, tags);
       console.debug('[api.memos.ai/edit] ai result:', ai);
@@ -31,7 +33,7 @@ export const action: ActionFunction = async ({ request }) => {
       }
 
       console.debug('[api.memos.ai] received content:', content);
-      const tags = await getTags();
+      const tags = await getTags(userId);
       console.debug('[api.memos.ai] tags count:', tags.length);
       const ai = await aiMemoProcessor(content, tags);
       console.debug('[api.memos.ai] ai result:', ai);

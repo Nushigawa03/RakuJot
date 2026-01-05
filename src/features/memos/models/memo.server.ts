@@ -15,7 +15,7 @@ const serializeMemo = (memo: any) => {
   };
 };
 
-export const getMemo = async (id: string) => {
+export const getMemo = async (id: string, userId: string) => {
   try {
     // まずモックデータから検索
     if (shouldUseMockDatabase()) {
@@ -26,7 +26,7 @@ export const getMemo = async (id: string) => {
     }
 
     // モックデータになければデータベースから取得
-    const memo = await prisma.memo.findUnique({ where: { id }, include: { tags: true } });
+    const memo = await prisma.memo.findUnique({ where: { id, userId }, include: { tags: true } });
     return serializeMemo(memo);
   } catch (error) {
     console.error("データベースエラー:", error);
@@ -41,9 +41,10 @@ export const getMemo = async (id: string) => {
   }
 };
 
-export const getMemos = async () => {
+export const getMemos = async (userId: string) => {
   try {
     const dbMemos = await prisma.memo.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
       include: { tags: true },
     });
@@ -81,7 +82,7 @@ export const getMemos = async () => {
   }
 };
 
-export const createMemo = async (data: any) => {
+export const createMemo = async (data: any, userId: string) => {
   try {
     // サーバー側バリデーション
     const v = validateMemoInput(data, false);
@@ -99,11 +100,12 @@ export const createMemo = async (data: any) => {
     }
 
     // タグを確実に存在させ、接続用オブジェクトを作る（ensureTags で責務を分離）
-    const ensuredTags = await ensureTags(data.tags || []);
+    const ensuredTags = await ensureTags(data.tags || [], userId);
     const tagsToConnect = ensuredTags.map(t => ({ id: t.id }));
 
     const newMemo = await prisma.memo.create({
       data: {
+        userId,
         title: data.title,
         date: data.date || "",
         tags: {
@@ -155,7 +157,7 @@ export const createMemo = async (data: any) => {
 };
 
 
-export const deleteMemo = async (id: string) => {
+export const deleteMemo = async (id: string, userId: string) => {
   try {
     // モックデータのIDの場合は処理をスキップ
     if (shouldUseMockDatabase() && id.startsWith('mock-')) {
@@ -166,8 +168,8 @@ export const deleteMemo = async (id: string) => {
     // トランザクションでMemoからTrashedMemoへ移動
     await prisma.$transaction(async (tx) => {
       // 元のメモを取得（タグ含む）
-      const memo = await tx.memo.findUnique({
-        where: { id },
+      const memo = await tx.memo.findFirst({
+        where: { id, userId },
         include: { tags: true },
       });
 
@@ -178,6 +180,7 @@ export const deleteMemo = async (id: string) => {
       // TrashedMemoに挿入
       await tx.trashedMemo.create({
         data: {
+          userId,
           originalId: memo.id,
           title: memo.title,
           date: memo.date,
@@ -204,9 +207,10 @@ export const deleteMemo = async (id: string) => {
   }
 };
 
-export const getTrashedMemos = async () => {
+export const getTrashedMemos = async (userId: string) => {
   try {
     const trashedMemos = await prisma.trashedMemo.findMany({
+      where: { userId },
       orderBy: { deletedAt: "desc" },
     });
     return trashedMemos;
@@ -218,13 +222,13 @@ export const getTrashedMemos = async () => {
   }
 };
 
-export const restoreMemo = async (originalId: string) => {
+export const restoreMemo = async (originalId: string, userId: string) => {
   try {
     // トランザクションでTrashedMemoからMemoへ復元
     await prisma.$transaction(async (tx) => {
       // ゴミ箱からメモを取得
-      const trashedMemo = await tx.trashedMemo.findUnique({
-        where: { originalId },
+      const trashedMemo = await tx.trashedMemo.findFirst({
+        where: { originalId, userId },
       });
 
       if (!trashedMemo) {
@@ -232,13 +236,14 @@ export const restoreMemo = async (originalId: string) => {
       }
 
       // タグを確実に存在させる
-      const ensuredTags = await ensureTags(trashedMemo.tagNames);
+      const ensuredTags = await ensureTags(trashedMemo.tagNames, userId);
       const tagsToConnect = ensuredTags.map(t => ({ id: t.id }));
 
       // Memoテーブルに復元（元のIDを使用）
       await tx.memo.create({
         data: {
           id: trashedMemo.originalId,
+          userId,
           title: trashedMemo.title,
           date: trashedMemo.date,
           tags: {
@@ -252,8 +257,8 @@ export const restoreMemo = async (originalId: string) => {
       });
 
       // ゴミ箱から削除
-      await tx.trashedMemo.delete({
-        where: { originalId },
+      await tx.trashedMemo.deleteMany({
+        where: { originalId, userId },
       });
     });
 
@@ -266,10 +271,10 @@ export const restoreMemo = async (originalId: string) => {
   }
 };
 
-export const permanentlyDeleteMemo = async (id: string) => {
+export const permanentlyDeleteMemo = async (id: string, userId: string) => {
   try {
-    await prisma.trashedMemo.delete({
-      where: { id },
+    await prisma.trashedMemo.deleteMany({
+      where: { id, userId },
     });
     return { success: true };
   } catch (error) {
@@ -280,13 +285,14 @@ export const permanentlyDeleteMemo = async (id: string) => {
   }
 };
 
-export const purgeOldTrashedMemos = async (days: number = 30) => {
+export const purgeOldTrashedMemos = async (days: number = 30, userId: string) => {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const result = await prisma.trashedMemo.deleteMany({
       where: {
+        userId,
         deletedAt: {
           lt: cutoffDate,
         },
@@ -302,7 +308,7 @@ export const purgeOldTrashedMemos = async (days: number = 30) => {
   }
 };
 
-export const updateMemo = async (id: string, data: any) => {
+export const updateMemo = async (id: string, data: any, userId: string) => {
   try {
     // モックデータのIDの場合は処理をスキップ
     if (shouldUseMockDatabase() && id.startsWith('mock-')) {
@@ -332,7 +338,7 @@ export const updateMemo = async (id: string, data: any) => {
     // タグが指定されている場合の処理
     if (tags !== undefined) {
       // タグを確実に存在させ、接続用オブジェクトを作る（ensureTags で責務を分離）
-      const ensuredTags = await ensureTags(tags || []);
+      const ensuredTags = await ensureTags(tags || [], userId);
       const tagsToConnect = ensuredTags.map(t => ({ id: t.id }));
 
       // メモのタグを置換（原子的に置き換え）
@@ -343,7 +349,7 @@ export const updateMemo = async (id: string, data: any) => {
 
     // If title, date, or body are being updated, recalculate embedding
     if (updateData.title || updateData.date !== undefined || updateData.body) {
-      const existing = await prisma.memo.findUnique({ where: { id } });
+      const existing = await prisma.memo.findFirst({ where: { id, userId } });
       if (existing) {
         const embedding = await computeMemoEmbedding({
           title: updateData.title || existing.title,
@@ -358,15 +364,24 @@ export const updateMemo = async (id: string, data: any) => {
 
     // Apply update in a transaction for atomicity
     const [updated] = await prisma.$transaction([
-      prisma.memo.update({
-        where: { id },
+      prisma.memo.updateMany({
+        where: { id, userId },
         data: updateData,
-        include: { tags: true },
       }),
     ]);
 
+    // Fetch the updated memo with tags
+    const updatedMemo = await prisma.memo.findFirst({
+      where: { id, userId },
+      include: { tags: true },
+    });
+
+    if (!updatedMemo) {
+      return { error: "メモの更新に失敗しました。" };
+    }
+
     // Convert Date fields to ISO strings for JSON serialization
-    return serializeMemo(updated);
+    return serializeMemo(updatedMemo);
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "メモの更新に失敗しました。" };
