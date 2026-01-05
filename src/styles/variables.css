@@ -1,0 +1,311 @@
+/**
+ * Design System Variables
+ * Global design tokens for the RakuJot application
+ */
+
+:root {
+    /* ========================================
+     Color Palette - Light Mode
+     ======================================== */
+
+    /* Primary Colors - Vibrant Blue */
+    --color-primary-50: hsl(217, 91%, 96%);
+    --color-primary-100: hsl(217, 91%, 90%);
+    --color-primary-200: hsl(217, 91%, 80%);
+    --color-primary-300: hsl(217, 91%, 70%);
+    --color-primary-400: hsl(217, 91%, 60%);
+    --color-primary-500: hsl(217, 91%, 50%);
+    --color-primary-600: hsl(217, 91%, 45%);
+    --color-primary-700: hsl(217, 91%, 40%);
+    --color-primary-800: hsl(217, 91%, 35%);
+    --color-primary-900: hsl(217, 91%, 25%);
+
+    /* Secondary Colors - Purple Accent */
+    --color-secondary-50: hsl(262, 83%, 96%);
+    --color-secondary-100: hsl(262, 83%, 90%);
+    --color-secondary-200: hsl(262, 83%, 80%);
+    --color-secondary-300: hsl(262, 83%, 70%);
+    --color-secondary-400: hsl(262, 83%, 60%);
+    --color-secondary-500: hsl(262, 83%, 58%);
+    --color-secondary-600: hsl(262, 83%, 48%);
+    --color-secondary-700: hsl(262, 83%, 38%);
+    --color-secondary-800: hsl(262, 83%, 28%);
+    --color-secondary-900: hsl(262, 83%, 18%);
+
+    /* Success Colors - Fresh Green */
+    --color-success-50: hsl(142, 71%, 96%);
+    --color-success-100: hsl(142, 71%, 90%);
+    --color-success-200: hsl(142, 71%, 80%);
+    --color-success-300: hsl(142, 71%, 70%);
+    --color-success-400: hsl(142, 71%, 60%);
+    --color-success-500: hsl(142, 71%, 45%);
+    --color-success-600: hsl(142, 71%, 40%);
+    --color-success-700: hsl(142, 71%, 35%);
+    --color-success-800: hsl(142, 71%, 30%);
+    --color-success-900: hsl(142, 71%, 20%);
+
+    /* Warning Colors - Amber */
+    --color-warning-50: hsl(38, 92%, 96%);
+    --color-warning-100: hsl(38, 92%, 90%);
+    --color-warning-200: hsl(38, 92%, 80%);
+    --color-warning-300: hsl(38, 92%, 70%);
+    --color-warning-400: hsl(38, 92%, 60%);
+    --color-warning-500: hsl(38, 92%, 50%);
+    --color-warning-600: hsl(38, 92%, 45%);
+    --color-warning-700: hsl(38, 92%, 40%);
+    --color-warning-800: hsl(38, 92%, 35%);
+    --color-warning-900: hsl(38, 92%, 25%);
+
+    /* Danger Colors - Vibrant Red */
+    --color-danger-50: hsl(0, 84%, 96%);
+    --color-danger-100: hsl(0, 84%, 90%);
+    --color-danger-200: hsl(0, 84%, 80%);
+    --color-danger-300: hsl(0, 84%, 70%);
+    --color-danger-400: hsl(0, 84%, 65%);
+    --color-danger-500: hsl(0, 84%, 60%);
+    --color-danger-600: hsl(0, 84%, 50%);
+    --color-danger-700: hsl(0, 84%, 45%);
+    --color-danger-800: hsl(0, 84%, 40%);
+    --color-danger-900: hsl(0, 84%, 30%);
+
+    /* Info Colors - Cyan */
+    --color-info-50: hsl(199, 89%, 96%);
+    --color-info-100: hsl(199, 89%, 90%);
+    --color-info-200: hsl(199, 89%, 80%);
+    --color-info-300: hsl(199, 89%, 70%);
+    --color-info-400: hsl(199, 89%, 60%);
+    --color-info-500: hsl(199, 89%, 48%);
+    --color-info-600: hsl(199, 89%, 43%);
+    --color-info-700: hsl(199, 89%, 38%);
+    --color-info-800: hsl(199, 89%, 33%);
+    --color-info-900: hsl(199, 89%, 23%);
+
+    /* Neutral Colors - Gray Scale */
+    --color-neutral-50: hsl(220, 14%, 96%);
+    --color-neutral-100: hsl(220, 14%, 93%);
+    --color-neutral-200: hsl(220, 13%, 87%);
+    --color-neutral-300: hsl(220, 13%, 75%);
+    --color-neutral-400: hsl(220, 13%, 60%);
+    --color-neutral-500: hsl(220, 13%, 46%);
+    --color-neutral-600: hsl(220, 14%, 35%);
+    --color-neutral-700: hsl(220, 14%, 27%);
+    --color-neutral-800: hsl(220, 14%, 18%);
+    --color-neutral-900: hsl(220, 14%, 10%);
+
+    /* ========================================
+     Semantic Colors - Light Mode
+     ======================================== */
+
+    --color-text-primary: var(--color-neutral-900);
+    --color-text-secondary: var(--color-neutral-600);
+    --color-text-tertiary: var(--color-neutral-500);
+    --color-text-disabled: var(--color-neutral-400);
+
+    --color-bg-primary: hsl(0, 0%, 100%);
+    --color-bg-secondary: var(--color-neutral-50);
+    --color-bg-tertiary: var(--color-neutral-100);
+
+    --color-border-primary: var(--color-neutral-200);
+    --color-border-secondary: var(--color-neutral-300);
+    --color-border-focus: var(--color-primary-500);
+
+    --color-surface-elevated: hsl(0, 0%, 100%);
+    --color-surface-hover: var(--color-neutral-50);
+
+    /* ========================================
+     Gradients
+     ======================================== */
+
+    --gradient-primary: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+    --gradient-secondary: linear-gradient(135deg, var(--color-secondary-500) 0%, var(--color-secondary-600) 100%);
+    --gradient-success: linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-600) 100%);
+    --gradient-vibrant: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+
+    /* ========================================
+     Shadows
+     ======================================== */
+
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+
+    /* Colored Shadows */
+    --shadow-primary: 0 4px 14px 0 rgba(37, 99, 235, 0.2);
+    --shadow-success: 0 4px 14px 0 rgba(16, 185, 129, 0.2);
+    --shadow-warning: 0 4px 14px 0 rgba(245, 158, 11, 0.2);
+    --shadow-danger: 0 4px 14px 0 rgba(239, 68, 68, 0.2);
+
+    /* ========================================
+     Spacing Scale
+     ======================================== */
+
+    --spacing-0: 0;
+    --spacing-1: 0.25rem;
+    /* 4px */
+    --spacing-2: 0.5rem;
+    /* 8px */
+    --spacing-3: 0.75rem;
+    /* 12px */
+    --spacing-4: 1rem;
+    /* 16px */
+    --spacing-5: 1.25rem;
+    /* 20px */
+    --spacing-6: 1.5rem;
+    /* 24px */
+    --spacing-8: 2rem;
+    /* 32px */
+    --spacing-10: 2.5rem;
+    /* 40px */
+    --spacing-12: 3rem;
+    /* 48px */
+    --spacing-16: 4rem;
+    /* 64px */
+    --spacing-20: 5rem;
+    /* 80px */
+    --spacing-24: 6rem;
+    /* 96px */
+
+    /* ========================================
+     Typography Scale
+     ======================================== */
+
+    --font-size-xs: 0.75rem;
+    /* 12px */
+    --font-size-sm: 0.875rem;
+    /* 14px */
+    --font-size-base: 1rem;
+    /* 16px */
+    --font-size-lg: 1.125rem;
+    /* 18px */
+    --font-size-xl: 1.25rem;
+    /* 20px */
+    --font-size-2xl: 1.5rem;
+    /* 24px */
+    --font-size-3xl: 1.875rem;
+    /* 30px */
+    --font-size-4xl: 2.25rem;
+    /* 36px */
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+
+    /* ========================================
+     Border Radius
+     ======================================== */
+
+    --radius-xs: 0.25rem;
+    /* 4px */
+    --radius-sm: 0.375rem;
+    /* 6px */
+    --radius-md: 0.5rem;
+    /* 8px */
+    --radius-lg: 0.75rem;
+    /* 12px */
+    --radius-xl: 1rem;
+    /* 16px */
+    --radius-2xl: 1.5rem;
+    /* 24px */
+    --radius-full: 9999px;
+
+    /* ========================================
+     Transitions
+     ======================================== */
+
+    --transition-fast: 150ms;
+    --transition-base: 200ms;
+    --transition-slow: 300ms;
+    --transition-slower: 500ms;
+
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-sharp: cubic-bezier(0.4, 0, 0.6, 1);
+    --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* ========================================
+     Z-Index Scale
+     ======================================== */
+
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+}
+
+/* ========================================
+   Dark Mode
+   ======================================== */
+
+.dark {
+    /* Semantic Colors - Dark Mode */
+    --color-text-primary: var(--color-neutral-50);
+    --color-text-secondary: var(--color-neutral-300);
+    --color-text-tertiary: var(--color-neutral-400);
+    --color-text-disabled: var(--color-neutral-600);
+
+    --color-bg-primary: hsl(220, 14%, 12%);
+    --color-bg-secondary: hsl(220, 14%, 15%);
+    --color-bg-tertiary: hsl(220, 14%, 18%);
+
+    --color-border-primary: var(--color-neutral-800);
+    --color-border-secondary: var(--color-neutral-700);
+    --color-border-focus: var(--color-primary-400);
+
+    --color-surface-elevated: hsl(220, 14%, 16%);
+    --color-surface-hover: hsl(220, 14%, 20%);
+
+    /* Gradients - Dark Mode */
+    --gradient-glass: linear-gradient(135deg, rgba(30, 30, 40, 0.9) 0%, rgba(30, 30, 40, 0.7) 100%);
+
+    /* Shadows - Dark Mode (softer) */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Prefers Dark Color Scheme */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-text-primary: var(--color-neutral-50);
+        --color-text-secondary: var(--color-neutral-300);
+        --color-text-tertiary: var(--color-neutral-400);
+        --color-text-disabled: var(--color-neutral-600);
+
+        --color-bg-primary: hsl(220, 14%, 12%);
+        --color-bg-secondary: hsl(220, 14%, 15%);
+        --color-bg-tertiary: hsl(220, 14%, 18%);
+
+        --color-border-primary: var(--color-neutral-800);
+        --color-border-secondary: var(--color-neutral-700);
+        --color-border-focus: var(--color-primary-400);
+
+        --color-surface-elevated: hsl(220, 14%, 16%);
+        --color-surface-hover: hsl(220, 14%, 20%);
+
+        --gradient-glass: linear-gradient(135deg, rgba(30, 30, 40, 0.9) 0%, rgba(30, 30, 40, 0.7) 100%);
+
+        --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+        --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+        --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+}

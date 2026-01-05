@@ -1,42 +1,55 @@
-/* Tags Input */
+/* ========================================
+   Tag Input Component
+   ======================================== */
+
 .tags-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background-color: var(--color-bg);
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-primary);
     min-height: 40px;
     align-items: center;
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.tags-container:hover {
+    border-color: var(--color-border-secondary);
 }
 
 .tags-container:focus-within {
     border-color: var(--color-border-focus);
-    box-shadow: 0 0 0 2px rgba(var(--color-success-rgb), 0.12);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* Focus within override from original */
-.edit-memo-container.is-active .tags-container,
-.edit-memo-container:focus-within .tags-container {
-    border-color: rgba(76, 175, 80, 0.5);
-}
-
+/* Tag Chips */
 .tags-container .tag-chip {
-    background: var(--color-success-bg);
-    color: var(--color-success-fg);
-    padding: 3px 8px;
-    border-radius: 14px;
-    font-size: 0.82rem;
-    font-weight: 500;
-    border: 1px solid rgba(var(--color-success-rgb), 0.28);
+    background: var(--color-success-100);
+    color: var(--color-success-700);
+    padding: var(--spacing-1) var(--spacing-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border: 1px solid var(--color-success-200);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    transition: all var(--transition-base) var(--ease-out);
 }
 
+.tags-container .tag-chip:hover {
+    background: var(--color-success-200);
+    transform: translateY(-1px);
+}
+
+/* Tag Remove Button */
 .tags-container .tag-remove-button {
     background: transparent;
     border: none;
-    color: var(--color-success-fg);
-    padding: 0 2px;
+    color: var(--color-success-700);
+    padding: 0;
     width: 18px;
     height: 18px;
     border-radius: 50%;
@@ -45,13 +58,16 @@
     justify-content: center;
     font-size: 14px;
     line-height: 1;
-    opacity: 1;
+    cursor: pointer;
+    transition: all var(--transition-base) var(--ease-out);
 }
 
 .tags-container .tag-remove-button:hover {
-    background: rgba(var(--color-success-rgb), 0.08);
+    background: var(--color-success-200);
+    transform: scale(1.1);
 }
 
+/* Tag Input */
 .tags-container .tag-input-wrapper {
     position: relative;
     flex: 1;
@@ -60,39 +76,53 @@
 
 .tags-container .tag-input {
     width: 100%;
-    padding: 6px 8px;
+    padding: var(--spacing-2);
     border: none;
     background: transparent;
-    font-size: 0.9rem;
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
     outline: none;
 }
 
+.tags-container .tag-input::placeholder {
+    color: var(--color-text-tertiary);
+}
+
+/* Tag Suggestions Dropdown */
 .tags-container .tag-suggestions {
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    background: var(--color-bg);
-    border: 1px solid rgba(var(--color-success-rgb), 0.45);
-    border-radius: var(--radius-sm);
-    margin-top: 4px;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    margin-top: var(--spacing-1);
     max-height: 160px;
     overflow-y: auto;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-    z-index: 100;
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-dropdown);
+    animation: slideInDown var(--transition-base) var(--ease-out);
 }
 
 .tags-container .tag-suggestion {
-    padding: 8px 12px;
+    padding: var(--spacing-2) var(--spacing-3);
     cursor: pointer;
-    transition: background 0.15s ease;
-    font-size: 0.9rem;
+    transition: all var(--transition-fast) var(--ease-out);
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
 }
 
 .tags-container .tag-suggestion:hover {
-    background: var(--color-success-bg);
+    background: var(--color-surface-hover);
 }
 
 .tags-container .tag-suggestion:not(:last-child) {
-    border-bottom: 1px solid #f4f4f4;
+    border-bottom: 1px solid var(--color-border-primary);
+}
+
+/* Active State Override */
+.edit-memo-container.is-active .tags-container,
+.edit-memo-container:focus-within .tags-container {
+    border-color: var(--color-border-focus);
 }

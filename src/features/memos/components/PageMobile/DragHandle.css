@@ -1,0 +1,52 @@
+/* Drag Handle Styles */
+
+.page-mobile__handle-card {
+    height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--spacing-3);
+    background: var(--gradient-glass);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    border-bottom: 1px solid var(--color-border-primary);
+    user-select: none;
+    cursor: grab;
+    touch-action: none;
+    transition: all var(--transition-base) var(--ease-out);
+    flex-shrink: 0;
+}
+
+.page-mobile__handle-card:active {
+    cursor: grabbing;
+    background: var(--color-bg-secondary);
+}
+
+.page-mobile__handle {
+    width: 64px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-neutral-400);
+    margin-bottom: var(--spacing-2);
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.page-mobile__input-overlay.dragging .page-mobile__handle,
+.page-mobile__handle-card:active .page-mobile__handle {
+    width: 80px;
+    background: var(--color-primary-500);
+}
+
+.page-mobile__handle-text {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+    line-height: 1;
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.page-mobile__input-overlay.dragging .page-mobile__handle-text,
+.page-mobile__handle-card:active .page-mobile__handle-text {
+    color: var(--color-text-primary);
+}

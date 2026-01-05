@@ -1,111 +1,94 @@
+/* ========================================
+   Page Mobile - Main Container
+   ======================================== */
+
 .page-mobile {
   display: flex;
   flex-direction: column;
   min-height: calc(100dvh - var(--kbd-height, 0px));
   height: calc(100dvh - var(--kbd-height, 0px));
-  overflow: hidden; /* prevent body scroll when keyboard lifts content */
-}
-
-.page-mobile__header {
-  touch-action: manipulation;
-  flex-shrink: 0;
-}
-
-.page-mobile__handle-card {
-  height: 56px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 12px;
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
-  user-select: none;
-}
-
-.page-mobile__handle {
-  width: 64px;
-  height: 6px;
-  border-radius: 4px;
-  background: var(--color-border);
-  margin-bottom: 6px;
-}
-
-.page-mobile__handle-text {
-  font-size: 12px;
-  color: var(--color-muted);
-  line-height: 1;
-}
-
-.page-mobile__main {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
   overflow: hidden;
+  background: var(--color-bg-primary);
+  position: relative;
 }
 
-.page-mobile__quick-input {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.page-mobile__list {
-  flex: 1;
-  overflow: auto;
-  padding: 0.75rem;
-}
+/* ========================================
+   Filters (kept for compatibility)
+   ======================================== */
 
 .page-mobile__filters {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-3);
 }
 
 .page-mobile__pill-row {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-2);
   overflow-x: auto;
   white-space: nowrap;
-  padding-bottom: 4px;
+  padding-bottom: var(--spacing-1);
+}
+
+.page-mobile__pill-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.page-mobile__pill-row::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+.page-mobile__pill-row::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-400);
+  border-radius: var(--radius-full);
 }
 
 .page-mobile__pill {
-  padding: 0.4rem 0.75rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-bg-secondary);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   line-height: 1.2;
-  color: var(--color-text);
+  color: var(--color-text-primary);
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.page-mobile__pill:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.page-mobile__pill:active {
+  transform: translateY(0);
 }
 
 .page-mobile__pill--active {
-  border: 2px solid var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.1);
+  border: 2px solid var(--color-primary-500);
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+  box-shadow: var(--shadow-primary);
 }
 
 .page-mobile__pill--danger {
-  border: 1px solid var(--color-danger);
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  font-weight: 500;
+  border: 1px solid var(--color-danger-500);
+  background: var(--color-danger-100);
+  color: var(--color-danger-700);
+  font-weight: var(--font-weight-semibold);
 }
 
-/* Ensure pill appearance in dark/light contexts even if .dark class isn't present immediately */
-:root .page-mobile__pill {
-  color: var(--color-text);
-}
-.dark .page-mobile__pill {
-  background: var(--color-surface);
-  border-color: var(--color-border);
-  color: var(--color-text);
+.page-mobile__pill--danger:hover {
+  background: var(--color-danger-200);
+  box-shadow: var(--shadow-danger);
 }
 
-.page-mobile__footer {
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+/* Category Colors */
+.page-mobile__pill--has-color {
+  border-left: 4px solid var(--category-color, var(--color-primary-500));
+  padding-left: var(--spacing-2);
 }

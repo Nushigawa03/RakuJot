@@ -1,49 +1,109 @@
-/* AI Suggestion Panel */
+/* ========================================
+   AI Suggestion Panel - Rich Flat Design
+   ======================================== */
+
 .ai-suggestion-preview {
-    background: white;
-    border: 2px solid #667eea;
-    border-radius: 10px;
-    padding: 16px;
+    background: var(--color-surface-elevated);
+    border: 2px solid var(--color-secondary-400);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    margin-bottom: 12px;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-3);
+    box-shadow: var(--shadow-lg);
+    animation: scaleIn var(--transition-base) var(--ease-out);
 }
 
+/* Header */
 .ai-suggestion-preview .suggestion-header {
-    border-bottom: 1px solid #e6e6e6;
-    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border-primary);
+    padding-bottom: var(--spacing-2);
 }
 
 .ai-suggestion-preview .suggestion-label {
-    font-weight: 600;
-    color: #667eea;
-    font-size: 0.95rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-secondary-600);
+    font-size: var(--font-size-base);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
 }
 
+/* Content */
 .ai-suggestion-preview .suggestion-content {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--spacing-3);
 }
 
 .ai-suggestion-preview .suggestion-field input,
 .ai-suggestion-preview .suggestion-field textarea {
     width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 0.9rem;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: all var(--transition-base) var(--ease-out);
 }
 
+.ai-suggestion-preview .suggestion-field input:hover,
+.ai-suggestion-preview .suggestion-field textarea:hover {
+    border-color: var(--color-border-secondary);
+}
+
+.ai-suggestion-preview .suggestion-field input:focus,
+.ai-suggestion-preview .suggestion-field textarea:focus {
+    outline: none;
+    border-color: var(--color-secondary-500);
+    box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+}
+
+/* Tags */
 .ai-suggestion-preview .suggestion-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--spacing-2);
 }
 
+/* Buttons */
 .ai-suggestion-preview .suggestion-buttons {
     display: flex;
-    gap: 10px;
-    margin-top: 12px;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-3);
+}
+
+.ai-suggestion-preview .suggestion-buttons button {
+    flex: 1;
+    padding: var(--spacing-3);
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.ai-suggestion-preview .suggestion-buttons .btn-accept {
+    background: var(--gradient-success);
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.ai-suggestion-preview .suggestion-buttons .btn-accept:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-success);
+}
+
+.ai-suggestion-preview .suggestion-buttons .btn-reject {
+    background: transparent;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-primary);
+}
+
+.ai-suggestion-preview .suggestion-buttons .btn-reject:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-secondary);
 }

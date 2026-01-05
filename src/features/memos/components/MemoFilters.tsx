@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { TagExpression } from '../types/tagExpressions';
 import { generateExpressionName } from '../utils/tagExpressionUtils';
 import { formatLogicalText } from '../utils/logicalTextFormatter';
@@ -18,6 +18,29 @@ const MemoFilters: React.FC<MemoFiltersProps> = ({
   activeExpression,
   handleExpressionClick,
 }) => {
+  const getExpressionClassName = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+  // Inject dynamic CSS for category colors (same as Sidebar)
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const styleId = 'memofilters-category-color-styles';
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    const named = expressions.filter(e => e.name);
+    const rules = named
+      .filter((e) => e.color)
+      .map((e) => `.category-color--${getExpressionClassName(e.id)} { --category-color: ${e.color}; }`)
+      .join('\n');
+
+    styleEl.textContent = rules;
+  }, [expressions]);
   return (
     <div className="page-mobile__filters">
       <div className="page-mobile__pill-row">
@@ -36,7 +59,7 @@ const MemoFilters: React.FC<MemoFiltersProps> = ({
             <button
               key={category.id}
               onClick={() => handleExpressionClick(category)}
-              className={`page-mobile__pill ${activeExpression === category.id ? 'page-mobile__pill--active' : ''}`}
+              className={`page-mobile__pill ${activeExpression === category.id ? 'page-mobile__pill--active' : ''} ${category.color ? `page-mobile__pill--has-color category-color--${getExpressionClassName(category.id)}` : ''}`}
             >
               {category.name}
             </button>

@@ -1,0 +1,341 @@
+/**
+ * Animations & Micro-interactions
+ * Smooth transitions and delightful animations
+ */
+
+/* ========================================
+   Keyframe Animations
+   ======================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes scaleOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes wiggle {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(-3deg);
+    }
+
+    75% {
+        transform: rotate(3deg);
+    }
+}
+
+/* ========================================
+   Animation Utility Classes
+   ======================================== */
+
+.animate-fadeIn {
+    animation: fadeIn var(--transition-base) var(--ease-out);
+}
+
+.animate-fadeOut {
+    animation: fadeOut var(--transition-base) var(--ease-in);
+}
+
+.animate-slideInUp {
+    animation: slideInUp var(--transition-slow) var(--ease-out);
+}
+
+.animate-slideInDown {
+    animation: slideInDown var(--transition-slow) var(--ease-out);
+}
+
+.animate-slideInLeft {
+    animation: slideInLeft var(--transition-slow) var(--ease-out);
+}
+
+.animate-slideInRight {
+    animation: slideInRight var(--transition-slow) var(--ease-out);
+}
+
+.animate-scaleIn {
+    animation: scaleIn var(--transition-base) var(--ease-out);
+}
+
+.animate-scaleOut {
+    animation: scaleOut var(--transition-base) var(--ease-in);
+}
+
+.animate-bounce {
+    animation: bounce 1s infinite;
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+.animate-wiggle {
+    animation: wiggle 0.5s ease-in-out;
+}
+
+/* ========================================
+   Hover Effects
+   ======================================== */
+
+.hover-lift {
+    transition: transform var(--transition-base) var(--ease-out),
+        box-shadow var(--transition-base) var(--ease-out);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.hover-glow {
+    transition: box-shadow var(--transition-base) var(--ease-out);
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+}
+
+.hover-scale {
+    transition: transform var(--transition-base) var(--ease-out);
+}
+
+.hover-scale:hover {
+    transform: scale(1.05);
+}
+
+.hover-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+.hover-shine::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent);
+    transition: left var(--transition-slow) var(--ease-out);
+}
+
+.hover-shine:hover::before {
+    left: 100%;
+}
+
+/* ========================================
+   Loading States
+   ======================================== */
+
+.shimmer {
+    background: linear-gradient(90deg,
+            var(--color-bg-secondary) 0%,
+            var(--color-bg-tertiary) 50%,
+            var(--color-bg-secondary) 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+.skeleton {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* ========================================
+   Transition Utilities
+   ======================================== */
+
+.transition-all {
+    transition: all var(--transition-base) var(--ease-in-out);
+}
+
+.transition-colors {
+    transition: color var(--transition-base) var(--ease-in-out),
+        background-color var(--transition-base) var(--ease-in-out),
+        border-color var(--transition-base) var(--ease-in-out);
+}
+
+.transition-transform {
+    transition: transform var(--transition-base) var(--ease-out);
+}
+
+.transition-opacity {
+    transition: opacity var(--transition-base) var(--ease-in-out);
+}
+
+/* ========================================
+   Smooth Interactions
+   ======================================== */
+
+.smooth-interaction {
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.smooth-interaction:active {
+    transform: scale(0.98);
+}
+
+.button-press {
+    transition: transform var(--transition-fast) var(--ease-sharp);
+}
+
+.button-press:active {
+    transform: scale(0.95);
+}

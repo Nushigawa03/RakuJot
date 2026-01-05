@@ -1,55 +1,87 @@
+/* ========================================
+   Detail Search - Rich Flat Design
+   ======================================== */
+
 .detail-search {
-    margin-top: 10px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    position: relative;
-  }
-  
-  .search-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px; /* 各項目の間隔を調整 */
-    align-items: flex-end; /* すべての要素を下揃えに変更 */
-  }
-  
-  .search-options label {
-    display: flex;
-    flex-direction: column;
-    font-size: 14px;
-    gap: 5px;
-  }
-  
-  .search-options select,
-  .search-options input[type="date"] {
-    padding: 4px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-lg);
+  position: relative;
+  animation: slideInDown var(--transition-slow) var(--ease-out);
+  box-shadow: var(--shadow-md);
+}
 
-  .detail-search-actions {
-    display: inline-flex;
-    align-items: flex-end; /* 下揃え */
-  }
+/* Search Options */
+.search-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-5);
+  align-items: flex-end;
+}
 
-  .clear-button {
-    padding: 8px 16px; /* DatePickerInputの高さに合わせて調整 */
-    background-color: var(--color-danger);
-    color: var(--color-danger-contrast);
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    height: 38px; /* DatePickerInputの入力欄の高さに合わせる */
-    box-sizing: border-box;
-  }
+.search-options label {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  gap: var(--spacing-2);
+}
 
-  .clear-button:hover {
-    background-color: #d32f2f;
-  }
+.search-options select,
+.search-options input[type="date"] {
+  padding: var(--spacing-1);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-base) var(--ease-out);
+}
 
-  .clear-button:active {
-    background-color: #b71c1c;
-  }
+.search-options select:hover,
+.search-options input[type="date"]:hover {
+  border-color: var(--color-border-secondary);
+}
+
+.search-options select:focus,
+.search-options input[type="date"]:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Search Actions */
+.detail-search-actions {
+  display: inline-flex;
+  align-items: flex-end;
+}
+
+/* Clear Button */
+.clear-button {
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--color-danger-500);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-base) var(--ease-out);
+  height: 38px;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-sm);
+}
+
+.clear-button:hover {
+  background: var(--color-danger-600);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-danger);
+}
+
+.clear-button:active {
+  background: var(--color-danger-700);
+  transform: translateY(0);
+}

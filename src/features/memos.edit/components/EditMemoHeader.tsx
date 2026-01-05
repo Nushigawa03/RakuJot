@@ -57,7 +57,6 @@ export const EditMemoHeader: React.FC<EditMemoHeaderProps> = ({
                         variant="secondary"
                         onClick={onDiscard}
                         disabled={!canDiscard}
-                        title="破棄"
                     >
                         🔄 <span className="button-text">変更を破棄</span>
                     </Button>
@@ -66,7 +65,6 @@ export const EditMemoHeader: React.FC<EditMemoHeaderProps> = ({
                         className="delete-button-top"
                         variant="secondary"
                         onClick={onDelete}
-                        title="削除"
                     >
                         🗑️ <span className="button-text">削除</span>
                     </Button>
@@ -75,7 +73,6 @@ export const EditMemoHeader: React.FC<EditMemoHeaderProps> = ({
                         className="mode-toggle-button"
                         variant="secondary"
                         onClick={onToggleMode}
-                        title={editMode ? '閲覧モード' : '詳細編集'}
                     >
                         {editMode ? <>📖 <span className="button-text">閲覧</span></> : <>✏️ <span className="button-text">編集</span></>}
                     </Button>

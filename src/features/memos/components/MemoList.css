@@ -1,85 +1,237 @@
+/* ========================================
+   Memo List - Rich Flat Design
+   ======================================== */
+
+/* Loading State */
 .memo-list-loading {
-  padding: 20px;
+  padding: var(--spacing-5);
   text-align: center;
-  color: #666;
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
+/* List Header */
 .memo-list-header {
   display: flex;
-  justify-content: space-between; /* 左右に要素を配置 */
-  align-items: center; /* 垂直方向に中央揃え */
-  margin-bottom: 10px;
-  padding: 0 10px; /* リストと同じ余白を追加 */
-  box-sizing: border-box; /* パディングを含めて幅を計算 */
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+  padding: 0 var(--spacing-3);
+  box-sizing: border-box;
 }
 
 .memo-list-sort {
   display: flex;
-  gap: 20px;
-  font-weight: bold;
+  gap: var(--spacing-5);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  width: 100%; /* リスト全体の幅に合わせる */
+  width: 100%;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .memo-list-sort .sortable {
-  flex: 0 0 120px; /* 日付の列幅に合わせる */
-  text-align: left; /* 左揃え */
+  flex: 0 0 120px;
+  text-align: left;
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.memo-list-sort .sortable:hover {
+  color: var(--color-primary-600);
 }
 
 .memo-list-sort .sortable:last-child {
-  flex: 1; /* タイトルの列幅に合わせる */
+  flex: 1;
   text-align: left;
 }
 
+/* List Container */
 .memo-list ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
+/* Memo List Item - Rich Card Style */
 .memo-list li {
   display: flex;
   justify-content: space-between;
-  align-items: center; /* 垂直方向に中央揃え */
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
+  align-items: center;
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border-primary);
   cursor: pointer;
+  transition: all var(--transition-base) var(--ease-out);
+  background: var(--color-bg-primary);
 }
 
 .memo-list li:hover {
-  background-color: #f5f5f5;
+  background: var(--color-surface-hover);
+  border-left: 3px solid var(--color-primary-500);
+  padding-left: calc(var(--spacing-4) - 3px);
+  transform: translateX(2px);
+  box-shadow: var(--shadow-sm);
 }
 
+/* Memo Date */
 .memo-date {
-  flex: 0 0 120px; /* 固定幅で日付を揃える */
-  color: #888;
-  font-size: 0.9em;
-  margin-right: 10px;
+  flex: 0 0 100px;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-right: var(--spacing-3);
   text-align: left;
 }
 
+/* Memo Title */
 .memo-title {
-  flex: 1; /* タイトルは残りのスペースを占有 */
-  font-weight: bold;
+  flex: 1;
+  font-weight: var(--font-weight-semibold);
   text-align: left;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
 }
 
+/* Memo Tags */
 .memo-tags {
-  flex: 0 0 auto; /* タグは必要な幅だけ占有 */
+  flex: 0 0 auto;
   display: flex;
-  gap: 5px; /* タグ間にスペースを追加 */
+  gap: var(--spacing-2);
 }
 
+/* Tag Badge */
 .tag {
-  background-color: #e0e0e0;
-  color: #333;
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-size: 0.8em;
+  background: var(--color-neutral-200);
+  color: var(--color-neutral-700);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base) var(--ease-out);
+  border: 1px solid var(--color-neutral-300);
+}
+
+.tag:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-xs);
 }
 
 .tag.highlight {
-  background-color: var(--color-info);
-  color: var(--color-info-contrast);
+  background: var(--color-info-100);
+  color: var(--color-info-700);
+  border-color: var(--color-info-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.tag.tag-overflow {
+  background: var(--color-neutral-300);
+  color: var(--color-neutral-600);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Text Truncation - All elements truncate with ellipsis */
+.memo-date,
+.memo-title,
+.tag {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memo-date {
+  max-width: 100px;
+}
+
+.memo-title {
+  min-width: 0;
+  /* Important for flex child truncation */
+}
+
+.tag {
+  max-width: 150px;
+}
+
+/* ========================================
+   Responsive Design for Narrow Widths
+   ======================================== */
+
+/* Tablet and narrow desktop */
+@media (max-width: 1200px) {
+  .memo-list li {
+    padding: var(--spacing-3) var(--spacing-3);
+  }
+
+  .memo-date {
+    flex: 0 0 90px;
+    max-width: 90px;
+    font-size: var(--font-size-xs);
+  }
+
+  .memo-title {
+    font-size: var(--font-size-sm);
+  }
+
+  .tag {
+    max-width: 120px;
+    font-size: calc(var(--font-size-xs) * 0.9);
+    padding: calc(var(--spacing-1) * 0.8) var(--spacing-1);
+  }
+}
+
+/* Small screens - Hide tags */
+@media (max-width: 900px) {
+  .memo-list-header {
+    padding: 0 var(--spacing-2);
+  }
+
+  .memo-list-sort {
+    gap: var(--spacing-3);
+    font-size: var(--font-size-xs);
+  }
+
+  .memo-list-sort .sortable {
+    flex: 0 0 80px;
+  }
+
+  .memo-list li {
+    padding: var(--spacing-3) var(--spacing-3)
+  }
+
+  .memo-date {
+    flex: 0 0 80px;
+    max-width: 80px;
+    font-size: var(--font-size-xs);
+    margin-right: var(--spacing-2);
+  }
+
+  /* Hide tags on narrow screens */
+  .memo-tags {
+    display: none;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 600px) {
+  .memo-list-header {
+    padding: 0 var(--spacing-1);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .memo-list-sort {
+    gap: var(--spacing-2);
+  }
+
+  .memo-list-sort .sortable {
+    flex: 0 0 60px;
+    font-size: calc(var(--font-size-xs) * 0.9);
+  }
+
+  .memo-list li {
+    padding: var(--spacing-3) var(--spacing-2)
+  }
+
+  .memo-date {
+    flex: 0 0 70px;
+    max-width: 70px;
+    font-size: calc(var(--font-size-xs) * 0.9);
+  }
 }

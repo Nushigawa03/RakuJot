@@ -1,41 +1,60 @@
+/* ========================================
+   Navigation Bar Mobile - Rich Flat Design
+   ======================================== */
+
 .nav-mobile {
   height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px;
-  background: var(--bg, #fff);
-  border-top: none;
-  border-right: none;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  border-left: none;
+  padding: 0 var(--spacing-2);
+  background: var(--color-bg-primary);
+  border: none;
+  border-bottom: 1px solid var(--color-border-primary);
 }
 
-.nav-left, .nav-right {
+/* Navigation Buttons */
+.nav-left,
+.nav-right {
   background: transparent;
   border: none;
   font-size: 20px;
-  padding: 8px;
+  padding: var(--spacing-2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  color: var(--color-text-primary);
+  transition: all var(--transition-base) var(--ease-out);
+  border-radius: var(--radius-md);
 }
 
+.nav-left:hover,
+.nav-right:hover {
+  background: var(--color-surface-hover);
+}
+
+.nav-left:active,
+.nav-right:active {
+  transform: scale(0.95);
+}
+
+/* Center Section */
 .nav-center {
   flex: 1 1 auto;
-  padding: 0 8px;
+  padding: 0 var(--spacing-2);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-1);
   min-width: 0;
 }
 
+/* Search Bar Mobile */
 .search-bar-container-mobile {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-1);
   width: 100%;
 }
 
@@ -48,65 +67,86 @@
 .nav-search {
   width: 100%;
   height: 36px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--color-neutral-bg);
+  padding: 0 var(--spacing-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-primary);
   outline: none;
-  font-size: 14px;
-  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.nav-search:hover {
+  border-color: var(--color-border-secondary);
 }
 
 .nav-search:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.1);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 .nav-search::placeholder {
-  color: rgba(0,0,0,0.4);
+  color: var(--color-text-tertiary);
 }
 
+/* Search Button */
 .search-button-mobile {
   background: transparent;
   border: none;
   font-size: 18px;
-  padding: 6px;
+  padding: var(--spacing-2);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-base) var(--ease-out);
+  border-radius: var(--radius-md);
 }
 
+.search-button-mobile:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/* Suggestions Dropdown Mobile */
 .suggestions-dropdown-mobile {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  background: var(--color-bg);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-primary);
   border-top: none;
-  border-right: 1px solid var(--color-neutral-bg);
-  border-bottom: 1px solid var(--color-neutral-bg);
-  border-left: 1px solid var(--color-neutral-bg);
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   max-height: 200px;
   overflow-y: auto;
-  z-index: 10;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: var(--z-dropdown);
+  box-shadow: var(--shadow-lg);
+  animation: slideInDown var(--transition-base) var(--ease-out);
 }
 
 .suggestion-item-mobile {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #374151;
+  gap: var(--spacing-2);
+  color: var(--color-text-primary);
+  transition: all var(--transition-fast) var(--ease-out);
+}
+
+.suggestion-item-mobile:not(:last-child) {
+  border-bottom: 1px solid var(--color-border-primary);
 }
 
 .suggestion-item-mobile:hover,
 .suggestion-item-mobile.selected {
-  background: #f3f4f6;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
 }
 
 .tag-icon {

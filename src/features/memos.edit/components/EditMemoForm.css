@@ -1,10 +1,13 @@
-/* Base container setup */
+/* ========================================
+   Edit Memo Form Container
+   ======================================== */
+
 .edit-memo-container {
   max-width: none;
   width: 100%;
   margin: 0 auto;
   min-height: 100dvh;
-  background-color: var(--color-bg, #fff);
+  background-color: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
 }

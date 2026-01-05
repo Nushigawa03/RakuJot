@@ -1,39 +1,45 @@
-import { useState, useEffect } from "react";
+import { useLayoutEffect, useState } from "react";
 
 type ScreenType = "pc" | "tablet" | "smartphone" | "other";
 
-const useScreenType = (): ScreenType => {
-  const [screenType, setScreenType] = useState<ScreenType>("other");
+const useScreenType = (): ScreenType | null => {
+  const getScreenType = (): ScreenType => {
+    if (typeof window === "undefined") return "other";
 
-  // PC判定用の関数
-  const isPC = (): boolean => {
-    if (navigator.userAgentData) {
-      // userAgentData.mobileがfalseならPCと判定
-      return !navigator.userAgentData.mobile;
-    } else {
-      // フォールバックとしてuserAgentを使用
-      const userAgent = navigator.userAgent.toLowerCase();
-      return !/mobile|android|iphone|ipad|tablet/.test(userAgent);
-    }
-  };
-
-  useEffect(() => {
-    const tabletMedia = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
-    const smartphoneMedia = window.matchMedia("(max-width: 767px)");
-
-    const updateScreenType = () => {
-      if (isPC()) {
-        setScreenType("pc");
-      } else if (tabletMedia.matches) {
-        setScreenType("tablet");
-      } else if (smartphoneMedia.matches) {
-        setScreenType("smartphone");
+    const isPC = (): boolean => {
+      if (navigator.userAgentData) {
+        // userAgentData.mobileがfalseならPCと判定
+        return !navigator.userAgentData.mobile;
       } else {
-        setScreenType("other");
+        // フォールバックとしてuserAgentを使用
+        const userAgent = navigator.userAgent.toLowerCase();
+        return !/mobile|android|iphone|ipad|tablet/.test(userAgent);
       }
     };
 
-    // 初期化
+    const tabletMedia = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+    const smartphoneMedia = window.matchMedia("(max-width: 767px)");
+
+    if (isPC()) return "pc";
+    if (smartphoneMedia.matches) return "smartphone";
+    if (tabletMedia.matches) return "tablet";
+    return "other";
+  };
+
+  // SSR時は判定できないのでnullで返し、クライアント初回レイアウト前に確定させる
+  const [screenType, setScreenType] = useState<ScreenType | null>(() =>
+    typeof window === "undefined" ? null : getScreenType(),
+  );
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const tabletMedia = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+    const smartphoneMedia = window.matchMedia("(max-width: 767px)");
+
+    const updateScreenType = () => setScreenType(getScreenType());
+
+    // 初期化: hydration後の初回ペイント前に判定することでPC/スマホのちらつきを抑える
     updateScreenType();
 
     // リスナーを追加

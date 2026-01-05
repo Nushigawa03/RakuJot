@@ -1,0 +1,27 @@
+/* Memo List Background Styles */
+
+.page-mobile__background {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+.page-mobile__list-header {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.page-mobile__list-main {
+    flex: 1;
+    overflow: auto;
+    padding: var(--spacing-3);
+}
+
+.page-mobile__list-footer {
+    background: var(--color-surface-elevated);
+    border-top: 1px solid var(--color-border-primary);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}

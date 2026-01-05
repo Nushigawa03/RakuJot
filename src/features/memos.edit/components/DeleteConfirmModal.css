@@ -1,117 +1,122 @@
+/* ========================================
+   Delete Confirm Modal - Rich Flat Design
+   ======================================== */
+
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  z-index: var(--z-modal);
+  animation: fadeIn var(--transition-base) var(--ease-out);
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  background: var(--color-surface-elevated);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
   max-width: 500px;
   width: 90%;
-  animation: slideUp 0.3s ease-out;
+  animation: slideInUp var(--transition-slow) var(--ease-out);
+  border: 1px solid var(--color-border-primary);
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
+/* Modal Header */
 .modal-header {
-  padding: 24px 24px 16px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: var(--spacing-6) var(--spacing-6) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border-primary);
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 1.5rem;
-  color: #333;
-  font-weight: 600;
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
+/* Modal Body */
 .modal-body {
-  padding: 24px;
+  padding: var(--spacing-6);
 }
 
 .modal-body p {
-  margin: 0 0 16px;
-  color: #555;
-  line-height: 1.6;
+  margin: 0 0 var(--spacing-4);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
 }
 
 .memo-title-preview {
-  background-color: var(--color-surface);
-  padding: 12px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  color: var(--color-text);
-  border-left: 4px solid var(--color-danger);
+  background-color: var(--color-danger-100);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger-700);
+  border-left: 4px solid var(--color-danger-500);
 }
 
 .warning-text {
-  color: var(--color-danger);
-  font-weight: 500;
-  font-size: 0.9rem;
+  color: var(--color-danger-600);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
   margin-bottom: 0 !important;
 }
 
+/* Modal Footer */
 .modal-footer {
-  padding: 16px 24px;
+  padding: var(--spacing-4) var(--spacing-6);
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  border-top: 1px solid #e0e0e0;
+  gap: var(--spacing-3);
+  border-top: 1px solid var(--color-border-primary);
 }
 
 .modal-footer button {
-  padding: 10px 24px;
-  font-size: 15px;
-  border-radius: 6px;
-  font-weight: 600;
+  padding: var(--spacing-3) var(--spacing-6);
+  font-size: var(--font-size-base);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base) var(--ease-out);
   border: none;
 }
 
+/* Cancel Button */
 .cancel-button {
-  background-color: #f5f5f5;
-  color: #666;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-primary);
 }
 
 .cancel-button:hover {
-  background-color: #e0e0e0;
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
+.cancel-button:active {
+  transform: translateY(0);
+}
+
+/* Confirm Button */
 .confirm-button {
-  background-color: var(--color-danger);
-  color: var(--color-danger-contrast);
+  background-color: var(--color-danger-500);
+  color: white;
+  box-shadow: var(--shadow-sm);
 }
 
 .confirm-button:hover {
-  background-color: #c0392b;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  background-color: var(--color-danger-600);
+  box-shadow: var(--shadow-danger);
+  transform: translateY(-1px);
+}
+
+.confirm-button:active {
+  transform: translateY(0);
 }

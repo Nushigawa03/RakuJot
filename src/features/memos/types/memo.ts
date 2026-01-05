@@ -2,7 +2,9 @@ export interface Memo {
     id: string;
     title: string;
     date?: string;
-    tags: string[];
+  tags: string[];
+  // precomputed tag ids that matched the current filter/query (used for UI highlighting)
+  matchedTagIds?: string[];
     body?: string;
     embedding?: number[] | any; // Embedding vector stored as JSON in DB
     createdAt: string;

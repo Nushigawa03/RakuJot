@@ -1,4 +1,7 @@
-/* View Mode Layout */
+/* ========================================
+   View Mode - Rich Flat Design
+   ======================================== */
+
 .view-mode {
     display: flex;
     flex-direction: column;
@@ -6,80 +9,95 @@
     overflow: hidden;
 }
 
-/* Scrollable content area */
+/* Scrollable Content Area */
 .view-mode .memo-display {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 20px 16px;
-    background: var(--color-bg);
-    border-bottom: 1px solid var(--color-border);
+    padding: var(--spacing-5) var(--spacing-4);
+    background: var(--color-bg-primary);
+    border-bottom: 1px solid var(--color-border-primary);
 }
 
+/* Memo Title */
 .view-mode .memo-title {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #1a1a1a;
-    margin: 0 0 12px 0;
-    line-height: 1.4;
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-3) 0;
+    line-height: var(--line-height-tight);
 }
 
 @media (max-width: 640px) {
     .view-mode .memo-title {
-        font-size: 1.25rem;
+        font-size: var(--font-size-2xl);
     }
 }
 
+/* Memo Date */
 .view-mode .memo-date {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 12px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-3);
+    font-weight: var(--font-weight-medium);
 }
 
+/* Memo Tags */
 .view-mode .memo-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 16px;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
 }
 
 .view-mode .tag-badge {
-    background: var(--color-success-bg);
-    color: var(--color-success-fg);
-    padding: 4px 10px;
-    border-radius: 14px;
-    font-size: 0.82rem;
-    font-weight: 500;
-    border: 1px solid rgba(var(--color-success-rgb), 0.28);
+    background: var(--color-success-100);
+    color: var(--color-success-700);
+    padding: var(--spacing-1) var(--spacing-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border: 1px solid var(--color-success-200);
+    transition: all var(--transition-base) var(--ease-out);
 }
 
+.view-mode .tag-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Memo Body */
 .view-mode .memo-body {
-    font-size: 1rem;
-    line-height: 1.7;
-    color: #333;
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-relaxed);
+    color: var(--color-text-primary);
     white-space: pre-wrap;
     word-wrap: break-word;
 }
 
 .view-mode .memo-body p {
-    margin: 0 0 8px 0;
+    margin: 0 0 var(--spacing-2) 0;
 }
 
-/* Quick Edit Area (Bottom Pane) */
+/* ========================================
+   Quick Edit Area (Bottom Pane)
+   ======================================== */
+
 .view-mode .quick-edit {
-    background: var(--color-surface);
+    background: var(--color-bg-secondary);
     border-top: none;
-    padding: 16px 12px 24px;
+    padding: var(--spacing-4) var(--spacing-3) var(--spacing-6);
     flex-shrink: 0;
     max-height: 50%;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .view-mode .quick-edit-header {
-    margin-bottom: 12px;
+    margin-bottom: var(--spacing-3);
     display: block;
 }
 
@@ -87,77 +105,112 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: var(--spacing-1);
 }
 
 .view-mode .quick-edit-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--color-success-fg);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-success-600);
     margin: 0;
 }
 
+/* History Controls (Undo/Redo) */
 .view-mode .history-controls {
     display: flex;
-    gap: 6px;
+    gap: var(--spacing-2);
 }
 
 .view-mode .btn-undo,
 .view-mode .btn-redo {
-    padding: 6px 12px;
+    padding: var(--spacing-2) var(--spacing-3);
     font-size: 1.2rem;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    color: #666;
-    font-weight: 500;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
     line-height: 1;
     min-width: auto;
+    cursor: pointer;
+    transition: all var(--transition-base) var(--ease-out);
 }
 
 .view-mode .btn-undo:hover:not(:disabled),
 .view-mode .btn-redo:hover:not(:disabled) {
-    background: #f5f5f5;
-    border-color: #4CAF50;
-    color: #4CAF50;
+    background: var(--color-surface-hover);
+    border-color: var(--color-success-500);
+    color: var(--color-success-600);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
+.view-mode .btn-undo:active:not(:disabled),
+.view-mode .btn-redo:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.view-mode .btn-undo:disabled,
+.view-mode .btn-redo:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Quick Edit Description */
 .view-mode .quick-edit-description {
-    font-size: 0.85rem;
-    color: #666;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
     margin: 0;
-    line-height: 1.4;
+    line-height: var(--line-height-normal);
 }
 
+/* Quick Body Textarea */
 .view-mode .quick-body {
-    border: 2px solid var(--color-border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
-    margin-bottom: 8px;
-    background: var(--color-bg);
-    transition: none;
+    border: 2px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-3);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-2);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.view-mode .quick-body:hover {
+    border-color: var(--color-border-secondary);
 }
 
 .view-mode .quick-body:focus {
     outline: none;
-    border-color: var(--color-success);
-    box-shadow: 0 0 0 3px rgba(var(--color-success-rgb), 0.1);
+    border-color: var(--color-success-500);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+/* AI Suggest Button */
 .view-mode .btn-ai-suggest {
     width: 100%;
-    padding: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: var(--spacing-3);
+    background: var(--gradient-secondary);
     color: white;
     border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: all var(--transition-base) var(--ease-out);
+    box-shadow: var(--shadow-md);
 }
 
 .view-mode .btn-ai-suggest:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+}
+
+.view-mode .btn-ai-suggest:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.view-mode .btn-ai-suggest:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

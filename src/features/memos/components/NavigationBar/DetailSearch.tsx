@@ -36,7 +36,7 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
 }) => {
   return (
     <div className="detail-search">
-      <p>詳細検索オプション</p>
+      {/* <p>詳細検索オプション</p> */}
       <div className="search-options">
         {/* 日付検索 */}
         <DatePickerInput 

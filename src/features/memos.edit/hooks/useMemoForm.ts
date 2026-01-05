@@ -50,6 +50,41 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once on mount
 
+    // Auto-save & History Capture Effect
+    useEffect(() => {
+        // Skip initial mount or external updates if we want to be strict, 
+        // but simple comparison is enough.
+        // We only want to auto-save if the current state differs from the "last saved" or "current history point".
+
+        const timer = setTimeout(() => {
+            // Check if current state differs from history[historyIndex]
+            const currentState = { title, body, date, tags: selectedTags };
+
+            // Allow auto-save if we have changes
+            // Note: simple JSON stringify is "dirty" but effective for simple objects
+            const currentJson = JSON.stringify(currentState);
+            const historyJson = history[historyIndex] ? JSON.stringify(history[historyIndex]) : "";
+
+            if (currentJson !== historyJson) {
+                // Determine if we should push to history or just update current
+                // For a "timed" auto-save, we usually push to history so Undo works for this "session".
+
+                // 1. Push to history
+                setHistory(prev => {
+                    const newHistory = prev.slice(0, historyIndex + 1);
+                    newHistory.push(currentState);
+                    return newHistory;
+                });
+                setHistoryIndex(prev => prev + 1);
+
+                // 2. Persist to server
+                performSave(title, body, selectedTags, date);
+            }
+        }, 1500); // 1.5s delay after typing stops
+
+        return () => clearTimeout(timer);
+    }, [title, body, date, selectedTags, historyIndex]); // Dependencies on form state
+
     // Auto-clear lastSaved indicator
     useEffect(() => {
         if (lastSaved) {
@@ -125,6 +160,20 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
     };
 
     const handleUndo = () => {
+        // Check if current state is different from the current history point (dirty)
+        // If so, "Undo" should just revert to the current history point without moving the index back.
+        const currentState = { title, body, date, tags: selectedTags };
+        const currentJson = JSON.stringify(currentState);
+        const historyJson = history[historyIndex] ? JSON.stringify(history[historyIndex]) : "";
+
+        if (currentJson !== historyJson) {
+            // Revert dirty changes to last known active history state
+            setAllState(history[historyIndex]);
+            // No history index change, just "reset"
+            return;
+        }
+
+        // Standard Undo
         if (historyIndex > 0) {
             const prevState = history[historyIndex - 1];
             // 1. Update UI immediately
@@ -136,6 +185,10 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
     };
 
     const handleRedo = () => {
+        // Redo is simpler, usually just moves forward if we are not at tip.
+        // If we are dirty and not at tip... behavior is ambiguous, but standard is:
+        // If you make new changes while in the past, you usually fork history or lose future.
+        // Here we just allow redo if possible.
         if (historyIndex < history.length - 1) {
             const nextState = history[historyIndex + 1];
             // 1. Update UI immediately

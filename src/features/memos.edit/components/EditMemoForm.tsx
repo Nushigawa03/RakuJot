@@ -136,8 +136,12 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
           availableTags={availableTags}
           onAddTag={handleAddTag}
           onRemoveTag={handleRemoveTag}
-          onSubmit={handleSubmit}
-          onDelete={() => setIsDeleteModalOpen(true)}
+          history={{
+            canUndo: historyIndex > 0,
+            canRedo: historyIndex < historyLength - 1,
+            onUndo: handleUndo,
+            onRedo: handleRedo
+          }}
         />
       )}
 

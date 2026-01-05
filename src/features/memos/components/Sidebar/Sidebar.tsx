@@ -71,16 +71,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   };
 
   return (
-    <div className="sidebar">
+    <>
       <div className="sidebar-header">
         <h3>
           分類
-          <span className="tooltip">
+          {/* <span className="tooltip">
             <span className="tooltip-icon">?</span>
             <span className="tooltip-text">
               検索条件は命名可能です。
             </span>
-          </span>
+          </span> */}
         </h3>
         <button
           className="settings-button"
@@ -91,42 +91,44 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="sidebar-loading">読み込み中...</div>
-      ) : (
-        <ul>
-          {expressions.filter(e => e.name).map((expr) => (
-            <li
-              key={expr.id}
-              className={`category ${expr.color ? 'has-color' : ''} ${activeExpression === expr.id ? 'active' : ''} ${expr.color ? `category-color--${getExpressionClassName(expr.id)}` : ''}`}
-              onClick={() => handleExpressionClick(expr)}
-            >
-              <span className="category-label">
-                <span className="category-name">{expr.name}</span>
-              </span>
-            </li>
-          ))}
-
-          {expressions.filter(e => !e.name).map((expr) => (
-            <li
-              key={expr.id}
-              className={`filter ${activeExpression === expr.id ? 'active' : ''}`}
-              onClick={() => handleExpressionClick(expr)}
-            >
-              <span className="filter-name">
-                {formatLogicalText(generateExpressionName(expr.orTerms))}
-              </span>
-              <button
-                className="delete-filter-button"
-                onClick={(e) => handleDeleteExpression(expr.id, e)}
-                title="式を削除"
+      <div className="sidebar-content">
+        {isLoading ? (
+          <div className="sidebar-loading">読み込み中...</div>
+        ) : (
+          <ul>
+            {expressions.filter(e => e.name).map((expr) => (
+              <li
+                key={expr.id}
+                className={`category ${expr.color ? 'has-color' : ''} ${activeExpression === expr.id ? 'active' : ''} ${expr.color ? `category-color--${getExpressionClassName(expr.id)}` : ''}`}
+                onClick={() => handleExpressionClick(expr)}
               >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <span className="category-label">
+                  <span className="category-name">{expr.name}</span>
+                </span>
+              </li>
+            ))}
+
+            {expressions.filter(e => !e.name).map((expr) => (
+              <li
+                key={expr.id}
+                className={`filter ${activeExpression === expr.id ? 'active' : ''}`}
+                onClick={() => handleExpressionClick(expr)}
+              >
+                <span className="filter-name">
+                  {formatLogicalText(generateExpressionName(expr.orTerms))}
+                </span>
+                <button
+                  className="delete-filter-button"
+                  onClick={(e) => handleDeleteExpression(expr.id, e)}
+                  title="式を削除"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {activeQuery && (
         <div className="expression-details">
@@ -140,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
         onClose={() => setIsSettingsOpen(false)}
         onDataChange={handleSettingsDataChange}
       />
-    </div>
+    </>
   );
 };
 

@@ -1,44 +1,52 @@
+/* ========================================
+   Detail Search Mobile - Rich Flat Design
+   ======================================== */
+
 .detail-search-mobile {
-  padding: 8px 12px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  /* Display in document flow so it pushes main content down on mobile */
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
   position: relative;
-  margin: 8px;
+  margin: var(--spacing-2);
   z-index: 2;
-  max-height: 50vh; /* 適度な高さ制限 */
+  max-height: 50vh;
   overflow: auto;
+  animation: slideInDown var(--transition-slow) var(--ease-out);
+  box-shadow: var(--shadow-md);
 }
 
+/* Tag Chips Mobile */
 .tag-chips-mobile {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-1);
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-3);
 }
 
 .tag-mobile {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: #e0e7ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #3730a3;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  background: var(--color-primary-100);
+  border: 1px solid var(--color-primary-200);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-primary-700);
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .tag-mobile.exclude {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background: var(--color-danger-100);
+  border-color: var(--color-danger-200);
+  color: var(--color-danger-700);
 }
 
 .tag-mobile.selected {
-  border: 2px solid #3b82f6;
+  border: 2px solid var(--color-primary-500);
+  box-shadow: var(--shadow-sm);
 }
 
 .tag-mobile button {
@@ -47,65 +55,90 @@
   cursor: pointer;
   font-size: 14px;
   padding: 0;
-  margin-left: 2px;
+  margin-left: var(--spacing-1);
+  color: inherit;
+  transition: all var(--transition-fast) var(--ease-out);
 }
 
+.tag-mobile button:hover {
+  transform: scale(1.1);
+}
+
+/* Search Options */
 .detail-search-mobile p {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
+  margin: 0 0 var(--spacing-3) 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .search-options-mobile {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .search-options-mobile label {
   display: flex;
   flex-direction: column;
-  font-size: 13px;
-  color: #374151;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .search-options-mobile input[type="date"],
 .search-options-mobile select {
-  margin-top: 4px;
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 13px;
-  background: white;
+  margin-top: var(--spacing-1);
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.search-options-mobile input[type="date"]:hover,
+.search-options-mobile select:hover {
+  border-color: var(--color-border-secondary);
 }
 
 .search-options-mobile input[type="date"]:focus,
 .search-options-mobile select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.1);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
+/* Date Picker */
 .date-with-picker {
   display: flex;
   align-items: center;
-  gap: 8px;
-  position: relative; /* so hidden date input absolute positions relative to this */
+  gap: var(--spacing-2);
+  position: relative;
 }
 
 .date {
   flex: 1 1 auto;
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 13px;
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
 .date-picker-btn {
   background: transparent;
   border: none;
   font-size: 18px;
-  padding: 6px;
+  padding: var(--spacing-2);
   cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.date-picker-btn:hover {
+  color: var(--color-primary-500);
+  transform: scale(1.1);
 }

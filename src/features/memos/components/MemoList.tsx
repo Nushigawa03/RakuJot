@@ -6,7 +6,6 @@ import { useSortedMemos } from "../hooks/useSortedMemos";
 import { Memo, MemoListProps } from "../types/memo";
 import { memoService } from "../services/memoService";
 import { getTagNameById, initializeTags } from "../utils/tagUtils";
-import { shouldHighlightTag } from "../utils/tagHighlight";
 
 const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, filterTags }) => {
   // デバッグ用: タグを常に表示するかどうか
@@ -15,7 +14,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortKey, setSortKey] = useState<"date" | "title">("date");
   const [memos, setMemos] = useState<Memo[]>([]);
-  
+
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // 全データを一括で取得
@@ -23,17 +22,17 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
     const loadAllData = async () => {
       try {
         setIsDataLoaded(false);
-        
+
         // タグを最初に初期化してから、並行して他のデータを取得
         await initializeTags();
-        
+
         const memosData = await memoService.getMemos();
 
         console.log("Number of memos:", memosData.length);
         setMemos(memosData);
-        
+
         // expression lists are no longer stored here
-        
+
         setIsDataLoaded(true);
       } catch (error) {
         console.error('データの読み込みエラー:', error);
@@ -112,8 +111,8 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
       </div>
       <ul>
         {sortedMemos.map((memo) => (
-          <li 
-            key={memo.id} 
+          <li
+            key={memo.id}
             onClick={() => navigate(`/app/edit/${memo.id}`)}
             onMouseEnter={() => {
               window.dispatchEvent(
@@ -145,18 +144,22 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
             <span className="memo-title">{memo.title}</span>
             {(DEBUG_ALWAYS_SHOW_TAGS || filterQuery) && (
               <span className="memo-tags">
-                  {(memo.tags || []).map((tag: any) => {
+                {(memo.tags || []).slice(0, 3).map((tag: any) => {
                   // tagがオブジェクト(Tag)ならidを、文字列ならそのまま
                   const tagId = typeof tag === 'string' ? tag : tag.id;
+                  const isHighlighted = Array.isArray(memo.matchedTagIds) && memo.matchedTagIds.includes(tagId);
                   return (
                     <span
                       key={tagId}
-                      className={`tag ${shouldHighlightTag(tagId, filterQuery, memo.tags) ? "highlight" : ""}`}
+                      className={`tag ${isHighlighted ? "highlight" : ""}`}
                     >
                       {getTagNameById(tagId)}
                     </span>
                   );
                 })}
+                {memo.tags && memo.tags.length > 3 && (
+                  <span className="tag tag-overflow">+{memo.tags.length - 3}</span>
+                )}
               </span>
             )}
           </li>

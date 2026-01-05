@@ -1,26 +1,38 @@
-.sidebar {
-  padding: 10px;
-  background-color: var(--color-surface-bg);
-}
+/* ========================================
+   Sidebar - Rich Flat Design
+   ======================================== */
 
+
+/* Loading State */
 .sidebar-loading {
-  padding: 20px;
+  padding: var(--spacing-5);
   text-align: center;
-  color: #666;
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
+/* Sidebar Content - Scrollable */
+.sidebar-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* Sidebar Header */
 .sidebar h3 {
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-3);
   display: flex;
   align-items: center;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--spacing-3);
 }
 
 .sidebar-header h3 {
@@ -29,34 +41,38 @@
   align-items: center;
 }
 
+/* Settings Button */
 .settings-button {
   background: none;
   border: none;
   cursor: pointer;
   font-size: 16px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
   opacity: 0.7;
-  transition: opacity 0.2s, background-color 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .settings-button:hover {
   opacity: 1;
-  background-color: rgba(0, 0, 0, 0.1);
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
+/* Tooltip */
 .tooltip {
   display: inline-block;
-  margin-left: 5px;
+  margin-left: var(--spacing-2);
   position: relative;
 }
 
 .tooltip-icon {
-  background-color: var(--color-info);
-  color: var(--color-info-contrast);
+  background: var(--color-info-500);
+  color: white;
   border-radius: 50%;
-  padding: 2px 5px;
-  font-size: 0.8em;
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-xs);
   cursor: pointer;
 }
 
@@ -66,65 +82,72 @@
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #333;
+  background: var(--color-neutral-900);
   color: white;
-  padding: 5px;
-  border-radius: 4px;
-  font-size: 0.8em;
+  padding: var(--spacing-2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
   white-space: nowrap;
-  z-index: 10;
-  max-width: 300px; /* 横幅を広げる */
+  z-index: var(--z-tooltip);
+  max-width: 300px;
   overflow-wrap: break-word;
   word-break: break-word;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
-/* 画面外に飛び出さないように調整 */
 .tooltip:hover .tooltip-text {
   display: block;
   left: 50%;
   transform: translateX(-20%);
+  animation: fadeIn var(--transition-fast) var(--ease-out);
 }
 
-/* 画面端に飛び出さないようにする */
 @media (max-width: 400px) {
   .tooltip-text {
     left: 0;
     transform: translateX(0);
-    max-width: 90%; /* 画面幅に応じて調整 */
+    max-width: 90%;
   }
 }
 
+/* Filter List */
 .sidebar ul {
   list-style: none;
   padding: 0;
 }
 
 .sidebar li {
-  padding: 5px;
+  padding: var(--spacing-1);
   cursor: pointer;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: all var(--transition-base) var(--ease-out);
+  color: var(--color-text-primary);
 }
 
 .filter-name {
   flex: 1;
+  display: inline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Delete Filter Button */
 .delete-filter-button {
   background: none;
   border: none;
   cursor: pointer;
-  color: #999;
+  color: var(--color-text-tertiary);
   font-size: 16px;
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: var(--spacing-0) var(--spacing-1);
+  border-radius: var(--radius-sm);
   opacity: 0;
-  transition: opacity 0.2s, background-color 0.2s;
-  margin-left: 8px;
+  transition: all var(--transition-base) var(--ease-out);
+  margin-left: var(--spacing-1);
 }
 
 .sidebar li:hover .delete-filter-button {
@@ -132,48 +155,54 @@
 }
 
 .delete-filter-button:hover {
-  background-color: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
+  background: var(--color-danger-100);
+  color: var(--color-danger-600);
 }
 
+/* List Item States */
 .sidebar li.active {
-  background-color: var(--color-info);
-  color: var(--color-info-contrast);
-  border-color: var(--color-info-hover);
+  background: var(--color-primary-500);
+  color: white;
+  border-color: var(--color-primary-600);
+  box-shadow: var(--shadow-sm);
 }
 
 .sidebar li:hover {
-  background-color: var(--color-neutral-bg);
+  background: var(--color-surface-hover);
+  transform: translateX(2px);
 }
 
-/* タグのスタイル */
+.sidebar li.active:hover {
+  background: var(--color-primary-600);
+}
+
+/* Tag Style */
 .sidebar li.tag {
-  font-weight: normal;
+  font-weight: var(--font-weight-normal);
 }
 
-/* カテゴリのスタイル */
+/* Category Style */
 .sidebar li.category {
-  font-weight: bold;
-  color: #0056b3;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-600);
   align-items: center;
   border-left: 4px solid transparent;
-  padding-left: 8px;
+  padding-left: var(--spacing-2);
 }
 
 .sidebar li.category.active {
-  background-color: #e0f7ff;
-  color: #0056b3;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
 }
 
-
 .sidebar li.category.has-color {
-  border-left-color: var(--category-color, var(--color-border-strong));
+  border-left-color: var(--category-color, var(--color-primary-500));
 }
 
 .category-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-2);
 }
 
 .category-name {
@@ -181,45 +210,98 @@
   align-items: center;
 }
 
-/* カテゴリ詳細のスタイル */
+/* Filter Details */
 .filter-details {
-  margin-top: 20px;
-  padding: 10px;
-  background-color: #e9ecef;
-  border-radius: 4px;
-  font-size: 0.9em;
+  margin-top: var(--spacing-5);
+  padding: var(--spacing-3);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--color-border-primary);
 }
 
-/* 論理演算子のスタイル */
+/* Logical Operators */
 .logical-operator {
   font-family: inherit;
-  font-weight: 600;
-  font-size: 0.9em;
-  margin: 0 4px;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  margin: 0 var(--spacing-1);
   opacity: 0.7;
+  color: var(--color-text-secondary);
 }
 
-.logical-operator.and {
-  color: #495057;
-}
-
+.logical-operator.and,
 .logical-operator.or {
-  color: #495057;
+  color: var(--color-text-secondary);
 }
 
 .logical-operator.not {
-  color: #6c757d;
+  color: var(--color-text-tertiary);
   font-style: italic;
 }
 
-/* フィルタ名内の論理演算子 */
 .filter-name .logical-operator {
-  margin: 0 3px;
-  font-size: 0.85em;
+  margin: 0 var(--spacing-1);
+  font-size: calc(var(--font-size-sm) * 0.95);
 }
 
-/* 詳細表示内の論理演算子 */
 .filter-details .logical-operator {
-  margin: 0 4px;
-  font-size: 0.9em;
+  margin: 0 var(--spacing-1);
+  font-size: var(--font-size-sm);
+}
+
+/* ========================================
+   Expression Details - Rich Display
+   ======================================== */
+
+.expression-details {
+  position: sticky;
+  bottom: 0;
+  flex: 0 0 auto;
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-4);
+  background: var(--color-bg-secondary);
+  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-primary);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1), var(--shadow-lg);
+  animation: fadeIn var(--transition-slow) var(--ease-out);
+  z-index: 10;
+}
+
+.expression-details h4 {
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.expression-details h4::before {
+  content: "📋";
+  font-size: var(--font-size-xl);
+}
+
+.expression-details p {
+  margin: 0;
+  padding: var(--spacing-3);
+  background: var(--color-bg-primary);
+  border-left: 4px solid var(--color-primary-500);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.expression-details p::before {
+  content: ">";
+  color: var(--color-primary-500);
+  margin-right: var(--spacing-2);
+  font-weight: var(--font-weight-bold);
 }

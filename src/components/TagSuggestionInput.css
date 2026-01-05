@@ -1,15 +1,124 @@
-.tag-suggestion-input { position:relative; display:inline-block; width:100%; }
-.tag-input { width:100%; padding:0.5rem; border:1px solid var(--color-border); border-radius:var(--radius-sm); font-size:0.9rem; transition: border-color 0.2s, box-shadow 0.2s; background:var(--color-bg); color:var(--color-text); }
-.tag-input:focus { outline:none; border-color:var(--color-primary); box-shadow:0 0 0 2px rgba(var(--color-primary-rgb),0.12); }
-.tag-input:disabled { background:var(--color-neutral-bg); cursor:not-allowed; }
-.suggestions-dropdown { position:absolute; top:100%; left:0; right:0; background:var(--color-bg); border:1px solid var(--color-border); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-.suggestion-item { padding:0.75rem; cursor:pointer; border-bottom:1px solid var(--color-border); transition: background-color 0.2s; }
-.suggestion-item:last-child { border-bottom:none; }
-.suggestion-item:hover, .suggestion-item.selected { background:var(--color-neutral-bg); }
-.suggestion-item.selected { background:rgba(var(--color-primary-rgb),0.12); }
-.tag-name { font-weight:500; color:var(--color-text); margin-bottom:0.25rem; }
-.tag-description { font-size:0.8rem; color:#666; line-height:1.3; }
-.no-suggestions { padding:0.75rem; text-align:center; color:#666; font-style:italic; }
-.suggestions-loading { padding:0.75rem; text-align:center; color:#666; }
-.keyboard-help { font-size:0.7rem; color:#999; margin-top:0.25rem; text-align:center; }
-@media (max-width:768px){ .suggestions-dropdown{ max-height:150px; } .suggestion-item{ padding:0.5rem; } .tag-name{ font-size:0.9rem; } .tag-description{ font-size:0.75rem; } }
+/* ========================================
+   Tag Suggestion Input Component
+   ======================================== */
+
+.tag-suggestion-input {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.tag-input {
+    width: 100%;
+    padding: var(--spacing-3);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-base) var(--ease-out);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+}
+
+.tag-input:hover {
+    border-color: var(--color-border-secondary);
+}
+
+.tag-input:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.tag-input:disabled {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-disabled);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Suggestions Dropdown */
+.suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    margin-top: var(--spacing-1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: var(--z-dropdown);
+    box-shadow: var(--shadow-lg);
+    animation: slideInDown var(--transition-base) var(--ease-out);
+}
+
+.suggestion-item {
+    padding: var(--spacing-3);
+    cursor: pointer;
+    transition: all var(--transition-fast) var(--ease-out);
+}
+
+.suggestion-item:not(:last-child) {
+    border-bottom: 1px solid var(--color-border-primary);
+}
+
+.suggestion-item:hover {
+    background: var(--color-surface-hover);
+}
+
+.suggestion-item.selected {
+    background: var(--color-primary-100);
+    color: var(--color-primary-700);
+}
+
+.tag-name {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.tag-description {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--line-height-normal);
+}
+
+.no-suggestions {
+    padding: var(--spacing-3);
+    text-align: center;
+    color: var(--color-text-tertiary);
+    font-style: italic;
+}
+
+.suggestions-loading {
+    padding: var(--spacing-3);
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.keyboard-help {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    margin-top: var(--spacing-1);
+    text-align: center;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .suggestions-dropdown {
+        max-height: 150px;
+    }
+
+    .suggestion-item {
+        padding: var(--spacing-2);
+    }
+
+    .tag-name {
+        font-size: var(--font-size-sm);
+    }
+
+    .tag-description {
+        font-size: var(--font-size-xs);
+    }
+}

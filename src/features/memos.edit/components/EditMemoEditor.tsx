@@ -2,21 +2,26 @@ import React from 'react';
 import './EditMemoEditor.css';
 import { Button } from '~/components';
 import { TagInput } from './TagInput';
+import DatePickerInput from '~/components/DatePickerInput';
 import { Tag } from '../hooks/useMemoForm';
 
 interface EditMemoEditorProps {
     title: string;
-    setTitle: (val: string) => void;
+    setTitle: (value: string) => void;
     body: string;
-    setBody: (val: string) => void;
+    setBody: (value: string) => void;
     date: string;
-    setDate: (val: string) => void;
+    setDate: (value: string) => void;
     selectedTags: string[];
     availableTags: Tag[];
-    onAddTag: (val: string) => void;
-    onRemoveTag: (val: string) => void;
-    onSubmit: (e: React.FormEvent) => void;
-    onDelete: () => void;
+    onAddTag: (tag: string) => void;
+    onRemoveTag: (tag: string) => void;
+    history: {
+        canUndo: boolean;
+        canRedo: boolean;
+        onUndo: () => void;
+        onRedo: () => void;
+    };
 }
 
 export const EditMemoEditor: React.FC<EditMemoEditorProps> = ({
@@ -27,11 +32,36 @@ export const EditMemoEditor: React.FC<EditMemoEditorProps> = ({
     availableTags,
     onAddTag,
     onRemoveTag,
-    onSubmit,
-    onDelete
+    history
 }) => {
     return (
-        <form className="edit-memo-form" onSubmit={onSubmit}>
+        <div className="edit-memo-form">
+            <div className="editor-toolbar">
+                <div className="editor-toolbar-group">
+                    <Button
+                        type="button"
+                        onClick={history.onUndo}
+                        disabled={!history.canUndo}
+                        className="editor-icon-button"
+                        variant="secondary"
+                    >
+                        ↩
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={history.onRedo}
+                        disabled={!history.canRedo}
+                        className="editor-icon-button"
+                        variant="secondary"
+                    >
+                        ↪
+                    </Button>
+                </div>
+                <div className="editor-status-text">
+                    編集モード
+                </div>
+            </div>
+
             <div className="form-group">
                 <label htmlFor="title">タイトル</label>
                 <input
@@ -39,21 +69,16 @@ export const EditMemoEditor: React.FC<EditMemoEditorProps> = ({
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    required
-                    placeholder="タイトル"
-                    aria-label="タイトル"
+                    placeholder="タイトルを入力"
                 />
             </div>
 
-            <div className="form-group">
-                <label htmlFor="date">日付</label>
-                <input
-                    id="date"
-                    type="text"
+            <div className="form-group date-picker-group">
+                <DatePickerInput
+                    label="日付"
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    placeholder="日付やキーワード（空欄でもOK）"
-                    aria-label="日付"
+                    onChange={setDate}
+                    placeholder="日付やキーワード (空欄でもOK)"
                 />
             </div>
 
@@ -67,22 +92,16 @@ export const EditMemoEditor: React.FC<EditMemoEditorProps> = ({
                 />
             </div>
 
-            <div className="form-group">
-                <label htmlFor="body">内容</label>
+            <div className="form-group full-height-input">
+                <label htmlFor="body">本文</label>
                 <textarea
                     id="body"
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
-                    rows={15}
-                    placeholder="内容"
-                    aria-label="内容"
+                    placeholder="メモの内容を入力..."
+                    className="body-textarea"
                 />
             </div>
-
-            <div className="form-actions">
-                <Button type="submit" variant="primary">💾 保存</Button>
-                <Button type="button" variant="secondary" onClick={onDelete}>🗑️ 削除</Button>
-            </div>
-        </form>
+        </div>
     );
 };

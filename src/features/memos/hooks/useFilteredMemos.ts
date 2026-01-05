@@ -6,6 +6,7 @@ import { evaluateDateQuery, type DateQueryEvalConfig } from '../utils/dateQueryE
 import { useEffect, useState } from 'react';
 import type { TagExpression } from '../types/tagExpressions';
 import tagExpressionService from '../services/tagExpressionService';
+import { extractTagIds } from '../utils/tagUtils';
 
 export const useFilteredMemos = (memos: Memo[], filterQuery: string, dateQuery?: string, queryEmbedding?: number[], filterTags?: SearchTag[]): Memo[] => {
   const [expressions, setExpressions] = useState<TagExpression[]>([]);
@@ -69,7 +70,79 @@ export const useFilteredMemos = (memos: Memo[], filterQuery: string, dateQuery?:
     result = result.filter((memo) => evaluateDateQuery(memo, dateQuery, config));
   }
 
-  return result;
+  // Precompute matchedTagIds for each memo to avoid re-evaluating per-tag in UI
+  const positiveFilterTagIds: string[] = (filterTags || [])
+    .filter(t => t && t.id && !t.id.startsWith('temp_') && !t.isExclude)
+    .map(t => t.id as string);
+
+  const highlightedFromQueryCache: { [memoId: string]: string[] } = {};
+
+  const extractPositiveTokensFromLegacyQuery = (q: string): string[] => {
+    if (!q) return [];
+    const parts = q.split(' ').filter(p => p.trim() !== '');
+    const exclude: string[] = [];
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i] === 'NOT' && i + 1 < parts.length) {
+        exclude.push(parts[i + 1]);
+        parts[i] = '';
+        parts[i + 1] = '';
+      } else if (parts[i].startsWith('-')) {
+        exclude.push(parts[i].substring(1));
+        parts[i] = '';
+      }
+    }
+    const remaining = parts.filter(p => p !== '');
+    const tokens: string[] = [];
+    for (const part of remaining) {
+      if (part === 'AND' || part === 'OR') continue;
+      tokens.push(part);
+    }
+    return tokens;
+  };
+
+  const queryPositiveTokens = filterQuery ? extractPositiveTokensFromLegacyQuery(filterQuery) : [];
+
+  // If filterQuery corresponds to a TagExpression id, extract include tag ids from that expression
+  const expressionDefinedPositiveIds: string[] = [];
+  if (filterQuery) {
+    const expr = tagExpressionService.findExpressionById(expressions, filterQuery);
+    if (expr && expr.orTerms) {
+      for (const term of expr.orTerms) {
+        if (term && Array.isArray(term.include)) {
+          for (const id of term.include) {
+            if (id && !expressionDefinedPositiveIds.includes(id)) expressionDefinedPositiveIds.push(id);
+          }
+        }
+      }
+    }
+  }
+
+  const final = result.map((memo) => {
+    const memoTagIds = extractTagIds(memo.tags as any);
+    const highlightsSet = new Set<string>();
+
+    // from filterTags (chips)
+    for (const id of positiveFilterTagIds) {
+      if (memoTagIds.includes(id)) highlightsSet.add(id);
+    }
+
+    // from TagExpression (if any)
+    for (const id of expressionDefinedPositiveIds) {
+      if (memoTagIds.includes(id)) highlightsSet.add(id);
+    }
+
+    // from legacy query tokens
+    for (const token of queryPositiveTokens) {
+      if (memoTagIds.includes(token)) highlightsSet.add(token);
+    }
+
+    const matchedTagIds = Array.from(highlightsSet);
+
+    // return a shallow copy with matchedTagIds set
+    return { ...memo, matchedTagIds } as Memo;
+  });
+
+  return final;
 };
 
 // 従来のクエリ文字列形式の評価（後方互換性のため）

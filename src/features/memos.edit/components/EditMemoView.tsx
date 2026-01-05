@@ -65,9 +65,9 @@ export const EditMemoView: React.FC<EditMemoViewProps> = ({
                             </Button>
                         </div>
                     </div>
-                    <p className="quick-edit-description">
+                    {/* <p className="quick-edit-description">
                         メモを改善したいアイデアがあれば、ここに書くとAIが提案します
-                    </p>
+                    </p> */}
                 </div>
 
                 {ai.suggestion ? (

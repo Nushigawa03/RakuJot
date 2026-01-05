@@ -1,130 +1,204 @@
+/* ========================================
+   Inline Memo Input - Rich Flat Design
+   ======================================== */
+
 .inline-memo-input {
     width: 100%;
-    padding: 16px;
-    background: var(--surface, #fff);
-    border: 1px solid var(--border, #e6e6e6);
-    border-radius: 10px;
-    margin: 12px 0;
-    box-shadow: 0 1px 2px rgba(16,24,40,0.03);
-    position: relative; /* for absolute positioned action buttons */
-    padding-bottom: 72px; /* room for bottom-right action area */
- }
+    padding: var(--spacing-4);
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-xl);
+    margin: var(--spacing-3) 0;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    padding-bottom: 72px;
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.inline-memo-input:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-border-secondary);
+}
 
 .inline-memo-input h2 {
-    margin-bottom: 10px;
+    margin-bottom: var(--spacing-3);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
 }
 
 .inline-memo-input .row {
     display: flex;
-    gap: 12px;
+    gap: var(--spacing-3);
     align-items: center;
 }
 
+/* Input and Textarea */
 .inline-memo-input input,
 .inline-memo-input textarea {
-        width: 100%;
-        margin-bottom: 10px;
-        padding: 10px 12px;
-        border: 1px solid var(--border, #e6e6e6);
-        border-radius: 8px;
-        background: var(--input-bg, #fff);
-        font-size: 14px;
+    width: 100%;
+    margin-bottom: var(--spacing-3);
+    padding: var(--spacing-3);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-base) var(--ease-out);
 }
 
+.inline-memo-input input:hover,
+.inline-memo-input textarea:hover {
+    border-color: var(--color-border-secondary);
+}
+
+.inline-memo-input input:focus,
+.inline-memo-input textarea:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.inline-memo-input input::placeholder,
+.inline-memo-input textarea::placeholder {
+    color: var(--color-text-tertiary);
+}
+
+/* Tags */
 .inline-memo-input .tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-2);
     align-items: center;
 }
 
 .inline-memo-input .tag {
-    background: var(--tag-bg, #f2f2f2);
-    padding: 6px 10px;
-    border-radius: 999px;
+    background: var(--color-success-100);
+    color: var(--color-success-700);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--radius-full);
     display: flex;
     align-items: center;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border: 1px solid var(--color-success-200);
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.inline-memo-input .tag:hover {
+    background: var(--color-success-200);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
 .inline-memo-input .tag button {
-        margin-left: 8px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-weight: 600;
+    margin-left: var(--spacing-2);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: var(--font-weight-semibold);
+    color: inherit;
+    transition: all var(--transition-fast) var(--ease-out);
 }
 
+.inline-memo-input .tag button:hover {
+    transform: scale(1.2);
+}
+
+/* Tag Input Wrapper */
 .inline-memo-input .tag-input-wrapper {
     position: relative;
     min-width: 200px;
 }
 
+/* Tag Suggestions */
 .inline-memo-input .tag-suggestions {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + var(--spacing-2));
     left: 0;
     right: 0;
-    background: var(--surface, #fff);
-    border: 1px solid var(--border, #e6e6e6);
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xl);
     z-index: 40;
     max-height: 200px;
     overflow: auto;
+    animation: slideInDown var(--transition-base) var(--ease-out);
 }
 
 .inline-memo-input .tag-suggestion {
-    padding: 8px 10px;
+    padding: var(--spacing-2) var(--spacing-3);
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    transition: all var(--transition-fast) var(--ease-out);
 }
 
 .inline-memo-input .tag-suggestion:hover {
-    background: rgba(0,0,0,0.04);
+    background: var(--color-surface-hover);
 }
 
+.inline-memo-input .tag-suggestion:not(:last-child) {
+    border-bottom: 1px solid var(--color-border-primary);
+}
+
+/* Actions */
 .inline-memo-input .actions {
     position: absolute;
-    right: 12px;
-    bottom: 12px;
+    right: var(--spacing-3);
+    bottom: var(--spacing-3);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--spacing-3);
     z-index: 10;
 }
 
 .inline-memo-input .action-buttons {
     display: flex;
-    gap: 8px;
+    gap: var(--spacing-2);
 }
 
 .inline-memo-input .action-buttons button {
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 14px;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.inline-memo-input .action-buttons button:not([disabled]):hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.inline-memo-input .action-buttons button:not([disabled]):active {
+    transform: translateY(0);
 }
 
 .inline-memo-input .action-buttons button[disabled] {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
-/* Responsive: on narrow screens keep buttons in flow under the form */
+/* Responsive */
 @media (max-width: 640px) {
     .inline-memo-input {
-        padding-bottom: 16px; /* no fixed action area */
+        padding-bottom: var(--spacing-4);
     }
+
     .inline-memo-input .actions {
         position: static;
-        margin-top: 8px;
+        margin-top: var(--spacing-2);
         justify-content: flex-end;
     }
+
     .inline-memo-input .action-buttons {
         width: 100%;
         justify-content: flex-end;
     }
+
     .inline-memo-input .action-buttons button {
         min-width: 96px;
     }

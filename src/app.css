@@ -1,3 +1,8 @@
+/* Import Design System */
+@import "./styles/variables.css";
+@import "./styles/animations.css";
+@import "./styles/components.css";
+
 @import "tailwindcss";
 
 @theme {
@@ -13,13 +18,13 @@
   /* Base colors */
   --color-text: #111827;
   --color-bg: #ffffff;
-  --color-text-rgb: 17,24,39;
+  --color-text-rgb: 17, 24, 39;
 
   /* Primary */
   --color-primary: #2563eb;
   --color-primary-hover: #1e4fd8;
   --color-primary-contrast: #ffffff;
-  --color-primary-rgb: 37,99,235;
+  --color-primary-rgb: 37, 99, 235;
 
   /* Neutral */
   --color-neutral-bg: #e5e7eb;
@@ -40,7 +45,7 @@
   --color-success-bg: #e8f5e9;
   --color-success-fg: #2e7d32;
   --color-success-border: #c8e6c9;
-  --color-success-rgb: 76,175,80;
+  --color-success-rgb: 76, 175, 80;
 
   /* Info */
   --color-info: #007bff;
@@ -53,7 +58,7 @@
   --color-surface: #fafafa;
   --color-surface-bg: #f0f0f0;
   /* Muted / subtle */
-  --color-muted: rgba(17,24,39,0.6);
+  --color-muted: rgba(17, 24, 39, 0.6);
   /* Danger bg */
   --color-danger-bg: #fee2e2;
 
@@ -65,7 +70,7 @@
   /* Base colors */
   --color-text: #f9fafb;
   --color-bg: #1e293b;
-  --color-text-rgb: 249,250,251;
+  --color-text-rgb: 249, 250, 251;
 
   /* Neutral */
   --color-neutral-bg: #374151;
@@ -75,8 +80,9 @@
   --color-border: #374151;
   --color-surface: #1f2937;
   --color-surface-bg: #374151;
-  --color-muted: rgba(249,250,251,0.65);
-  --color-danger-bg: #4c1111; /* subtle dark danger background */
+  --color-muted: rgba(249, 250, 251, 0.65);
+  --color-danger-bg: #4c1111;
+  /* subtle dark danger background */
 }
 
 /* Ensure CSS variables also follow system preference when JS hasn't run yet */
@@ -84,7 +90,7 @@
   :root {
     --color-text: #f9fafb;
     --color-bg: #1e293b;
-    --color-text-rgb: 249,250,251;
+    --color-text-rgb: 249, 250, 251;
 
     --color-neutral-bg: #374151;
     --color-neutral-fg: #f9fafb;
@@ -94,11 +100,36 @@
     --color-surface-bg: #374151;
   }
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   @apply bg-white dark:bg-slate-800;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
   }
+}
+
+/* Better default focus styles */
+*:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Improve button and input defaults */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }

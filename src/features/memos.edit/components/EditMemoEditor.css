@@ -1,53 +1,215 @@
-/* Edit Mode Layout */
+/* ========================================
+   Edit Memo Editor - Rich Flat Design
+   ======================================== */
+
+/* Main Container */
 .edit-memo-form {
-    padding: 8px 12px 0;
+    padding: var(--spacing-4);
     flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-primary);
+    height: 100%;
 }
 
+/* ========================================
+   Toolbar
+   ======================================== */
+
+.edit-memo-form .editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-5);
+    padding-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--color-border-primary);
+}
+
+.edit-memo-form .editor-toolbar-group {
+    display: flex;
+    gap: var(--spacing-3);
+}
+
+/* Icon Buttons with Rich Flat Style */
+.edit-memo-form .editor-icon-button {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    color: var(--color-text-primary);
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    padding: 0;
+    cursor: pointer;
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.edit-memo-form .editor-icon-button:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.edit-memo-form .editor-icon-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.edit-memo-form .editor-icon-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--color-bg-secondary);
+}
+
+/* Status Text */
+.edit-memo-form .editor-status-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+/* ========================================
+   Date Picker Group
+   ======================================== */
+
+.edit-memo-form .date-picker-group {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.edit-memo-form .date-picker-group label {
+    margin-bottom: var(--spacing-2);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.edit-memo-form .date-picker-group .date-with-picker {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.edit-memo-form .date-picker-group input.date {
+    width: 100%;
+    padding: var(--spacing-3);
+    padding-right: 40px;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.edit-memo-form .date-picker-group input.date:hover {
+    border-color: var(--color-border-secondary);
+}
+
+.edit-memo-form .date-picker-group input.date:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.edit-memo-form .date-picker-group .date-picker-btn {
+    position: absolute;
+    right: var(--spacing-3);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.edit-memo-form .date-picker-group .date-picker-btn:hover {
+    color: var(--color-primary-500);
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* ========================================
+   Form Groups
+   ======================================== */
+
 .edit-memo-form .form-group {
-    margin-bottom: 10px;
+    margin-bottom: var(--spacing-4);
 }
 
 .edit-memo-form label {
     display: block;
-    font-weight: 500;
-    margin-bottom: 4px;
-    color: #444;
-    font-size: 0.9rem;
-    letter-spacing: 0.2px;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-2);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
 }
 
 .edit-memo-form input[type="text"],
 .edit-memo-form textarea {
     width: 100%;
-    padding: 7px 9px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    background-color: var(--color-bg);
+    padding: var(--spacing-3);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-base) var(--ease-out);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    line-height: var(--line-height-normal);
+}
+
+.edit-memo-form input[type="text"]:hover,
+.edit-memo-form textarea:hover {
+    border-color: var(--color-border-secondary);
 }
 
 .edit-memo-form input[type="text"]:focus,
 .edit-memo-form textarea:focus {
     outline: none;
     border-color: var(--color-border-focus);
-    box-shadow: 0 0 0 2px rgba(var(--color-success-rgb), 0.12);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    background-color: var(--color-bg-primary);
 }
 
-.edit-memo-form .form-actions {
+/* Full Height Textarea */
+.edit-memo-form .form-group.full-height-input {
+    flex: 1;
     display: flex;
-    justify-content: flex-end;
-    margin-top: 16px;
-    gap: 10px;
-    padding-bottom: 20px;
+    flex-direction: column;
+    min-height: 0;
+    margin-bottom: 0;
 }
 
-@media (max-width: 768px) {
-    .edit-memo-form .form-actions {
-        flex-direction: row;
-        gap: 6px;
+.edit-memo-form .body-textarea {
+    flex: 1;
+    resize: none;
+}
+
+/* ========================================
+   Mobile Responsive
+   ======================================== */
+
+@media (max-width: 640px) {
+    .edit-memo-form {
+        padding: var(--spacing-3);
+    }
+
+    .edit-memo-form .editor-toolbar {
+        margin-bottom: var(--spacing-4);
+    }
+
+    .edit-memo-form .editor-toolbar-group {
+        gap: var(--spacing-2);
     }
 }
