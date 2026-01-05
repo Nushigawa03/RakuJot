@@ -6,7 +6,10 @@
     "build": "react-router build",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "tsc",
-    "preview": "react-router-serve ./build/server/index.js"
+    "preview": "react-router-serve ./build/server/index.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "react-router": {
     "appDirectory": "src"
@@ -26,16 +29,20 @@
     "@react-router/dev": "^7.10.1",
     "@react-router/node": "^7.10.1",
     "@tailwindcss/postcss": "^4.1.18",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.22",
     "eslint": "^9.39.2",
+    "happy-dom": "^20.0.11",
     "postcss": "^8.5.6",
     "prisma": "^7.1.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite": "^7.2.7",
     "vite-plugin-pwa": "^1.2.0",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.0.16"
   }
 }

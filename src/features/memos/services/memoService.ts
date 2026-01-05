@@ -2,7 +2,7 @@ import type { Memo } from "../types/memo";
 import { tagService } from './tagService';
 import { normalizeTagName } from '../utils/normalizeTagName';
 import { refreshTags } from '../utils/tagUtils';
-export type AiResult = { title?: string; tags?: string[]; date?: string; [k: string]: any };
+export type AiResult = { title?: string; tags?: string[]; date?: string;[k: string]: any };
 export type MemoPayload = { title: string; body: string; tags: string[]; date?: string };
 
 export class MemoService {
@@ -258,6 +258,51 @@ export class MemoService {
       return { ok: true };
     } catch (e: any) {
       return { ok: false, error: e?.message || '削除中にエラーが発生しました' };
+    }
+  }
+
+  async getTrashedMemos(): Promise<any[]> {
+    try {
+      const r = await fetch(`${this.basePath}/memos/trash`);
+      if (!r.ok) return [];
+      const d = await r.json();
+      return Array.isArray(d) ? d : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async restoreMemo(originalId: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const resp = await fetch(`${this.basePath}/memos/trash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ originalId, action: 'restore' }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        return { ok: false, error: err?.error || '復元に失敗しました。' };
+      }
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e?.message || '復元中にエラーが発生しました' };
+    }
+  }
+
+  async permanentlyDeleteMemo(id: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const resp = await fetch(`${this.basePath}/memos/trash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'permanent-delete' }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        return { ok: false, error: err?.error || '完全削除に失敗しました。' };
+      }
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e?.message || '完全削除中にエラーが発生しました' };
     }
   }
 }

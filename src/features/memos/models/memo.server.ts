@@ -26,7 +26,7 @@ export const getMemo = async (id: string) => {
     }
 
     // モックデータになければデータベースから取得
-  const memo = await prisma.memo.findUnique({ where: { id }, include: { tags: true } });
+    const memo = await prisma.memo.findUnique({ where: { id }, include: { tags: true } });
     return serializeMemo(memo);
   } catch (error) {
     console.error("データベースエラー:", error);
@@ -65,7 +65,7 @@ export const getMemos = async () => {
       }
       return { error: "データベースに接続できません。サーバーが起動していることを確認してください。" };
     }
-    
+
     if (error instanceof PrismaClientKnownRequestError) {
       switch (error.code) {
         case 'P2002':
@@ -76,7 +76,7 @@ export const getMemos = async () => {
           return { error: `データベースエラー: ${error.message}` };
       }
     }
-    
+
     return { error: "メモの取得に失敗しました。" };
   }
 };
@@ -163,13 +163,142 @@ export const deleteMemo = async (id: string) => {
       return { success: true };
     }
 
-    await prisma.memo.delete({
+    // トランザクションでMemoからTrashedMemoへ移動
+    await prisma.$transaction(async (tx) => {
+      // 元のメモを取得（タグ含む）
+      const memo = await tx.memo.findUnique({
+        where: { id },
+        include: { tags: true },
+      });
+
+      if (!memo) {
+        throw new Error("メモが見つかりません");
+      }
+
+      // TrashedMemoに挿入
+      await tx.trashedMemo.create({
+        data: {
+          originalId: memo.id,
+          title: memo.title,
+          date: memo.date,
+          tagNames: memo.tags.map(t => t.name),
+          body: memo.body,
+          embedding: memo.embedding,
+          createdAt: memo.createdAt instanceof Date ? memo.createdAt.toISOString() : memo.createdAt,
+          updatedAt: memo.updatedAt instanceof Date ? memo.updatedAt.toISOString() : memo.updatedAt,
+        },
+      });
+
+      // 元のメモを削除
+      await tx.memo.delete({
+        where: { id },
+      });
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("データベースエラー:", error);
+    return { error: "メモの削除に失敗しました。" };
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+export const getTrashedMemos = async () => {
+  try {
+    const trashedMemos = await prisma.trashedMemo.findMany({
+      orderBy: { deletedAt: "desc" },
+    });
+    return trashedMemos;
+  } catch (error) {
+    console.error("データベースエラー:", error);
+    return { error: "ゴミ箱のメモ取得に失敗しました。" };
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+export const restoreMemo = async (originalId: string) => {
+  try {
+    // トランザクションでTrashedMemoからMemoへ復元
+    await prisma.$transaction(async (tx) => {
+      // ゴミ箱からメモを取得
+      const trashedMemo = await tx.trashedMemo.findUnique({
+        where: { originalId },
+      });
+
+      if (!trashedMemo) {
+        throw new Error("ゴミ箱にメモが見つかりません");
+      }
+
+      // タグを確実に存在させる
+      const ensuredTags = await ensureTags(trashedMemo.tagNames);
+      const tagsToConnect = ensuredTags.map(t => ({ id: t.id }));
+
+      // Memoテーブルに復元（元のIDを使用）
+      await tx.memo.create({
+        data: {
+          id: trashedMemo.originalId,
+          title: trashedMemo.title,
+          date: trashedMemo.date,
+          tags: {
+            connect: tagsToConnect,
+          },
+          body: trashedMemo.body,
+          embedding: trashedMemo.embedding,
+          createdAt: trashedMemo.createdAt,
+          updatedAt: trashedMemo.updatedAt,
+        },
+      });
+
+      // ゴミ箱から削除
+      await tx.trashedMemo.delete({
+        where: { originalId },
+      });
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("データベースエラー:", error);
+    return { error: "メモの復元に失敗しました。" };
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+export const permanentlyDeleteMemo = async (id: string) => {
+  try {
+    await prisma.trashedMemo.delete({
       where: { id },
     });
     return { success: true };
   } catch (error) {
     console.error("データベースエラー:", error);
-    return { error: "メモの削除に失敗しました。" };
+    return { error: "メモの完全削除に失敗しました。" };
+  } finally {
+    await prisma.$disconnect();
+  }
+};
+
+export const purgeOldTrashedMemos = async (days: number = 30) => {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const result = await prisma.trashedMemo.deleteMany({
+      where: {
+        deletedAt: {
+          lt: cutoffDate,
+        },
+      },
+    });
+
+    return { success: true, count: result.count };
+  } catch (error) {
+    console.error("データベースエラー:", error);
+    return { error: "古いメモの削除に失敗しました。" };
+  } finally {
+    await prisma.$disconnect();
   }
 };
 
@@ -199,7 +328,7 @@ export const updateMemo = async (id: string, data: any) => {
 
     // タグの処理を分離（検証は済んでいるのでここで DB 操作を行う）
     const { tags, ...updateData } = data;
-    
+
     // タグが指定されている場合の処理
     if (tags !== undefined) {
       // タグを確実に存在させ、接続用オブジェクトを作る（ensureTags で責務を分離）

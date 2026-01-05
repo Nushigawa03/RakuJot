@@ -39,3 +39,18 @@ model TagExpression {
   createdAt DateTime? 
   updatedAt DateTime? 
 }
+
+model TrashedMemo {
+  id         String   @id @default(cuid())
+  originalId String   @unique // 元のMemoのID
+  title      String
+  date       String?
+  tagNames   String[] // タグ名の配列
+  body       String?
+  embedding  Json?    // 埋め込みベクトル
+  createdAt  String   // 元の作成日時（ISO文字列）
+  updatedAt  String   // 元の更新日時（ISO文字列）
+  deletedAt  DateTime @default(now()) // ゴミ箱に移動した日時
+  
+  @@index([deletedAt]) // 自動削除クエリの高速化
+}
