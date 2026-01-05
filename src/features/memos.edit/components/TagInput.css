@@ -1,0 +1,98 @@
+/* Tags Input */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg);
+    min-height: 40px;
+    align-items: center;
+}
+
+.tags-container:focus-within {
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 2px rgba(var(--color-success-rgb), 0.12);
+}
+
+/* Focus within override from original */
+.edit-memo-container.is-active .tags-container,
+.edit-memo-container:focus-within .tags-container {
+    border-color: rgba(76, 175, 80, 0.5);
+}
+
+.tags-container .tag-chip {
+    background: var(--color-success-bg);
+    color: var(--color-success-fg);
+    padding: 3px 8px;
+    border-radius: 14px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    border: 1px solid rgba(var(--color-success-rgb), 0.28);
+}
+
+.tags-container .tag-remove-button {
+    background: transparent;
+    border: none;
+    color: var(--color-success-fg);
+    padding: 0 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 1;
+}
+
+.tags-container .tag-remove-button:hover {
+    background: rgba(var(--color-success-rgb), 0.08);
+}
+
+.tags-container .tag-input-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 140px;
+}
+
+.tags-container .tag-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.tags-container .tag-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg);
+    border: 1px solid rgba(var(--color-success-rgb), 0.45);
+    border-radius: var(--radius-sm);
+    margin-top: 4px;
+    max-height: 160px;
+    overflow-y: auto;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    z-index: 100;
+}
+
+.tags-container .tag-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-size: 0.9rem;
+}
+
+.tags-container .tag-suggestion:hover {
+    background: var(--color-success-bg);
+}
+
+.tags-container .tag-suggestion:not(:last-child) {
+    border-bottom: 1px solid #f4f4f4;
+}

@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Button, Textarea } from '~/components';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router';
 import './EditMemoForm.css';
 import DeleteConfirmModal from './DeleteConfirmModal';
-import { useNavigate } from 'react-router';
-import { memoService } from '../../memos/services/memoService';
-
-interface Tag {
-  id: string;
-  name: string;
-}
+import { useMemoForm, Tag } from '../hooks/useMemoForm';
+import { useMemoAi } from '../hooks/useMemoAi';
+import { EditMemoView } from './EditMemoView';
+import { EditMemoEditor } from './EditMemoEditor';
+import { EditMemoHeader } from './EditMemoHeader';
 
 interface EditMemoFormProps {
   memo: {
@@ -24,131 +22,60 @@ interface EditMemoFormProps {
   availableTags: Tag[];
 }
 
-const EditMemoForm: React.FC<EditMemoFormProps> = ({ 
-  memo, 
-  onSubmit, 
-  onDelete, 
+const EditMemoForm: React.FC<EditMemoFormProps> = ({
+  memo,
+  onSubmit,
+  onDelete,
   error,
-  availableTags 
+  availableTags
 }) => {
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
-  const [title, setTitle] = useState(memo.title || "");
-  const [body, setBody] = useState(memo.body || "");
-  const [date, setDate] = useState(memo.date || "");
-  const [selectedTags, setSelectedTags] = useState<string[]>(
-    memo.tags?.map(t => t.name) || []
-  );
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [tagInput, setTagInput] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [quickEditContent, setQuickEditContent] = useState("");
-  const [isAiProcessing, setIsAiProcessing] = useState(false);
-  const [autoApplySuggestions, setAutoApplySuggestions] = useState(true); // デフォルト自動適用
-  const [aiSuggestion, setAiSuggestion] = useState<{
-    title: string;
-    body: string;
-    tags: string[];
-    date: string;
-  } | null>(null);
-  const [history, setHistory] = useState<Array<{
-    title: string;
-    body: string;
-    tags: string[];
-    date: string;
-  }>>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const tagInputRef = useRef<HTMLInputElement>(null);
 
-  // 初期状態を履歴に保存（一度だけ）
-  useEffect(() => {
-    const initial = { title: memo.title || "", body: memo.body || "", tags: (memo.tags?.map(t => t.name) || []), date: memo.date || "" };
-    setHistory([initial]);
-    setHistoryIndex(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const {
+    title, setTitle,
+    body, setBody,
+    date, setDate,
+    selectedTags, setSelectedTags,
+    isSaving,
+    lastSaved,
+    historyIndex,
+    historyLength,
+    performSave,
+    saveToHistory, // Add this
+    handleDiscardChanges,
+    handleUndo,
+    handleRedo
+  } = useMemoForm({ initialMemo: memo, onSubmit });
 
-  // lastSaved を3秒後に自動消去
-  useEffect(() => {
-    if (lastSaved) {
-      const timer = setTimeout(() => {
-        setLastSaved(null);
-      }, 3000);
+  // Use current form state for AI context
+  const currentMemoData = { title, body, date, tags: selectedTags };
 
-      return () => clearTimeout(timer);
-    }
-  }, [lastSaved]);
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setIsSaving(true);
-    try {
-      const ok = await onSubmit(title, body, selectedTags, date);
+  const {
+    quickEditContent, setQuickEditContent,
+    isAiProcessing,
+    aiSuggestion, setAiSuggestion,
+    handleAiSuggest,
+    handleApplySuggestion,
+    handleRejectSuggestion
+  } = useMemoAi({
+    currentMemo: currentMemoData,
+    onApply: async (suggestion) => {
+      const ok = await performSave(suggestion.title, suggestion.body, suggestion.tags, suggestion.date);
       if (ok) {
-        setLastSaved(new Date());
-      }
-    } catch (error) {
-      console.error("保存エラー:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDiscardChanges = async () => {
-    if (history.length > 0 && !isSaving) {
-      const initial = history[0];
-      
-      // 保存をまず実行
-      setIsSaving(true);
-      try {
-        const ok = await onSubmit(initial.title, initial.body, initial.tags, initial.date);
-        // 保存成功後に state を更新
-        if (ok) {
-          setTitle(initial.title);
-          setBody(initial.body);
-          setSelectedTags(initial.tags);
-          setDate(initial.date);
-          setHistoryIndex(0);
-          setLastSaved(new Date());
-        }
-      } catch (error) {
-        console.error("保存エラー:", error);
-      } finally {
-        setIsSaving(false);
+        saveToHistory(suggestion); // Save to history stack
+        setTitle(suggestion.title);
+        setBody(suggestion.body);
+        setDate(suggestion.date);
+        setSelectedTags(suggestion.tags);
       }
     }
-  };
+  });
 
-  const handleAddTag = (tagName: string) => {
-    if (tagName.trim() && !selectedTags.includes(tagName.trim())) {
-      setSelectedTags([...selectedTags, tagName.trim()]);
-      setTagInput("");
-      setShowSuggestions(false);
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
-  };
-
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      handleAddTag(tagInput);
-    }
-  };
-
-  const filteredSuggestions = availableTags
-    .filter(tag => 
-      tag.name.toLowerCase().includes(tagInput.toLowerCase()) &&
-      !selectedTags.includes(tag.name)
-    )
-    .slice(0, 5);
-
-  const handleDeleteClick = () => {
-    setIsDeleteModalOpen(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await performSave(title, body, selectedTags, date);
   };
 
   const handleDeleteConfirm = async () => {
@@ -156,409 +83,62 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
     await onDelete();
   };
 
-  const saveToHistory = (snapshot?: { title: string; body: string; tags: string[]; date: string }) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    const stateToSave = snapshot ?? { title, body, tags: selectedTags, date };
-    newHistory.push(stateToSave);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  };
-
-  const handleUndo = async () => {
-    if (historyIndex > 0 && !isSaving) {
-      const prevState = history[historyIndex - 1];
-      
-      // 保存をまず実行
-      setIsSaving(true);
-      try {
-        const ok = await onSubmit(prevState.title, prevState.body, prevState.tags, prevState.date);
-        // 保存成功後に state を更新
-        if (ok) {
-          setTitle(prevState.title);
-          setBody(prevState.body);
-          setSelectedTags(prevState.tags);
-          setDate(prevState.date);
-          setHistoryIndex(historyIndex - 1);
-          setLastSaved(new Date());
-        }
-      } catch (error) {
-        console.error("保存エラー:", error);
-      } finally {
-        setIsSaving(false);
-      }
+  const handleAddTag = (tagName: string) => {
+    if (tagName.trim() && !selectedTags.includes(tagName.trim())) {
+      setSelectedTags([...selectedTags, tagName.trim()]);
     }
   };
 
-  const handleRedo = async () => {
-    if (historyIndex < history.length - 1 && !isSaving) {
-      const nextState = history[historyIndex + 1];
-      
-      // 保存をまず実行
-      setIsSaving(true);
-      try {
-        const ok = await onSubmit(nextState.title, nextState.body, nextState.tags, nextState.date);
-        // 保存成功後に state を更新
-        if (ok) {
-          setTitle(nextState.title);
-          setBody(nextState.body);
-          setSelectedTags(nextState.tags);
-          setDate(nextState.date);
-          setHistoryIndex(historyIndex + 1);
-          setLastSaved(new Date());
-        }
-      } catch (error) {
-        console.error("保存エラー:", error);
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  };
-
-  const handleAiSuggest = async () => {
-    if (!quickEditContent.trim()) return;
-    
-    setIsAiProcessing(true);
-    try {
-      // サービスに委託してサーバー側でAIを呼び、提案ペイロードを受け取る
-      // Provide the original memo body together with the quick edit instruction
-      const aiPayload = await memoService.suggestEditForContent(memo.body || '', quickEditContent, { tagLimit: 10 });
-
-      const suggestion = {
-        title: aiPayload.title || title || 'AIが提案するタイトル',
-        body: aiPayload.body || quickEditContent,
-        // merge existing selectedTags with suggested tags, preserving order and uniqueness
-        tags: Array.from(new Set([...selectedTags, ...(aiPayload.tags || [])])),
-        date: aiPayload.date || date || new Date().toLocaleDateString('ja-JP'),
-      };
-      
-      if (autoApplySuggestions) {
-        // 即時適用・自動保存
-        setIsSaving(true);
-        try {
-          const ok = await onSubmit(suggestion.title, suggestion.body, suggestion.tags, suggestion.date);
-          // 保存成功後に state を更新
-          if (ok) {
-            saveToHistory(suggestion);
-            setTitle(suggestion.title);
-            setBody(suggestion.body);
-            setSelectedTags(suggestion.tags);
-            setDate(suggestion.date);
-            setQuickEditContent("");
-            setAiSuggestion(null);
-            setLastSaved(new Date());
-          }
-        } catch (error) {
-          console.error("保存エラー:", error);
-        } finally {
-          setIsSaving(false);
-        }
-      } else {
-        // プレビュー表示
-        setAiSuggestion(suggestion);
-      }
-    } catch (error) {
-      console.error("AI提案エラー:", error);
-    } finally {
-      setIsAiProcessing(false);
-    }
-  };
-
-  const handleApplySuggestion = async () => {
-    if (!aiSuggestion || isSaving) return;
-    
-    // 保存をまず実行
-    setIsSaving(true);
-    try {
-      const ok = await onSubmit(aiSuggestion.title, aiSuggestion.body, aiSuggestion.tags, aiSuggestion.date);
-      // 保存成功後に state を更新
-      if (ok) {
-        saveToHistory(aiSuggestion);
-        setTitle(aiSuggestion.title);
-        setBody(aiSuggestion.body);
-        setSelectedTags(aiSuggestion.tags);
-        setDate(aiSuggestion.date);
-        setAiSuggestion(null);
-        setQuickEditContent("");
-        setLastSaved(new Date());
-      }
-    } catch (error) {
-      console.error("保存エラー:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleRejectSuggestion = () => {
-    setAiSuggestion(null);
+  const handleRemoveTag = (tagToRemove: string) => {
+    setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
   };
 
   return (
     <div className="edit-memo-container full-screen">
-      <div className="top-actions sticky">
-        <Button type="button" className="back-button" variant="secondary" onClick={() => navigate(-1)}>
-          ← 戻る
-        </Button>
-        
-        <div className="top-actions-center">
-          {isSaving ? (
-            <div className="saving-indicator">
-              💾 保存中...
-            </div>
-          ) : error ? (
-            <div className="auto-save-indicator error">
-              エラー: {error}
-            </div>
-          ) : (
-            lastSaved && (
-              <div className="auto-save-indicator">
-                ✓ {lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み
-              </div>
-            )
-          )}
-        </div>
+      <EditMemoHeader
+        onBack={() => navigate(-1)}
+        isSaving={isSaving}
+        error={error}
+        lastSaved={lastSaved}
+        onDiscard={handleDiscardChanges}
+        canDiscard={historyIndex > 0}
+        onDelete={() => setIsDeleteModalOpen(true)}
+        editMode={editMode}
+        onToggleMode={() => setEditMode(!editMode)}
+      />
 
-        <div className="top-actions-right">
-          <Button 
-            type="button" 
-            className="discard-button"
-            variant="secondary"
-            onClick={handleDiscardChanges}
-            disabled={historyIndex === 0}
-          >
-            🔄 破棄
-          </Button>
-          <Button 
-            type="button" 
-            className="delete-button-top"
-            variant="secondary"
-            onClick={handleDeleteClick}
-          >
-            🗑️ 削除
-          </Button>
-          <Button 
-            type="button" 
-            className="mode-toggle-button"
-            variant="secondary"
-            onClick={() => setEditMode(!editMode)}
-          >
-            {editMode ? '📖 閲覧モード' : '✏️ 詳細編集'}
-          </Button>
-        </div>
-      </div>
-      {/* エラーメッセージは上部の auto-save 表示と同じ位置・サイズで表示するため移動しました */}
-      
       {!editMode ? (
-        /* 閲覧モード */
-        <div className="view-mode">
-          <div className="memo-display">
-            <h1 className="memo-title">{title || '(タイトルなし)'}</h1>
-            {date && <div className="memo-date">{date}</div>}
-            {selectedTags.length > 0 && (
-              <div className="memo-tags">
-                {selectedTags.map((tag, index) => (
-                  <span key={`${tag}-${index}`} className="tag-badge">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="memo-body">
-              {body.split('\n').map((line, i) => (
-                <p key={i}>{line || '\u00A0'}</p>
-              ))}
-            </div>
-          </div>
-
-          <div className="quick-edit">
-            <div className="quick-edit-header">
-              <div className="header-top">
-                <h3>✨ 手軽に編集</h3>
-                <div className="history-controls">
-                  <Button className="btn-undo" variant="secondary" onClick={handleUndo} disabled={historyIndex <= 0}>
-                    ↶
-                  </Button>
-                  <Button className="btn-redo" variant="secondary" onClick={handleRedo} disabled={historyIndex >= history.length - 1}>
-                    ↷
-                  </Button>
-                </div>
-              </div>
-              <p className="quick-edit-description">
-                メモを改善したいアイデアがあれば、ここに書くとAIが提案します
-              </p>
-            </div>
-            
-            {aiSuggestion ? (
-              /* AI提案プレビュー */
-              <div className="ai-suggestion-preview">
-                <div className="suggestion-header">
-                  <span className="suggestion-label">🤖 AIの提案</span>
-                </div>
-                <div className="suggestion-content">
-                  <div className="suggestion-field">
-                    <label>タイトル:</label>
-                    <input 
-                      type="text" 
-                      value={aiSuggestion.title}
-                      onChange={(e) => setAiSuggestion({...aiSuggestion, title: e.target.value})}
-                    />
-                  </div>
-                  <div className="suggestion-field">
-                    <label>日付:</label>
-                    <input 
-                      type="text" 
-                      value={aiSuggestion.date}
-                      onChange={(e) => setAiSuggestion({...aiSuggestion, date: e.target.value})}
-                    />
-                  </div>
-                  <div className="suggestion-field">
-                    <label>タグ:</label>
-                    <div className="suggestion-tags">
-                      {aiSuggestion.tags.map((tag, idx) => (
-                        <span key={idx} className="tag-badge">{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="suggestion-field">
-                    <label>内容:</label>
-                    <Textarea
-                      value={aiSuggestion.body}
-                      onChange={(value) => setAiSuggestion({...aiSuggestion, body: value})}
-                      rows={6}
-                      autoResize={false}
-                      showLines={true}
-                    />
-                  </div>
-                </div>
-                <div className="suggestion-buttons actions-fixed">
-                  <Button className="btn-apply" variant="primary" onClick={handleApplySuggestion}>
-                    ✓ この内容を適用
-                  </Button>
-                  <Button className="btn-reject" variant="secondary" onClick={handleRejectSuggestion}>
-                    ✗ キャンセル
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              /* クイック編集入力 */
-              <>
-                <Textarea
-                  className="quick-body"
-                  placeholder="改善したい点を教えてください"
-                  value={quickEditContent}
-                  onChange={setQuickEditContent}
-                  rows={8}
-                  disabled={isAiProcessing}
-                  autoResize={false}
-                  showLines={true}
-                />
-                <Button 
-                  className="btn-ai-suggest"
-                  variant="primary"
-                  onClick={handleAiSuggest}
-                  disabled={!quickEditContent.trim() || isAiProcessing}
-                >
-                  {isAiProcessing ? '処理中...' : 'OK'}
-                </Button>
-              </>
-            )}
-
-          </div>
-        </div>
+        <EditMemoView
+          memo={currentMemoData}
+          history={{
+            canUndo: historyIndex > 0,
+            canRedo: historyIndex < historyLength - 1,
+            onUndo: handleUndo,
+            onRedo: handleRedo
+          }}
+          ai={{
+            quickEditContent,
+            setQuickEditContent,
+            isProcessing: isAiProcessing,
+            suggestion: aiSuggestion,
+            setSuggestion: setAiSuggestion,
+            onSuggest: handleAiSuggest,
+            onApply: handleApplySuggestion,
+            onReject: handleRejectSuggestion
+          }}
+        />
       ) : (
-        /* 編集モード */
-        <form className="edit-memo-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="title">タイトル</label>
-            <input
-              id="title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="タイトル"
-              aria-label="タイトル"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="date">日付・キーワード</label>
-            <input
-              id="date"
-              type="text"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              placeholder="日付やキーワード（空欄でもOK）"
-              aria-label="日付"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>タグ</label>
-            <div className="tags-container" aria-label="タグ">
-              {selectedTags.map((tag, index) => (
-                <span key={`${tag}-${index}`} className="tag-chip">
-                  {tag}
-                  <button
-                    type="button"
-                    className="tag-remove-button"
-                    onClick={() => handleRemoveTag(tag)}
-                    aria-label={`Remove ${tag}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              <div className="tag-input-wrapper">
-                <input
-                  ref={tagInputRef}
-                  id="tags"
-                  type="text"
-                  className="tag-input"
-                  value={tagInput}
-                  onChange={(e) => {
-                    setTagInput(e.target.value);
-                    setShowSuggestions(e.target.value.length > 0);
-                  }}
-                  onKeyDown={handleTagInputKeyDown}
-                  onFocus={() => tagInput.length > 0 && setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  placeholder="タグを追加"
-                  aria-label="タグ入力"
-                />
-                {showSuggestions && filteredSuggestions.length > 0 && (
-                  <div className="tag-suggestions">
-                    {filteredSuggestions.map((tag) => (
-                      <div
-                        key={tag.id}
-                        className="tag-suggestion"
-                        onClick={() => handleAddTag(tag.name)}
-                      >
-                        {tag.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="body">内容</label>
-            <textarea
-              id="body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={15}
-              placeholder="内容"
-              aria-label="内容"
-            />
-          </div>
-          
-          <div className="form-actions">
-            <Button type="submit" variant="primary">💾 保存</Button>
-            <Button type="button" variant="secondary" onClick={handleDeleteClick}>🗑️ 削除</Button>
-          </div>
-        </form>
+        <EditMemoEditor
+          title={title} setTitle={setTitle}
+          body={body} setBody={setBody}
+          date={date} setDate={setDate}
+          selectedTags={selectedTags}
+          availableTags={availableTags}
+          onAddTag={handleAddTag}
+          onRemoveTag={handleRemoveTag}
+          onSubmit={handleSubmit}
+          onDelete={() => setIsDeleteModalOpen(true)}
+        />
       )}
 
       <DeleteConfirmModal

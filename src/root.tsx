@@ -12,6 +12,7 @@ import "./app.css";
 import { useDarkMode } from "./hooks/useDarkMode";
 
 export const links: Route.LinksFunction = () => [
+  { rel: "manifest", href: "/manifest.json" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
@@ -32,6 +33,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#ffffff" />
+        <meta name="description" content="AIを搭載した高速メモ管理アプリケーション" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="RakuJot" />
+        <link rel="apple-touch-icon" href="/logo-light.png" />
         <Meta />
         <Links />
       </head>

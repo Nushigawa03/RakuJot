@@ -1,0 +1,199 @@
+/* Header actions bar wrapper */
+.edit-memo-header-container {
+    z-index: 50;
+    flex-shrink: 0;
+    height: 56px;
+}
+
+.edit-memo-header-container.sticky {
+    position: sticky;
+    top: 0;
+}
+
+.edit-memo-header-container .top-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: saturate(120%) blur(6px);
+    border-bottom: 1px solid rgba(76, 175, 80, 0.3);
+    gap: 10px;
+    height: 100%;
+    flex-wrap: nowrap;
+    /* Prevent wrapping */
+}
+
+.edit-memo-header-container .top-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edit-memo-header-container .top-actions-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    overflow: hidden;
+}
+
+/* Indicators */
+.edit-memo-header-container .auto-save-indicator,
+.edit-memo-header-container .saving-indicator {
+    padding: 6px 12px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 4px;
+    white-space: nowrap;
+    animation: none;
+}
+
+.edit-memo-header-container .saving-indicator {
+    background: #fff3e0;
+    color: #e65100;
+    border-bottom: 1px solid #ffe0b2;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.edit-memo-header-container .auto-save-indicator {
+    background: var(--color-success-bg);
+    color: var(--color-success-fg);
+    border-bottom: 1px solid var(--color-success-border);
+}
+
+.edit-memo-header-container .auto-save-indicator.error {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    border-bottom: 1px solid var(--color-danger);
+    font-weight: 600;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Buttons */
+.edit-memo-header-container .back-button {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+    /* Prevent wrapped text inside buttons */
+}
+
+.edit-memo-header-container .back-button:hover {
+    background: var(--color-surface);
+}
+
+.edit-memo-header-container .discard-button {
+    background: var(--color-bg);
+    color: var(--color-warning);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.edit-memo-header-container .discard-button:hover:not(:disabled) {
+    background: var(--color-warning);
+    color: var(--color-warning-contrast);
+}
+
+.edit-memo-header-container .discard-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.edit-memo-header-container .delete-button-top {
+    background: var(--color-bg);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.edit-memo-header-container .delete-button-top:hover {
+    background: var(--color-danger);
+    color: var(--color-danger-contrast);
+}
+
+.edit-memo-header-container .mode-toggle-button {
+    background: var(--color-success);
+    color: var(--color-success-contrast);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.edit-memo-header-container .mode-toggle-button:hover {
+    background: var(--color-success-hover);
+}
+
+/* Mobile Tweaks */
+@media (max-width: 640px) {
+    .edit-memo-header-container .top-actions {
+        padding: 8px;
+        gap: 4px;
+    }
+
+    .edit-memo-header-container .top-actions-right .discard-button,
+    .edit-memo-header-container .top-actions-right .delete-button-top,
+    .edit-memo-header-container .mode-toggle-button,
+    .edit-memo-header-container .back-button {
+        padding: 6px;
+        font-size: 1.1rem;
+        /* Icon size when text hidden */
+        min-width: 32px;
+        justify-content: center;
+    }
+
+    /* Hide text labels on mobile, keep icons */
+    .edit-memo-header-container .button-text {
+        display: none;
+    }
+
+    /* Shorten saving message */
+    .edit-memo-header-container .saving-indicator {
+        font-size: 0;
+        /* Hide text */
+        padding: 4px;
+        min-width: 24px;
+    }
+
+    .edit-memo-header-container .saving-indicator::after {
+        content: "💾";
+        font-size: 1rem;
+        display: block;
+    }
+
+    /* Shorten saved message */
+    .edit-memo-header-container .auto-save-indicator {
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

@@ -1,0 +1,49 @@
+/* AI Suggestion Panel */
+.ai-suggestion-preview {
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.ai-suggestion-preview .suggestion-header {
+    border-bottom: 1px solid #e6e6e6;
+    padding-bottom: 8px;
+}
+
+.ai-suggestion-preview .suggestion-label {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 0.95rem;
+}
+
+.ai-suggestion-preview .suggestion-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ai-suggestion-preview .suggestion-field input,
+.ai-suggestion-preview .suggestion-field textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.ai-suggestion-preview .suggestion-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ai-suggestion-preview .suggestion-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
