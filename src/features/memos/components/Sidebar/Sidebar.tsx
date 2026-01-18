@@ -8,6 +8,7 @@ import { formatLogicalText } from '../../utils/logicalTextFormatter';
 import { SidebarSettingsModal } from './SidebarSettingsModal';
 import tagExpressionService from '../../services/tagExpressionService';
 import { initializeTags } from '../../utils/tagUtils';
+import UserMenu from '~/features/auth/components/UserMenu';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const { activeExpression, activeQuery, handleExpressionClick } = useTagExpression(onFilterChange);
@@ -142,6 +143,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
         onClose={() => setIsSettingsOpen(false)}
         onDataChange={handleSettingsDataChange}
       />
+
+      <div className="sidebar-footer">
+        <UserMenu />
+        <a href="/memos/trash" className="trash-link">
+          🗑️ ゴミ箱
+        </a>
+      </div>
     </>
   );
 };

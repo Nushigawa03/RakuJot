@@ -111,3 +111,98 @@
 | データベース操作（複数テーブル） | Models 層 | `deleteMemo()` (関連削除含む) |
 | 外部 AI API 呼び出し | Services 層 | `aiMemoProcessor()`, `computeEmbeddings()` |
 | AI + DB の組み合わせ | Services 層 → Models 層 | AI処理後にタグ情報を取得 |
+
+## テストコード
+
+### 基本方針
+- **テストフレームワーク**: Vitest + Testing Library (React)
+- **環境**: happy-dom (軽量DOM実装)
+- **カバレッジ**: v8 プロバイダー
+
+### テストファイルの配置 (Colocation)
+テストファイルは**テスト対象と同じディレクトリに配置**する（colocation パターン）。
+
+```
+src/features/memos/components/TrashPage/
+├── TrashPage.tsx        # コンポーネント
+├── TrashPage.css        # スタイル
+└── TrashPage.test.tsx   # テスト ← 同じフォルダ
+```
+
+**メリット**:
+- テスト対象とテストが近い位置にあるため、関連ファイルが見つけやすい
+- ファイル移動時にテストも一緒に移動しやすい
+- import パスが短くなる
+
+### 命名規約
+| 種類 | パターン | 例 |
+|------|---------|-----|
+| 単体テスト | `*.test.ts(x)` | `TrashPage.test.tsx` |
+| E2E/統合テスト | `*.spec.ts(x)` | `memo-flow.spec.ts` |
+
+### テストセットアップ
+グローバル設定は `src/test/setup.ts` に配置:
+
+```typescript
+import { expect, afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import * as matchers from '@testing-library/jest-dom/matchers';
+
+expect.extend(matchers);
+
+// happy-dom にないグローバルをモック
+globalThis.alert = vi.fn();
+globalThis.confirm = vi.fn(() => true);
+
+afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+});
+```
+
+### モックの書き方
+```typescript
+// 同じ階層からの相対パスでモック
+vi.mock('../../services/memoService', () => ({
+    memoService: {
+        getTrashedMemos: vi.fn(),
+        restoreMemo: vi.fn(),
+    },
+}));
+
+// テスト内でモック値を設定
+(memoService.getTrashedMemos as any).mockResolvedValue(mockData);
+```
+
+**重要**: `vi.mock()` のパスは **import 文と同じパス** を使用する。
+
+### テストの書き方（推奨パターン）
+```typescript
+describe('ComponentName', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('日本語でテスト内容を記述する', async () => {
+        // Arrange: モックデータ・レンダリング準備
+        (service.method as any).mockResolvedValue(data);
+        render(<Component />);
+
+        // Act: ユーザー操作をシミュレート
+        await waitFor(() => {
+            fireEvent.click(screen.getByText('ボタン'));
+        });
+
+        // Assert: 期待結果を検証
+        expect(screen.getByText('期待するテキスト')).toBeInTheDocument();
+    });
+});
+```
+
+### テスト実行コマンド
+```bash
+npm test              # watch モード
+npm test -- --run     # 単発実行
+npm run test:coverage # カバレッジ付き
+```
+

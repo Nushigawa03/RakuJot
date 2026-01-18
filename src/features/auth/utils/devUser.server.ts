@@ -1,4 +1,4 @@
-import { prisma } from "~/db.server";
+import { findUserByEmail, createUser } from "~/features/auth/models/user.server";
 
 /**
  * Development utility to get or create a default user.
@@ -7,22 +7,18 @@ import { prisma } from "~/db.server";
 export const getDevUserId = async (): Promise<string> => {
     const devEmail = "dev@example.com";
 
-    // Try to find existing dev user
-    const user = await prisma.user.findUnique({
-        where: { email: devEmail },
-    });
+    // Try to find existing dev user (via Models layer)
+    const user = await findUserByEmail(devEmail);
 
     if (user) {
         return user.id;
     }
 
-    // Create dev user if not exists
-    const newUser = await prisma.user.create({
-        data: {
-            email: devEmail,
-            name: "Dev User",
-            googleId: "dev-google-id", // Dummy ID
-        },
+    // Create dev user if not exists (via Models layer)
+    const newUser = await createUser({
+        email: devEmail,
+        name: "Dev User",
+        googleId: "dev-google-id", // Dummy ID
     });
 
     return newUser.id;

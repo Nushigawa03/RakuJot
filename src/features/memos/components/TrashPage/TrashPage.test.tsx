@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import TrashPage from '../TrashPage';
-import { memoService } from '../../../services/memoService';
+import TrashPage from './TrashPage';
+import { memoService } from '../../services/memoService';
+
 
 // モックデータ
 const mockTrashedMemos = [
@@ -18,7 +19,7 @@ const mockTrashedMemos = [
     },
 ];
 
-vi.mock('../../../services/memoService', () => ({
+vi.mock('../../services/memoService', () => ({
     memoService: {
         getTrashedMemos: vi.fn(),
         restoreMemo: vi.fn(),

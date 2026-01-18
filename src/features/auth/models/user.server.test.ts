@@ -1,0 +1,139 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// vi.mock はホイスティングされるため、vi.hoisted() でモックを定義
+const mockPrisma = vi.hoisted(() => ({
+    user: {
+        findUnique: vi.fn(),
+        create: vi.fn(),
+    },
+}));
+
+vi.mock('~/db.server', () => ({
+    prisma: mockPrisma,
+}));
+
+// モック後にインポート
+import {
+    findUserByEmail,
+    findUserByGoogleId,
+    createUser,
+    findOrCreateUserByEmail,
+} from './user.server';
+
+describe('user.server', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    describe('findUserByEmail', () => {
+        it('メールアドレスでユーザーを検索する', async () => {
+            const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' };
+            mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
+
+            const user = await findUserByEmail('test@example.com');
+
+            expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+                where: { email: 'test@example.com' },
+            });
+            expect(user).toEqual(mockUser);
+        });
+
+        it('ユーザーが見つからない場合は null を返す', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+
+            const user = await findUserByEmail('notfound@example.com');
+
+            expect(user).toBeNull();
+        });
+
+        it('エラー時は null を返す', async () => {
+            mockPrisma.user.findUnique.mockRejectedValueOnce(new Error('DB Error'));
+
+            const user = await findUserByEmail('test@example.com');
+
+            expect(user).toBeNull();
+        });
+    });
+
+    describe('findUserByGoogleId', () => {
+        it('Google IDでユーザーを検索する', async () => {
+            const mockUser = { id: '1', googleId: 'google-123', email: 'test@example.com' };
+            mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
+
+            const user = await findUserByGoogleId('google-123');
+
+            expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+                where: { googleId: 'google-123' },
+            });
+            expect(user).toEqual(mockUser);
+        });
+    });
+
+    describe('createUser', () => {
+        it('新しいユーザーを作成する', async () => {
+            const newUser = {
+                id: '1',
+                email: 'new@example.com',
+                name: 'New User',
+                googleId: 'google-456',
+            };
+            mockPrisma.user.create.mockResolvedValueOnce(newUser);
+
+            const user = await createUser({
+                email: 'new@example.com',
+                name: 'New User',
+                googleId: 'google-456',
+            });
+
+            expect(mockPrisma.user.create).toHaveBeenCalledWith({
+                data: {
+                    email: 'new@example.com',
+                    name: 'New User',
+                    googleId: 'google-456',
+                    picture: undefined,
+                },
+            });
+            expect(user).toEqual(newUser);
+        });
+
+        it('エラー時は例外をスローする', async () => {
+            mockPrisma.user.create.mockRejectedValueOnce(new Error('Duplicate email'));
+
+            await expect(createUser({
+                email: 'test@example.com',
+                googleId: 'google-789',
+            })).rejects.toThrow('Duplicate email');
+        });
+    });
+
+    describe('findOrCreateUserByEmail', () => {
+        it('既存ユーザーが見つかる場合はそれを返す', async () => {
+            const existingUser = { id: '1', email: 'existing@example.com' };
+            mockPrisma.user.findUnique.mockResolvedValueOnce(existingUser);
+
+            const user = await findOrCreateUserByEmail({
+                email: 'existing@example.com',
+                googleId: 'google-123',
+            });
+
+            expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+            expect(mockPrisma.user.create).not.toHaveBeenCalled();
+            expect(user).toEqual(existingUser);
+        });
+
+        it('ユーザーが見つからない場合は新規作成する', async () => {
+            const newUser = { id: '2', email: 'new@example.com', googleId: 'google-456' };
+            mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+            mockPrisma.user.create.mockResolvedValueOnce(newUser);
+
+            const user = await findOrCreateUserByEmail({
+                email: 'new@example.com',
+                googleId: 'google-456',
+            });
+
+            expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+            expect(mockPrisma.user.create).toHaveBeenCalled();
+            expect(user).toEqual(newUser);
+        });
+    });
+});

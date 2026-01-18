@@ -305,3 +305,32 @@
   margin-right: var(--spacing-2);
   font-weight: var(--font-weight-bold);
 }
+
+/* ========================================
+   Sidebar Footer - Trash Link
+   ======================================== */
+
+.sidebar-footer {
+  flex: 0 0 auto;
+  padding: var(--spacing-3);
+  border-top: 1px solid var(--color-border-primary);
+  margin-top: auto;
+}
+
+.trash-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.trash-link:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+  transform: translateX(2px);
+}
