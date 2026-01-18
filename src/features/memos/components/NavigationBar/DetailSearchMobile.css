@@ -142,3 +142,22 @@
   color: var(--color-primary-500);
   transform: scale(1.1);
 }
+
+/* Clear Button Mobile */
+.clear-button-mobile {
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--color-neutral-200);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: all var(--transition-base) var(--ease-out);
+  margin-top: var(--spacing-2);
+}
+
+.clear-button-mobile:hover {
+  background: var(--color-neutral-300);
+  border-color: var(--color-border-secondary);
+}

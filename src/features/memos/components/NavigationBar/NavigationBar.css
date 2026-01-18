@@ -292,3 +292,72 @@
   background: var(--color-surface-hover);
   border-color: var(--color-border-secondary);
 }
+
+/* Search Button */
+.search-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.search-button:hover {
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+}
+
+/* Clear Search Button */
+.clear-search-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: var(--spacing-1);
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+  transition: all var(--transition-fast) var(--ease-out);
+  line-height: 1;
+}
+
+.clear-search-button:hover {
+  background: var(--color-neutral-200);
+  color: var(--color-text-primary);
+}
+
+/* Parse Indicator */
+.parse-indicator {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  padding: 0 var(--spacing-1);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Parse Preview Badge */
+.parse-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: 2px var(--spacing-2);
+  background: var(--color-success-100);
+  border: 1px solid var(--color-success-200);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--color-success-700);
+  white-space: nowrap;
+}

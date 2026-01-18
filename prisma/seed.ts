@@ -2,6 +2,7 @@ import 'dotenv/config';
 import prismaPackage from "@prisma/client";
 const { PrismaClient } = prismaPackage;
 import { PrismaPg } from "@prisma/adapter-pg";
+// @ts-expect-error type definition missing
 import pg from "pg";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });

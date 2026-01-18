@@ -1,0 +1,49 @@
+/* ========================================
+   Tag Chip Inline - Compact search bar tags
+   ======================================== */
+
+.tag-chip-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    padding: 2px var(--spacing-2);
+    background: var(--color-primary-100);
+    border: 1px solid var(--color-primary-200);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    color: var(--color-primary-700);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all var(--transition-fast) var(--ease-out);
+}
+
+.tag-chip-inline:hover {
+    background: var(--color-primary-200);
+}
+
+.tag-chip-inline.exclude {
+    background: var(--color-danger-100);
+    border-color: var(--color-danger-200);
+    color: var(--color-danger-700);
+}
+
+.tag-chip-inline.exclude:hover {
+    background: var(--color-danger-200);
+}
+
+.tag-chip-inline-remove {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+}
+
+.tag-chip-inline-remove:hover {
+    opacity: 1;
+}

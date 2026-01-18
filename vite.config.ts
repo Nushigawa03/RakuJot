@@ -5,6 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const config = defineConfig({
   plugins: [
+    // @ts-expect-error
     reactRouter({
       appDirectory: "src",
     }),

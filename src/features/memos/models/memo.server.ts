@@ -1,5 +1,5 @@
-import prismaPackage from "@prisma/client";
-const { PrismaClientInitializationError, PrismaClientKnownRequestError } = prismaPackage;
+import prismaPackage, { Prisma } from "@prisma/client";
+
 import { prisma } from "~/db.server";
 import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
 import { ensureTags } from "./tag.server";
@@ -37,18 +37,18 @@ export const getMemos = async (userId: string) => {
     return dbMemos.map(serializeMemo);
   } catch (error) {
     console.error("データベースエラー:", error);
-    if (error instanceof PrismaClientInitializationError) {
+    if (error instanceof Prisma.PrismaClientInitializationError) {
       return { error: "データベースに接続できません。サーバーが起動していることを確認してください。" };
     }
 
-    if (error instanceof PrismaClientKnownRequestError) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
       switch (error.code) {
         case 'P2002':
           return { error: "同じタイトルのメモが既に存在します。" };
         case 'P2025':
           return { error: "参照先のデータが見つかりません。" };
         default:
-          return { error: `データベースエラー: ${error.message}` };
+          return { error: `データベースエラー: ${(error as Error).message}` };
       }
     }
 
@@ -121,7 +121,7 @@ export const deleteMemo = async (id: string, userId: string) => {
   try {
 
     // トランザクションでMemoからTrashedMemoへ移動
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 元のメモを取得（タグ含む）
       const memo = await tx.memo.findFirst({
         where: { id, userId },
@@ -141,7 +141,7 @@ export const deleteMemo = async (id: string, userId: string) => {
           date: memo.date,
           tagNames: memo.tags.map(t => t.name),
           body: memo.body,
-          embedding: memo.embedding,
+          embedding: memo.embedding as any,
           createdAt: memo.createdAt instanceof Date ? memo.createdAt.toISOString() : memo.createdAt,
           updatedAt: memo.updatedAt instanceof Date ? memo.updatedAt.toISOString() : memo.updatedAt,
         },
@@ -180,7 +180,7 @@ export const getTrashedMemos = async (userId: string) => {
 export const restoreMemo = async (originalId: string, userId: string) => {
   try {
     // トランザクションでTrashedMemoからMemoへ復元
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // ゴミ箱からメモを取得
       const trashedMemo = await tx.trashedMemo.findFirst({
         where: { originalId, userId },
@@ -205,7 +205,7 @@ export const restoreMemo = async (originalId: string, userId: string) => {
             connect: tagsToConnect,
           },
           body: trashedMemo.body,
-          embedding: trashedMemo.embedding,
+          embedding: trashedMemo.embedding as any,
           createdAt: trashedMemo.createdAt,
           updatedAt: trashedMemo.updatedAt,
         },

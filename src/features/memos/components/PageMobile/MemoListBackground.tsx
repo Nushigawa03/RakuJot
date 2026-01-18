@@ -17,7 +17,10 @@ interface MemoListBackgroundProps {
     handleExpressionClick: (expression: TagExpression) => void;
     filterQuery: string;
     queryEmbedding: number[] | undefined;
-    filterTags: SearchTag[];
+    textQuery: string;
+    setTextQuery: (query: string) => void;
+    tagQuery: SearchTag[];
+    removeTag: (tag: SearchTag) => void;
 }
 
 const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
@@ -30,7 +33,10 @@ const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
     handleExpressionClick,
     filterQuery,
     queryEmbedding,
-    filterTags,
+    textQuery,
+    setTextQuery,
+    tagQuery,
+    removeTag,
 }) => {
     return (
         <div className="page-mobile__background">
@@ -48,12 +54,17 @@ const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
                     expressions={expressions}
                     activeExpression={activeExpression}
                     handleExpressionClick={handleExpressionClick}
+                    textQuery={textQuery}
+                    setTextQuery={setTextQuery}
+                    tagQuery={tagQuery}
+                    removeTag={removeTag}
                 />
                 <MemoList
                     filterQuery={filterQuery}
                     dateQuery={dateQuery}
                     queryEmbedding={queryEmbedding}
-                    filterTags={filterTags}
+                    textQuery={textQuery}
+                    tagQuery={tagQuery}
                 />
             </main>
 

@@ -2,10 +2,15 @@ import React, { useEffect } from 'react';
 import { TagExpression } from '../types/tagExpressions';
 import { generateExpressionName } from '../utils/tagExpressionUtils';
 import { formatLogicalText } from '../utils/logicalTextFormatter';
+import { SearchTag } from '../types/searchTag';
 
 interface MemoFiltersProps {
   dateQuery: string;
   setDateQuery: (query: string) => void;
+  textQuery?: string;
+  setTextQuery?: (query: string) => void;
+  tagQuery?: SearchTag[];
+  removeTag?: (tag: SearchTag) => void;
   expressions: TagExpression[];
   activeExpression: string | null;
   handleExpressionClick: (expression: TagExpression) => void;
@@ -14,6 +19,10 @@ interface MemoFiltersProps {
 const MemoFilters: React.FC<MemoFiltersProps> = ({
   dateQuery,
   setDateQuery,
+  textQuery,
+  setTextQuery,
+  tagQuery,
+  removeTag,
   expressions,
   activeExpression,
   handleExpressionClick,
@@ -53,6 +62,27 @@ const MemoFilters: React.FC<MemoFiltersProps> = ({
             📅 {dateQuery} ✕
           </button>
         )}
+        {textQuery && setTextQuery && (
+          <button
+            onClick={() => setTextQuery('')}
+            className="page-mobile__pill"
+            style={{ backgroundColor: '#e0e0e0', color: '#333' }}
+            title="テキスト検索をクリア"
+          >
+            "{textQuery}" ✕
+          </button>
+        )}
+        {tagQuery && tagQuery.map(tag => (
+          <button
+            key={tag.id}
+            onClick={() => removeTag && removeTag(tag)}
+            className="page-mobile__pill"
+            style={{ backgroundColor: '#e0e0e0', color: '#333' }}
+            title="タグ検索をクリア"
+          >
+            🏷️ {tag.name} ✕
+          </button>
+        ))}
         {expressions
           .filter(e => !!e.name)
           .map((category) => (

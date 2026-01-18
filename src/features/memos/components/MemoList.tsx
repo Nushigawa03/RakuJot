@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import "./MemoList.css";
 import { useNavigate } from "react-router";
-import { useFilteredMemos } from "../hooks/useFilteredMemos";
+import { useMemoSearch } from "../hooks/useMemoSearch";
 import { useSortedMemos } from "../hooks/useSortedMemos";
 import { Memo, MemoListProps } from "../types/memo";
 import { memoService } from "../services/memoService";
 import { getTagNameById, initializeTags } from "../utils/tagUtils";
 
-const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, filterTags }) => {
+const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, textQuery, tagQuery }) => {
   // デバッグ用: タグを常に表示するかどうか
   const DEBUG_ALWAYS_SHOW_TAGS = false;
   const navigate = useNavigate();
@@ -67,13 +67,15 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
     };
   }, []);
 
-  const filteredMemos = useFilteredMemos(memos, filterQuery, dateQuery, queryEmbedding, filterTags);
+  const filteredMemos = useMemoSearch(memos, filterQuery, dateQuery, queryEmbedding, textQuery, tagQuery);
   const sortedMemos = useSortedMemos(filteredMemos, sortKey, sortOrder);
 
   // デバッグ用ログ
   console.log("Raw memos:", memos.length);
   console.log("Filter query:", filterQuery);
   console.log("Date query:", dateQuery);
+  console.log("Text query:", textQuery);
+  console.log("Tag query:", tagQuery);
   console.log("Filtered memos:", filteredMemos.length);
   console.log("Sorted memos:", sortedMemos.length);
 
@@ -142,7 +144,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
           >
             <span className="memo-date">{memo.date || "不明"}</span>
             <span className="memo-title">{memo.title}</span>
-            {(DEBUG_ALWAYS_SHOW_TAGS || filterQuery) && (
+            {(DEBUG_ALWAYS_SHOW_TAGS || filterQuery || (tagQuery && tagQuery.length > 0)) && (
               <span className="memo-tags">
                 {(memo.tags || []).slice(0, 3).map((tag: any) => {
                   // tagがオブジェクト(Tag)ならidを、文字列ならそのまま

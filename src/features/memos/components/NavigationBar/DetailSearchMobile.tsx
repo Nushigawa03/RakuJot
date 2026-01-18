@@ -1,7 +1,6 @@
 import React from 'react';
 import './DetailSearchMobile.css';
 import { SearchTag } from '../../types/searchTag';
-import TagChips from '~/components/TagChips';
 import DatePickerInput from '~/components/DatePickerInput';
 
 interface DetailSearchMobileProps {
@@ -14,38 +13,38 @@ interface DetailSearchMobileProps {
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
   onTagAdd: (tag: string) => void;
+  onClear?: () => void;
 }
 
 const DetailSearchMobile: React.FC<DetailSearchMobileProps> = ({
-  filterTags,
-  selectedTagIndex,
-  onTagRemove,
   selectedStartDate,
   selectedEndDate,
   onStartDateChange,
   onEndDateChange,
+  onClear,
 }) => {
   return (
     <div className="detail-search-mobile" onClick={(e) => e.stopPropagation()}>
-      <TagChips 
-        tags={filterTags}
-        selectedIndex={selectedTagIndex}
-        onRemove={onTagRemove}
-      />
       <div className="search-options-mobile">
-        <DatePickerInput 
+        <DatePickerInput
           label="開始日"
           value={selectedStartDate}
           onChange={onStartDateChange}
         />
-        <DatePickerInput 
+        <DatePickerInput
           label="終了日"
           value={selectedEndDate}
           onChange={onEndDateChange}
         />
+        {onClear && (
+          <button className="clear-button-mobile" onClick={onClear}>
+            クリア
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
 export default DetailSearchMobile;
+

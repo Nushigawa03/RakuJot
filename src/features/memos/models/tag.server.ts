@@ -124,7 +124,7 @@ export const ensureTags = async (names: string[], userId: string): Promise<Tag[]
   const existingTags = await prisma.tag.findMany({
     where: { userId },
   });
-  const normalizedExisting = existingTags.map((t: Tag) => ({ ...t, _norm: normalizeTagName(t.name) }));
+  const normalizedExisting = existingTags.map((t) => ({ ...t, _norm: normalizeTagName(t.name) }));
 
   const toCreate: string[] = [];
   const ensured: Tag[] = [];

@@ -7,13 +7,21 @@ export class SearchService {
   }
 
   async parseSearchQuery(text: string): Promise<{ start?: string, end?: string, tag?: string }> {
-    const resp = await fetch('/api/parseSearch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    if (!resp.ok) throw new Error('parseSearch API error');
-    return resp.json();
+    try {
+      const resp = await fetch('/api/parseSearch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!resp.ok) {
+        console.warn('[searchService] parseSearch API returned status:', resp.status);
+        return {};
+      }
+      return await resp.json();
+    } catch (e) {
+      console.warn('[searchService] parseSearch request failed:', e);
+      return {};
+    }
   }
 }
 

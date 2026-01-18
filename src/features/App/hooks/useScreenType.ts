@@ -7,9 +7,9 @@ const useScreenType = (): ScreenType | null => {
     if (typeof window === "undefined") return "other";
 
     const isPC = (): boolean => {
-      if (navigator.userAgentData) {
+      if ((navigator as any).userAgentData) {
         // userAgentData.mobileがfalseならPCと判定
-        return !navigator.userAgentData.mobile;
+        return !(navigator as any).userAgentData.mobile;
       } else {
         // フォールバックとしてuserAgentを使用
         const userAgent = navigator.userAgent.toLowerCase();

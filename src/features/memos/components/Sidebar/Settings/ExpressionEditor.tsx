@@ -70,6 +70,7 @@ export const ExpressionEditor: React.FC = () => {
       mainName: string;
       alternatives: string[];
       alternativeNames: string[];
+      newAlternative?: string;
     }>;
     newMustTag: string;
     mustNot: Array<{
@@ -77,6 +78,7 @@ export const ExpressionEditor: React.FC = () => {
       mainName: string;
       alternatives: string[];
       alternativeNames: string[];
+      newAlternative?: string;
     }>;
     newMustNotTag: string;
   }>({
@@ -141,12 +143,14 @@ export const ExpressionEditor: React.FC = () => {
       mainName: string;
       alternatives: string[];
       alternativeNames: string[];
+      newAlternative?: string;
     }> = [];
     const mustNot: Array<{
       main: string;
       mainName: string;
       alternatives: string[];
       alternativeNames: string[];
+      newAlternative?: string;
     }> = [];
 
     if (expr.orTerms.length > 0) {

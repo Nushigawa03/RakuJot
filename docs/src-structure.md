@@ -95,6 +95,7 @@
 - 複雑なビジネスロジック（複数のデータソースを組み合わせる処理）
 - Models 層を組み合わせた高レベルな操作
 - **配置**: `src/features/*/services/*.ts` (サーバーサイドの場合は `*.server.ts`)
+    - **TODO**: サーバーサイドのロジック層（Processor/Parser等）の命名と役割を明確化する（例: `searchParser.server.ts`）。API Routeから直接呼ばれるビジネスロジックはこの層に配置する。
 
 ### API Route 層の責務
 - HTTP リクエスト/レスポンスのハンドリング

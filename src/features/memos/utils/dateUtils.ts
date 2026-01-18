@@ -83,8 +83,8 @@ export function parseFuzzyDate(input: string, preferEnd: boolean): string | null
   try {
     const dt = new Date(s);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
-  } catch {}
-  return s;
+  } catch { }
+  return null;
 }
 
 export function buildDateQuery(startRaw: string, endRaw: string) {
@@ -99,7 +99,7 @@ export function buildDateQuery(startRaw: string, endRaw: string) {
         start = end;
         end = tmp;
       }
-    } catch {}
+    } catch { }
   }
   let query = '';
   if (start && end) query = `date:${start}..${end}`;

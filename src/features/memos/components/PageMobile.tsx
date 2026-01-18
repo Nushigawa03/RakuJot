@@ -18,8 +18,11 @@ const PageMobile: React.FC = () => {
     filterQuery,
     dateQuery,
     setDateQuery,
+    textQuery,
+    setTextQuery,
     queryEmbedding,
-    filterTags,
+    tagQuery,
+    setTagQuery,
     expressions,
     activeExpression,
     handleExpressionClick,
@@ -39,6 +42,10 @@ const PageMobile: React.FC = () => {
     }
   };
 
+  const handleRemoveTag = (tagToRemove: any) => {
+    setTagQuery(tagQuery.filter(t => t.id !== tagToRemove.id));
+  };
+
   return (
     <div className="page-mobile" ref={containerRef}>
       {/* Background: Memo List (always visible) */}
@@ -52,7 +59,10 @@ const PageMobile: React.FC = () => {
         handleExpressionClick={handleExpressionClick}
         filterQuery={filterQuery}
         queryEmbedding={queryEmbedding}
-        filterTags={filterTags}
+        textQuery={textQuery}
+        setTextQuery={setTextQuery}
+        tagQuery={tagQuery}
+        removeTag={handleRemoveTag}
       />
 
       {/* Foreground: FullScreenMemoInput (draggable overlay) */}

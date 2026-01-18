@@ -1,13 +1,12 @@
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import DetailSearchMobile from './DetailSearchMobile';
 import { useNavigationBarStore } from '../../stores/navigationBarStore';
 import './NavigationBarMobile.css';
-import { SearchTag } from '../../types/searchTag';
 import { Tag } from '../../types/tags';
-import { useTagSearch } from '../../hooks/useTagSearch';
+import { useSmartSearch } from '../../hooks/useSmartSearch';
 import { searchService } from '../../services/searchService';
-import { parseFuzzyDate, buildDateQuery } from '../../utils/dateUtils';
+import TagChipInline from '~/components/TagChipInline';
 
 type Props = {
   onBack: () => void;
@@ -23,17 +22,14 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
   } = useNavigationBarStore();
 
   const [isFocused, setIsFocused] = useState(false);
-  const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
-  const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // タグ検索用カスタムフック
+  // スマート検索フック
   const {
     searchQuery,
     setSearchQuery,
     filterTags,
-    setFilterTags,
     suggestions,
     setSuggestions,
     selectedSuggestionIndex,
@@ -46,7 +42,15 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
     handleTagAdd,
     handleTagRemove,
     findTagByName,
-  } = useTagSearch(availableTags);
+    isParsing,
+    hasSearchConditions,
+    selectedStartDate,
+    selectedEndDate,
+    setSelectedStartDate,
+    setSelectedEndDate,
+    handleSearch,
+    handleClearSearch,
+  } = useSmartSearch(availableTags);
 
   // タグ一覧を取得
   useEffect(() => {
@@ -54,7 +58,6 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
       console.error('タグの取得エラー:', error);
     });
   }, []);
-
 
   // サジェストからタグを選択
   const selectSuggestion = (tag: Tag) => {
@@ -71,14 +74,14 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
     if (showSuggestions && suggestions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedSuggestionIndex((prev) => 
+        setSelectedSuggestionIndex((prev) =>
           prev < suggestions.length - 1 ? prev + 1 : 0
         );
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedSuggestionIndex((prev) => 
+        setSelectedSuggestionIndex((prev) =>
           prev > 0 ? prev - 1 : suggestions.length - 1
         );
         return;
@@ -122,51 +125,6 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
     }
   };
 
-  const handleSearch = async () => {
-    // If user typed a natural-language query like "先月の仕事" and no explicit start/end selected,
-    // call the parse API to extract dates/tags. We'll apply the parsed values immediately and also
-    // update local state so the UI reflects them.
-
-    // If user typed a free-form query and hasn't set start/end manually, try to parse it.
-    if (searchQuery && !selectedStartDate && !selectedEndDate) {
-      try {
-        const data = await searchService.parseSearchQuery(searchQuery);
-        const parsedStart = data.start ?? null;
-        const parsedEnd = data.end ?? null;
-        const parsedTag = data.tag ?? null;
-        if (parsedStart) setSelectedStartDate(parsedStart);
-        if (parsedEnd) setSelectedEndDate(parsedEnd);
-        if (parsedTag) {
-          const foundExact = availableTags.find(t => t.name === parsedTag);
-          const foundCi = availableTags.find(t => t.name.toLowerCase() === parsedTag.toLowerCase());
-          const foundIncludes = availableTags.find(t => t.name.toLowerCase().includes(parsedTag.toLowerCase()));
-          const match = foundExact || foundCi || foundIncludes;
-          if (match) handleTagAdd(match.name);
-        }
-        const startRaw2 = parsedStart ?? (selectedStartDate ? selectedStartDate.trim() : '');
-        const endRaw2 = parsedEnd ?? (selectedEndDate ? selectedEndDate.trim() : '');
-        applyDateFilterFromRaw(startRaw2, endRaw2);
-        return;
-      } catch (err) {
-        console.warn('[NavigationBarMobile] parseSearch call failed', err);
-      }
-    }
-    // Otherwise use existing selectedStartDate/EndDate
-    const startRaw = selectedStartDate ? selectedStartDate.trim() : '';
-    const endRaw = selectedEndDate ? selectedEndDate.trim() : '';
-    applyDateFilterFromRaw(startRaw, endRaw);
-  };
-
-  // 日付フィルタ適用ロジックをutilsに分離
-  const applyDateFilterFromRaw = (startRaw: string, endRaw: string) => {
-    const { start, end, query } = buildDateQuery(startRaw, endRaw);
-    try {
-      window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'date', start: start || null, end: end || null, query } }));
-    } catch (e) {}
-    console.log('日付フィルタ適用:', { start, end, query });
-    setIsFocused(false);
-  };
-
   const stop = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
@@ -187,15 +145,25 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
 
   return (
     <div ref={containerRef} className="nav-mobile-wrapper" tabIndex={-1} onClick={stop}>
-      <div
-        className="nav-mobile"
-      >
+      <div className="nav-mobile">
         <button className="nav-left" onClick={(e) => { e.stopPropagation(); onBack(); }} aria-label="戻る">
           ←
         </button>
 
         <div className="nav-center">
           <div className="search-bar-container-mobile">
+            {/* インラインタグチップ */}
+            {filterTags.length > 0 && (
+              <div className="inline-tag-chips-mobile">
+                {filterTags.map((tag) => (
+                  <TagChipInline
+                    key={`${tag.id}-${tag.isExclude}`}
+                    tag={tag}
+                    onRemove={handleTagRemove}
+                  />
+                ))}
+              </div>
+            )}
             <div className="search-input-container-mobile">
               <input
                 className="nav-search"
@@ -224,6 +192,20 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
                 </div>
               )}
             </div>
+            {/* 解析中インジケーター */}
+            {isParsing && (
+              <span className="parse-indicator-mobile">...</span>
+            )}
+            {/* クリアボタン - 条件がある時のみ表示 */}
+            {hasSearchConditions && (
+              <button
+                className="clear-search-button-mobile"
+                onClick={(e) => { e.stopPropagation(); handleClearSearch(); }}
+                aria-label="検索をクリア"
+              >
+                ×
+              </button>
+            )}
             <button className="search-button-mobile" onClick={(e) => { e.stopPropagation(); handleSearch(); }}>
               🔍
             </button>
@@ -250,6 +232,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
           onStartDateChange={setSelectedStartDate}
           onEndDateChange={setSelectedEndDate}
           onTagAdd={handleTagAdd}
+          onClear={handleClearSearch}
         />
       )}
     </div>

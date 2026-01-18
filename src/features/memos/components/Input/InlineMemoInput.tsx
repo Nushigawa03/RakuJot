@@ -31,11 +31,11 @@ const InlineMemoInput: React.FC<InlineMemoInputProps> = ({ onSave, onCancel, aut
 
   const handleSave = async () => {
     if (!title.trim()) { alert('タイトルは必須です。'); return; }
-    const newMemo: Omit<Memo, 'id' | 'createdAt' | 'updatedAt'> = { title, tags, date, body };
+    const newMemo: { title: string; tags: string[]; date?: string; body: string } = { title, tags, date, body };
     setIsSaving(true);
     let createdMemo: any = null;
     try {
-      const res = await memoService.createMemo(newMemo);
+      const res = await memoService.createMemo(newMemo as any);
       if (!res.ok) {
         alert(res.error || 'メモの保存に失敗しました。');
         setIsSaving(false);
@@ -61,7 +61,7 @@ const InlineMemoInput: React.FC<InlineMemoInputProps> = ({ onSave, onCancel, aut
     searchService.fetchTags().then((t) => {
       if (!mounted) return;
       if (Array.isArray(t)) setAvailableTags(t.map((x: any) => ({ id: x.id, name: x.name })));
-    }).catch(() => {});
+    }).catch(() => { });
     return () => { mounted = false; };
   }, []);
 
@@ -90,7 +90,7 @@ const InlineMemoInput: React.FC<InlineMemoInputProps> = ({ onSave, onCancel, aut
       // focus and move caret to end
       titleInputRef.current.focus();
       const len = titleInputRef.current.value.length;
-      try { titleInputRef.current.setSelectionRange(len, len); } catch (e) {}
+      try { titleInputRef.current.setSelectionRange(len, len); } catch (e) { }
     }
   }, [autoFocus]);
 

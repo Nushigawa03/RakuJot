@@ -3,14 +3,17 @@ import DetailSearch from './DetailSearch';
 import { useNavigationBarStore } from '../../stores/navigationBarStore';
 import './NavigationBar.css';
 import InlineMemoInput from '../Input/InlineMemoInput';
-import { SearchTag } from '../../types/searchTag';
 import { Tag } from '../../types/tags';
 import tagExpressionService from '../../services/tagExpressionService';
-import { useTagSearch } from '../../hooks/useTagSearch';
+import { useSmartSearch } from '../../hooks/useSmartSearch';
 import { searchService } from '../../services/searchService';
-import { buildDateQuery } from '../../utils/dateUtils';
+import TagChipInline from '~/components/TagChipInline';
 
-const NavigationBar: React.FC = () => {
+interface NavigationBarProps {
+  activeTextQuery?: string;
+}
+
+const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
   const {
     isOrSearch,
     isDetailSearch,
@@ -19,13 +22,12 @@ const NavigationBar: React.FC = () => {
   } = useNavigationBarStore();
 
   const [isFocused, setIsFocused] = useState(false);
-  const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
-  const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
   const [isCreatingMemo, setIsCreatingMemo] = useState(false);
   const [isSavingFilter, setIsSavingFilter] = useState(false);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // スマート検索フック
   const {
     searchQuery,
     setSearchQuery,
@@ -43,7 +45,16 @@ const NavigationBar: React.FC = () => {
     handleTagAdd,
     handleTagRemove,
     findTagByName,
-  } = useTagSearch(availableTags);
+    parsedPreview,
+    isParsing,
+    hasSearchConditions,
+    selectedStartDate,
+    selectedEndDate,
+    setSelectedStartDate,
+    setSelectedEndDate,
+    handleSearch,
+    handleClearSearch,
+  } = useSmartSearch(availableTags);
 
   // タグ一覧を取得
   useEffect(() => {
@@ -63,21 +74,19 @@ const NavigationBar: React.FC = () => {
     setSelectedSuggestionIndex(-1);
   };
 
-
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // サジェストが表示されている場合のキーボード操作
     if (showSuggestions && suggestions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedSuggestionIndex((prev: number) => 
+        setSelectedSuggestionIndex((prev: number) =>
           prev < suggestions.length - 1 ? prev + 1 : 0
         );
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedSuggestionIndex((prev: number) => 
+        setSelectedSuggestionIndex((prev: number) =>
           prev > 0 ? prev - 1 : suggestions.length - 1
         );
         return;
@@ -95,12 +104,22 @@ const NavigationBar: React.FC = () => {
       }
     }
 
-    if (e.key === 'Enter' && searchQuery.trim()) {
+    if (e.key === 'Enter') {
+      console.log('[NavigationBar] Enter pressed with query:', searchQuery);
       const input = searchQuery.trim();
+
+      if (!input) {
+        // Input is empty, but we allow Enter to trigger "Clear/Refresh" of search
+        handleSearch();
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
       const isExclude = input.startsWith('-');
       const tagName = isExclude ? input.slice(1) : input;
       const foundTag = findTagByName(tagName);
-      
+
       if (foundTag) {
         // 既存タグの場合のみタグチップとして追加
         handleTagAdd(input);
@@ -141,48 +160,11 @@ const NavigationBar: React.FC = () => {
     }
   };
 
-  const handleSearch = async () => {
-    if (searchQuery && !selectedStartDate && !selectedEndDate) {
-      try {
-        const data = await searchService.parseSearchQuery(searchQuery);
-        const parsedStart = data.start ?? null;
-        const parsedEnd = data.end ?? null;
-        const parsedTag = data.tag ?? null;
-        if (parsedStart) setSelectedStartDate(parsedStart);
-        if (parsedEnd) setSelectedEndDate(parsedEnd);
-        if (parsedTag) {
-          const foundExact = availableTags.find(t => t.name === parsedTag);
-          const foundCi = availableTags.find(t => t.name.toLowerCase() === parsedTag.toLowerCase());
-          const foundIncludes = availableTags.find(t => t.name.toLowerCase().includes(parsedTag.toLowerCase()));
-          const match = foundExact || foundCi || foundIncludes;
-          if (match) handleTagAdd(match.name);
-        }
-        const startRaw2 = parsedStart ?? (selectedStartDate ? selectedStartDate.trim() : '');
-        const endRaw2 = parsedEnd ?? (selectedEndDate ? selectedEndDate.trim() : '');
-        applyDateFilterFromRaw(startRaw2, endRaw2);
-        return;
-      } catch (err) {
-        console.warn('[NavigationBar] parseSearch call failed', err);
-      }
-    }
-    const startRaw = selectedStartDate ? selectedStartDate.trim() : '';
-    const endRaw = selectedEndDate ? selectedEndDate.trim() : '';
-    applyDateFilterFromRaw(startRaw, endRaw);
-  };
-
-  const applyDateFilterFromRaw = (startRaw: string, endRaw: string) => {
-    const { start, end, query } = buildDateQuery(startRaw, endRaw);
-    try {
-      window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'date', start: start || null, end: end || null, query } }));
-    } catch (e) {}
-    setIsFocused(false);
-  };
-
   const handleNewMemoSave = (memo: { title: string; tags: string[]; date?: string; body?: string }) => {
     console.log('新しいメモが保存されました:', memo);
     try {
       window.dispatchEvent(new CustomEvent('memoSaved', { detail: memo }));
-    } catch (e) {}
+    } catch (e) { }
     setIsCreatingMemo(false); // 保存後に画面を閉じる
   };
 
@@ -200,7 +182,7 @@ const NavigationBar: React.FC = () => {
     // SearchTagからタグIDを抽出してorTermsを構築
     const includeTagIds = filterTags.filter(tag => !tag.isExclude).map(tag => tag.id);
     const excludeTagIds = filterTags.filter(tag => tag.isExclude).map(tag => tag.id);
-    
+
     // 検索クエリがある場合の処理（一時的に文字列として扱う）
     if (searchQuery.trim()) {
       // 検索クエリは現在文字列なので、一時的なタグとして扱う
@@ -210,35 +192,24 @@ const NavigationBar: React.FC = () => {
       }
       // TODO: 検索クエリがタグでない場合の処理を実装
     }
-    
+
     const orTerms = [{
       include: includeTagIds,
       exclude: excludeTagIds
     }];
-    
+
     try {
       await tagExpressionService.create({ orTerms });
       console.log('フィルタが保存されました');
     } catch (error) {
       console.error('フィルタ保存エラー:', error);
     }
-    
+
     setIsSavingFilter(false);
   };
 
   const handleFilterSaveCancel = () => {
     setIsSavingFilter(false);
-  };
-
-  const handleClearSearch = () => {
-    setSelectedStartDate(null);
-    setSelectedEndDate(null);
-    setFilterTags([]);
-    setSearchQuery('');
-    // 検索クリアイベントを発行
-    try {
-      window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'clear' } }));
-    } catch (e) {}
   };
 
   React.useEffect(() => {
@@ -274,14 +245,24 @@ const NavigationBar: React.FC = () => {
         >
           <div className="top-bar">
             <div className="search-bar-container">
+              {/* Active Text Query Chip */}
+              {activeTextQuery && !searchQuery && (
+                <div className="tag-chip inline text-query-chip" style={{ backgroundColor: '#e0e0e0', color: '#333' }}>
+                  <span className="tag-name">"{activeTextQuery}"</span>
+                  <button
+                    className="remove-button"
+                    onClick={() => handleClearSearch()}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               {filterTags.map((tag, index) => (
-                <span
+                <TagChipInline
                   key={`${tag.id}-${tag.isExclude}`}
-                  className={`tag ${selectedTagIndex === index ? 'selected' : ''} ${tag.isExclude ? 'exclude' : ''}`}
-                >
-                  {tag.isExclude ? `NOT ${tag.name}` : tag.name}
-                  <button onClick={() => handleTagRemove(tag)}>×</button>
-                </span>
+                  tag={tag}
+                  onRemove={handleTagRemove}
+                />
               ))}
               <div className="search-input-container">
                 <input
@@ -291,7 +272,7 @@ const NavigationBar: React.FC = () => {
                   value={searchQuery}
                   onChange={e => handleSearchChange(e.target.value)}
                   onFocus={() => setIsFocused(true)}
-                  onKeyDown={handleKeyDown} // キー操作を追加
+                  onKeyDown={handleKeyDown}
                 />
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="suggestions-dropdown">
@@ -309,12 +290,35 @@ const NavigationBar: React.FC = () => {
                   </div>
                 )}
               </div>
-              <button className="search-button" onClick={handleSearch}>
+              {/* AI解析プレビュー */}
+              {/* {isParsing && (
+                <span className="parse-indicator">...</span>
+              )}
+              {parsedPreview && (parsedPreview.start || parsedPreview.tag) && !isParsing && (
+                <span className="parse-preview">
+                  {parsedPreview.start && `📅${parsedPreview.start.slice(5)}`}
+                  {parsedPreview.tag && `🏷️${parsedPreview.tag}`}
+                </span>
+              )} */}
+              {/* クリアボタン - 条件がある時のみ表示 */}
+              {hasSearchConditions && (
+                <button
+                  className="clear-search-button"
+                  onClick={handleClearSearch}
+                  title="検索をクリア"
+                >
+                  ×
+                </button>
+              )}
+              <button className="search-button" onClick={() => {
+                console.log('[NavigationBar] Search button clicked');
+                handleSearch();
+              }}>
                 🔍
               </button>
               {(filterTags.length > 0 || searchQuery.trim()) && (
-                <button 
-                  className="save-filter-button" 
+                <button
+                  className="save-filter-button"
                   onClick={handleSaveAsFilter}
                   title="この検索をフィルタとして保存"
                 >
@@ -340,12 +344,11 @@ const NavigationBar: React.FC = () => {
               onCategorySelect={(category) => console.log('カテゴリ選択:', category)}
               onOrSearchToggle={toggleOrSearch}
               onDetailSearchToggle={toggleDetailSearch}
-              onClear={handleClearSearch}
             />
           )}
         </div>
       )}
-      
+
       {isSavingFilter && (
         <div className="save-filter-modal-overlay" onClick={handleFilterSaveCancel}>
           <div className="save-filter-modal" onClick={(e) => e.stopPropagation()}>

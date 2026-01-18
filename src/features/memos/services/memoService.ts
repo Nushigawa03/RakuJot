@@ -215,7 +215,15 @@ export class MemoService {
       const r = await fetch(`${this.basePath}/memos`);
       if (!r.ok) return [];
       const d = await r.json();
-      return Array.isArray(d) ? d : [];
+      if (!Array.isArray(d)) return [];
+
+      // Normalize tags to ensure they are string[] (ids), handling generic objects from API
+      return d.map((memo: any) => ({
+        ...memo,
+        tags: Array.isArray(memo.tags)
+          ? memo.tags.map((t: any) => (typeof t === 'string' ? t : t.id))
+          : []
+      }));
     } catch {
       return [];
     }

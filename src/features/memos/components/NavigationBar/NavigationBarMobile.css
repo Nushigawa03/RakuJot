@@ -152,3 +152,59 @@
 .tag-icon {
   flex-shrink: 0;
 }
+
+/* Inline Tag Chips in Search Bar */
+.inline-tag-chips-mobile {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.inline-tag-chips-mobile::-webkit-scrollbar {
+  display: none;
+}
+
+/* Clear Search Button Mobile */
+.clear-search-button-mobile {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: var(--spacing-1);
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+  transition: all var(--transition-fast) var(--ease-out);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.clear-search-button-mobile:hover {
+  background: var(--color-neutral-200);
+  color: var(--color-text-primary);
+}
+
+/* Parse Indicator Mobile */
+.parse-indicator-mobile {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  padding: 0 var(--spacing-1);
+  flex-shrink: 0;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

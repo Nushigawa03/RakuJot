@@ -23,7 +23,7 @@ export function useTagSearch(availableTags: Tag[], initialFilterTags: SearchTag[
       const isExclude = input.startsWith('-');
       const searchTerm = isExclude ? input.slice(1) : input;
       if (searchTerm) {
-        const matchingTags = availableTags.filter(tag => 
+        const matchingTags = availableTags.filter(tag =>
           tag.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
           !filterTags.some(filterTag => filterTag.id === tag.id && filterTag.isExclude === isExclude)
         );
@@ -39,7 +39,7 @@ export function useTagSearch(availableTags: Tag[], initialFilterTags: SearchTag[
     }
   }, [availableTags, filterTags]);
 
-  const handleTagAdd = useCallback((tagInput: string) => {
+  const handleTagAdd = useCallback((tagInput: string, skipDispatch = false) => {
     const isExclude = tagInput.startsWith('-');
     const tagName = isExclude ? tagInput.slice(1) : tagInput;
     const foundTag = findTagByName(tagName);
@@ -52,18 +52,22 @@ export function useTagSearch(availableTags: Tag[], initialFilterTags: SearchTag[
     if (!existingTag) {
       const newFilterTags = [...filterTags, newSearchTag];
       setFilterTags(newFilterTags);
-      try {
-        window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'tags', tags: newFilterTags } }));
-      } catch {}
+      if (!skipDispatch) {
+        try {
+          window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'tags', tags: newFilterTags } }));
+        } catch { }
+      }
     }
   }, [filterTags, findTagByName]);
 
-  const handleTagRemove = useCallback((targetTag: SearchTag) => {
+  const handleTagRemove = useCallback((targetTag: SearchTag, skipDispatch = false) => {
     const newFilterTags = filterTags.filter((tag) => !(tag.id === targetTag.id && tag.isExclude === targetTag.isExclude));
     setFilterTags(newFilterTags);
-    try {
-      window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'tags', tags: newFilterTags } }));
-    } catch {}
+    if (!skipDispatch) {
+      try {
+        window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'tags', tags: newFilterTags } }));
+      } catch { }
+    }
     setSelectedTagIndex(null);
   }, [filterTags]);
 

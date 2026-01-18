@@ -7,11 +7,11 @@ import {
   ScrollRestoration,
 } from "react-router";
 
-import type { Route } from "./+types/root";
+// import type { Route } from "./+types/root";
 import "./app.css";
 import { useDarkMode } from "./hooks/useDarkMode";
 
-export const links: Route.LinksFunction = () => [
+export const links: any = () => [
   { rel: "manifest", href: "/manifest.json" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
@@ -55,7 +55,7 @@ export default function App() {
   return <Outlet />;
 }
 
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+export function ErrorBoundary({ error }: { error: unknown }) {
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;

@@ -5,12 +5,19 @@ import Sidebar from './Sidebar/Sidebar';
 import QuickMemoInput from './Input/QuickMemoInput';
 import { MemoPreview } from './Sidebar/MemoPreview';
 import './PagePC.css';
-import { SearchTag } from '../types/searchTag';
+import { useSearchFilters } from '../hooks/useSearchFilters';
 
 const Page: React.FC = () => {
-  const [filterQuery, setFilterQuery] = useState<string>('');
-  const [dateQuery, setDateQuery] = useState<string>('');
-  const [filterTags, setFilterTags] = useState<SearchTag[]>([]);
+  // useSearchFiltersフックを使用して検索条件を一元管理
+  const {
+    filterQuery,
+    setFilterQuery,
+    dateQuery,
+    textQuery,
+    queryEmbedding,
+    tagQuery
+  } = useSearchFilters();
+
   const [hoveredMemo, setHoveredMemo] = useState<{
     id: string;
     title: string;
@@ -18,34 +25,6 @@ const Page: React.FC = () => {
     date?: string;
     tags?: { id: string; name: string }[];
   } | null>(null);
-
-  // Listen for search events from NavigationBar
-  useEffect(() => {
-    const onSearchExecuted = (ev: Event) => {
-      try {
-        const detail = (ev as CustomEvent).detail;
-        if (detail) {
-          if (detail.type === 'clear') {
-            // クリア時はすべての検索条件をリセット
-            setDateQuery('');
-            setFilterTags([]);
-            return;
-          }
-          if (typeof detail.query === 'string') {
-            setDateQuery(detail.query);
-          }
-          if (detail.type === 'tags' && Array.isArray(detail.tags)) {
-            setFilterTags(detail.tags);
-          }
-        }
-      } catch (err) {
-        console.error('onSearchExecuted handler error', err);
-      }
-    };
-
-    window.addEventListener('searchExecuted', onSearchExecuted as EventListener);
-    return () => window.removeEventListener('searchExecuted', onSearchExecuted as EventListener);
-  }, []);
 
   // Listen for memo hover events from MemoList
   useEffect(() => {
@@ -65,14 +44,20 @@ const Page: React.FC = () => {
   return (
     <div className="page-container">
       <header>
-        <NavigationBar />
+        <NavigationBar activeTextQuery={textQuery} />
       </header>
       <div className="main-content">
         <aside className="sidebar">
           <Sidebar onFilterChange={setFilterQuery} />
         </aside>
         <section className="memo-list">
-          <MemoList filterQuery={filterQuery} dateQuery={dateQuery} filterTags={filterTags} />
+          <MemoList
+            filterQuery={filterQuery}
+            dateQuery={dateQuery}
+            textQuery={textQuery}
+            tagQuery={tagQuery}
+            queryEmbedding={queryEmbedding}
+          />
         </section>
         <aside className="recommendation-section">
           <MemoPreview memo={hoveredMemo} />

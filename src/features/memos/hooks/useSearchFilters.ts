@@ -9,9 +9,11 @@ export interface UseSearchFiltersResult {
     setFilterQuery: (query: string) => void;
     dateQuery: string;
     setDateQuery: (query: string) => void;
+    textQuery: string;
+    setTextQuery: (query: string) => void;
     queryEmbedding: number[] | undefined;
-    filterTags: SearchTag[];
-    setFilterTags: (tags: SearchTag[]) => void;
+    tagQuery: SearchTag[];
+    setTagQuery: (tags: SearchTag[]) => void;
     expressions: TagExpression[];
     activeExpression: string;
     handleExpressionClick: (expression: TagExpression) => void;
@@ -19,12 +21,13 @@ export interface UseSearchFiltersResult {
 }
 
 export const useSearchFilters = (
-    onInputOffsetChange: (offset: number) => void
+    onInputOffsetChange?: (offset: number) => void
 ): UseSearchFiltersResult => {
     const [filterQuery, setFilterQuery] = useState<string>('');
     const [dateQuery, setDateQuery] = useState<string>('');
+    const [textQuery, setTextQuery] = useState<string>('');
     const [queryEmbedding, setQueryEmbedding] = useState<number[] | undefined>(undefined);
-    const [filterTags, setFilterTags] = useState<SearchTag[]>([]);
+    const [tagQuery, setTagQuery] = useState<SearchTag[]>([]);
     const [expressions, setExpressions] = useState<TagExpression[]>([]);
     const { activeExpression, handleExpressionClick } = useTagExpression((query) => setFilterQuery(query));
 
@@ -41,15 +44,19 @@ export const useSearchFilters = (
         loadFiltersAndCategories();
     }, []);
 
-    // Generate embedding when dateQuery changes
+    // Generate embedding when textQuery changes (for Semantic Search)
+    // Note: Previously used dateQuery, but usually semantic search is for text content.
+    // If textQuery is present, use it. If not, maybe use dateQuery if it has text intent?
+    // Current design separates them. We use textQuery for embedding ideally.
     useEffect(() => {
-        if (dateQuery) {
+        const targetText = textQuery || '';
+        if (targetText && targetText.length > 1) { // Min length check
             const generateQueryEmbedding = async () => {
                 try {
                     const response = await fetch('/api/embeddings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ texts: [dateQuery] }),
+                        body: JSON.stringify({ texts: [targetText] }),
                     });
                     if (response.ok) {
                         const data = await response.json();
@@ -70,26 +77,83 @@ export const useSearchFilters = (
         } else {
             setQueryEmbedding(undefined);
         }
-    }, [dateQuery]);
+    }, [textQuery]);
+
+    // Callback wrapper to handle optional prop
+    const handleInputOffsetChange = (offset: number) => {
+        if (onInputOffsetChange) {
+            onInputOffsetChange(offset);
+        }
+    };
 
     // Listen for search events dispatched from NavigationBar components
     useEffect(() => {
         const onSearchExecuted = (ev: Event) => {
             try {
                 const detail = (ev as CustomEvent).detail;
+                console.log('[useSearchFilters] Received search event:', detail);
+
                 if (detail) {
                     if (detail.type === 'clear') {
                         setDateQuery('');
-                        setFilterTags([]);
+                        setTextQuery('');
+                        setTagQuery([]);
+                        handleInputOffsetChange(0);
                         return;
                     }
+
+                    // Unified 'smart' search event
+                    if (detail.type === 'smart') {
+                        let hasUpdates = false;
+
+                        // Update queries
+                        if (detail.dateQuery !== undefined) {
+                            setDateQuery(detail.dateQuery || '');
+                            hasUpdates = true;
+                        }
+                        if (detail.textQuery !== undefined) {
+                            setTextQuery(detail.textQuery || '');
+                            hasUpdates = true;
+                        }
+
+                        // Clear sidebar filter if searching globally
+                        if (hasUpdates) {
+                            setFilterQuery('');
+                        }
+
+                        // Update tags
+                        if (Array.isArray(detail.tags)) {
+                            setTagQuery(detail.tags);
+                            hasUpdates = true;
+                        } else if (Array.isArray(detail.tagQuery)) {
+                            setTagQuery(detail.tagQuery);
+                            hasUpdates = true;
+                        }
+
+                        if (hasUpdates) {
+                            handleInputOffsetChange(1); // Show list
+                        }
+                        return;
+                    }
+
+                    // Legacy/Individual handlers (Migration support)
+                    // If still receiving old format (e.g. from unprocessed components)
                     if (typeof detail.query === 'string') {
-                        setDateQuery(detail.query);
-                        onInputOffsetChange(1); // Show list when search is executed
+                        // Ambiguous query: treat as text if no "date:" prefix, else date?
+                        // For safety, let's assume legacy "query" meant dateQuery (as per old implementation)
+                        // BUT user wants separation.
+                        // Ideally everything uses 'smart' type now.
+                        if (detail.query.startsWith('date:') || detail.query.includes('date>=')) {
+                            setDateQuery(detail.query);
+                        } else {
+                            setTextQuery(detail.query);
+                            setDateQuery('');
+                        }
+                        handleInputOffsetChange(1);
                     }
                     if (detail.type === 'tags' && Array.isArray(detail.tags)) {
-                        setFilterTags(detail.tags);
-                        onInputOffsetChange(1); // Show list when tags are set
+                        setTagQuery(detail.tags);
+                        handleInputOffsetChange(1);
                     }
                 }
             } catch (err) {
@@ -99,19 +163,21 @@ export const useSearchFilters = (
 
         window.addEventListener('searchExecuted', onSearchExecuted as EventListener);
         return () => window.removeEventListener('searchExecuted', onSearchExecuted as EventListener);
-    }, [onInputOffsetChange]);
+    }, []);
 
     return {
         filterQuery,
         setFilterQuery,
         dateQuery,
         setDateQuery,
+        textQuery,
+        setTextQuery,
         queryEmbedding,
-        filterTags,
-        setFilterTags,
+        tagQuery,
+        setTagQuery,
         expressions,
         activeExpression,
         handleExpressionClick,
-        setInputOffset: onInputOffsetChange,
+        setInputOffset: handleInputOffsetChange,
     };
 };
