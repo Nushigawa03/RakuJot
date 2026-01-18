@@ -26,7 +26,11 @@
     "react-dom": "^19.2.3",
     "react-router": "^7.10.1"
   },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  },
   "devDependencies": {
+    "tsx": "^4.19.4",
     "@react-router/dev": "^7.10.1",
     "@react-router/node": "^7.10.1",
     "@tailwindcss/postcss": "^4.1.18",

@@ -1,7 +1,6 @@
 import prismaPackage from "@prisma/client";
 const { PrismaClientInitializationError, PrismaClientKnownRequestError } = prismaPackage;
 import { prisma } from "~/db.server";
-import { mockMemos, shouldUseMockDatabase } from "./mock/mockData";
 import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
 import { ensureTags } from "./tag.server";
 
@@ -17,24 +16,10 @@ const serializeMemo = (memo: any) => {
 
 export const getMemo = async (id: string, userId: string) => {
   try {
-    // まずモックデータから検索
-    if (shouldUseMockDatabase()) {
-      const mockMemo = mockMemos.find(memo => memo.id === id);
-      if (mockMemo) {
-        return mockMemo;
-      }
-    }
-
-    // モックデータになければデータベースから取得
     const memo = await prisma.memo.findUnique({ where: { id, userId }, include: { tags: true } });
     return serializeMemo(memo);
   } catch (error) {
     console.error("データベースエラー:", error);
-    // データベースエラーの場合、モックデータのみから検索
-    if (shouldUseMockDatabase()) {
-      const mockMemo = mockMemos.find(memo => memo.id === id);
-      return mockMemo || { error: "メモの取得に失敗しました。" };
-    }
     return { error: "メモの取得に失敗しました。" };
   } finally {
     await prisma.$disconnect();
@@ -49,21 +34,10 @@ export const getMemos = async (userId: string) => {
       include: { tags: true },
     });
 
-    // モックデータを使用する場合は、データベースのデータにモックデータを追加
-    if (shouldUseMockDatabase()) {
-      console.log("Adding mock database data to existing memos");
-      return [...mockMemos, ...dbMemos.map(serializeMemo)];
-    }
-
     return dbMemos.map(serializeMemo);
   } catch (error) {
     console.error("データベースエラー:", error);
     if (error instanceof PrismaClientInitializationError) {
-      // データベース接続エラーの場合は、モックデータのみ返す
-      if (shouldUseMockDatabase()) {
-        console.log("Database connection failed, using mock data only");
-        return mockMemos;
-      }
       return { error: "データベースに接続できません。サーバーが起動していることを確認してください。" };
     }
 
@@ -138,20 +112,6 @@ export const createMemo = async (data: any, userId: string) => {
     return serializeMemo(newMemo);
   } catch (error) {
     console.error("データベースエラー:", error);
-    // データベースエラーでもモックモードの場合はメモを作成したことにする
-    if (shouldUseMockDatabase()) {
-      console.log("Database error in mock mode, creating mock memo:", data.title);
-      const newMockMemo = {
-        id: `mock-${Date.now()}`,
-        title: data.title,
-        body: data.body || "",
-        date: data.date || "",
-        tags: data.tags || [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      return newMockMemo;
-    }
     return { error: "メモの作成に失敗しました。" };
   }
 };
@@ -159,11 +119,6 @@ export const createMemo = async (data: any, userId: string) => {
 
 export const deleteMemo = async (id: string, userId: string) => {
   try {
-    // モックデータのIDの場合は処理をスキップ
-    if (shouldUseMockDatabase() && id.startsWith('mock-')) {
-      console.log("Mock mode: Skipping deletion of mock memo:", id);
-      return { success: true };
-    }
 
     // トランザクションでMemoからTrashedMemoへ移動
     await prisma.$transaction(async (tx) => {
@@ -310,11 +265,6 @@ export const purgeOldTrashedMemos = async (days: number = 30, userId: string) =>
 
 export const updateMemo = async (id: string, data: any, userId: string) => {
   try {
-    // モックデータのIDの場合は処理をスキップ
-    if (shouldUseMockDatabase() && id.startsWith('mock-')) {
-      console.log("Mock mode: Skipping update of mock memo:", id);
-      return;
-    }
 
     // Validate partial input on the original incoming data BEFORE we transform it
     // (e.g. converting tags to Prisma `{ set: [...] }`), otherwise the validator

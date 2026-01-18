@@ -1,4 +1,3 @@
-import { mockTags, shouldUseMockDatabase } from "./mock/mockData";
 import { prisma } from "../../../db.server";
 import type { Tag } from "../types/tags";
 import { normalizeTagName } from "../utils/normalizeTagName";
@@ -14,17 +13,10 @@ export const getTags = async (userId: string): Promise<Tag[]> => {
       description: tag.description ?? undefined
     }));
 
-    // モックデータを使用する場合は、モックデータとデータベースのデータを両方表示
-    if (shouldUseMockDatabase()) {
-      console.log("Using both mock and database tags");
-      return [...mockTags, ...dbData];
-    }
-
     return dbData;
   } catch (error) {
     console.error("タグの取得エラー:", error);
-    // エラー時はモックデータを返す（モック使用時のみ）
-    return shouldUseMockDatabase() ? mockTags : [];
+    return [];
   }
 };
 

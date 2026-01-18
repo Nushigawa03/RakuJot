@@ -1,4 +1,3 @@
-import { mockFilters, mockCategories, shouldUseMockDatabase } from "./mock/mockData";
 import { prisma } from "../../../db.server";
 import type { TagExpression } from "../types/tagExpressions";
 
@@ -16,15 +15,10 @@ export const getTagExpressions = async (userId: string): Promise<TagExpression[]
       icon: e.icon ?? undefined,
     }));
 
-    if (shouldUseMockDatabase()) {
-      console.log("Using both mock and database tagExpressions");
-      return ([...mockFilters as unknown as TagExpression[], ...mockCategories as unknown as TagExpression[], ...dbTagExpressions]);
-    }
-
     return dbTagExpressions;
   } catch (error) {
     console.error("tagExpressions の取得エラー:", error);
-    return shouldUseMockDatabase() ? ([...mockFilters as unknown as TagExpression[], ...mockCategories as unknown as TagExpression[]]) : [];
+    return [];
   }
 };
 
