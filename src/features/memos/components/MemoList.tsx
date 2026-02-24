@@ -67,8 +67,13 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
     };
   }, []);
 
-  const filteredMemos = useMemoSearch(memos, filterQuery, dateQuery, queryEmbedding, textQuery, tagQuery);
-  const sortedMemos = useSortedMemos(filteredMemos, sortKey, sortOrder);
+  // 1. まず全メモに対して指定のソート（日付順やタイトル順など）を先に適用する
+  const baseSortedMemos = useSortedMemos(memos, sortKey, sortOrder);
+
+  // 2. その後でフィルタリングとあいまい検索（スコア順）を適用する
+  // Javascriptのsortは安定ソートのため、スコアが同点のメモ（すべてスコア0のメモ等）は
+  // ここで適用した「ベースのソート順」を維持したまま一覧に残る
+  const sortedMemos = useMemoSearch(baseSortedMemos, filterQuery, dateQuery, textQuery, tagQuery);
 
   // デバッグ用ログ
   console.log("Raw memos:", memos.length);
@@ -76,8 +81,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   console.log("Date query:", dateQuery);
   console.log("Text query:", textQuery);
   console.log("Tag query:", tagQuery);
-  console.log("Filtered memos:", filteredMemos.length);
-  console.log("Sorted memos:", sortedMemos.length);
+  console.log("Processed memos:", sortedMemos.length);
 
   if (!isDataLoaded) {
     return (

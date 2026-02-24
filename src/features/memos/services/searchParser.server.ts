@@ -128,10 +128,16 @@ async function aiParse(text: string): Promise<Omit<ParsedSearchResult, 'source'>
         const jsonMatch = output.match(/\{[\s\S]*\}/m);
         if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
+
+            const extractString = (val: any) => {
+                if (Array.isArray(val)) return val.length > 0 ? String(val[0]) : null;
+                return val ? String(val) : null;
+            };
+
             return {
-                start: parsed.start ?? null,
-                end: parsed.end ?? null,
-                tag: parsed.tag ?? null
+                start: extractString(parsed.start),
+                end: extractString(parsed.end),
+                tag: extractString(parsed.tag)
             };
         }
     } catch (e) {

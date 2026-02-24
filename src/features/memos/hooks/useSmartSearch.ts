@@ -182,6 +182,15 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
             }
         }
 
+        // 防御的処理: LLMのパース結果等によりeffectiveTagが意図せず配列等になった場合に備える
+        if (effectiveTag) {
+            if (Array.isArray(effectiveTag)) {
+                effectiveTag = effectiveTag.length > 0 ? String(effectiveTag[0]) : null;
+            } else if (typeof effectiveTag !== 'string') {
+                effectiveTag = String(effectiveTag);
+            }
+        }
+
         // クエリの決定:
         let residualQuery = query;
         let finalDateQuery = '';
@@ -214,6 +223,20 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                 const regex = new RegExp(effectiveTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
                 residualQuery = residualQuery.replace(regex, '').trim();
             }
+        }
+
+        // 1.5 抽出済みの文言を除去（AIやヒューリスティックで抽出された場合）
+        if (effectiveStart || effectiveEnd || effectiveTag) {
+            // 日付キーワードの除去
+            residualQuery = residualQuery.replace(
+                /(先々月|先月|来月|去年|今年|来年|今日|昨日|明日|\d{4}年\d{1,2}月|\d{4}年|\d{4}-\d{2}-\d{2}|春|夏|秋|冬)/g,
+                ''
+            );
+            // 単独で残った「の」や「に関する」などの助詞・接続表現を前後から除去
+            residualQuery = residualQuery
+                .replace(/^[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*/g, '')
+                .replace(/[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*$/g, '')
+                .trim();
         }
 
         // クエリがタグや日付で消費されていない部分（残りのクエリ）がある場合
@@ -267,6 +290,10 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
 
         // プレビューをクリア
         setParsedPreview(null);
+
+        // 抽出済みの情報を入力から消し、再検索等の際に重複しないようにする
+        tagSearch.setSearchQuery(finalTextQuery);
+
     }, [parsedPreview, selectedStartDate, selectedEndDate, availableTags, tagSearch]);
 
     // 検索クリア

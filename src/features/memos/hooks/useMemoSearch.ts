@@ -7,9 +7,9 @@ import { useEffect, useState } from 'react';
 import type { TagExpression } from '../types/tagExpressions';
 import tagExpressionService from '../services/tagExpressionService';
 import { extractTagIds } from '../utils/tagUtils';
-import { computeCosineSimilarity } from '../utils/similarityUtils';
+import { sortMemosByFuzzyScore } from '../utils/searchScoringUtils';
 
-export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: string, queryEmbedding?: number[], textQuery?: string, tagQuery?: SearchTag[]): Memo[] => {
+export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: string, textQuery?: string, tagQuery?: SearchTag[]): Memo[] => {
   const [expressions, setExpressions] = useState<TagExpression[]>([]);
 
   useEffect(() => {
@@ -47,28 +47,6 @@ export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: st
     });
   }
 
-  // 2. Text/Body/Fuzzy Search
-  if (effectiveTextQuery) {
-    result = result.filter((memo) => {
-      // Lexical check (Tags, Title, Body)
-      const lexicalMatch = evaluateTextQuery(memo, effectiveTextQuery, true); // true = allow body search
-
-      // Semantic check
-      let semanticMatch = false;
-      if (queryEmbedding && queryEmbedding.length > 0 && memo.embedding && memo.embedding.length > 0) {
-        try {
-          const sim = computeCosineSimilarity(queryEmbedding, memo.embedding);
-          if (sim >= 0.75) semanticMatch = true;
-        } catch (e) {
-          // ignore error
-        }
-      }
-
-      return lexicalMatch || semanticMatch;
-    });
-  } else if (queryEmbedding && !isExpression) {
-    // check semantic only if no text query but embedding exists 
-  }
 
   // 3. Tag Chips Filter (AND)
   if (tagQuery && tagQuery.length > 0) {
@@ -96,6 +74,9 @@ export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: st
       result = result.filter((memo) => evaluateDateQuery(memo, dq, config));
     }
   }
+
+  // 5. Text/Body/Fuzzy Search & Scoring (After filtering by Tags and Dates)
+  result = sortMemosByFuzzyScore(result, effectiveTextQuery);
 
   // Highlighting Logic
   const positiveFilterTagIds: string[] = (tagQuery || [])
@@ -150,72 +131,3 @@ export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: st
 
   return final;
 };
-
-// 拡張されたクエリ評価（タグ + 本文/タイトル）
-function evaluateTextQuery(memo: Memo, filterQuery: string, searchBody: boolean = false): boolean {
-  const queryParts = filterQuery.split(' ').filter(part => part.trim() !== '');
-  const memoTags = memo.tags || [];
-
-  if (queryParts.length === 0) return true;
-
-  // NOT条件（除外タグ/除外ワード）
-  const excludeParts: string[] = [];
-  for (let i = 0; i < queryParts.length; i++) {
-    if (queryParts[i] === 'NOT' && i + 1 < queryParts.length) {
-      excludeParts.push(queryParts[i + 1]);
-      queryParts[i] = '';
-      queryParts[i + 1] = '';
-    } else if (queryParts[i].startsWith('-')) {
-      excludeParts.push(queryParts[i].substring(1));
-      queryParts[i] = '';
-    }
-  }
-
-  // Check excludes
-  if (excludeParts.length > 0) {
-    const hasExcludeMatch = excludeParts.some(part => {
-      if (memoTags.includes(part)) return true;
-      if (searchBody) {
-        if (memo.title?.toLowerCase().includes(part.toLowerCase())) return true;
-        if (memo.body?.toLowerCase().includes(part.toLowerCase())) return true;
-      }
-      return false;
-    });
-    if (hasExcludeMatch) return false;
-  }
-
-  const remainingParts = queryParts.filter(part => part !== '');
-  if (remainingParts.length === 0) return true;
-
-  // OR条件を処理
-  const orGroups: string[][] = [[]];
-  let currentGroup = 0;
-
-  for (let i = 0; i < remainingParts.length; i++) {
-    const part = remainingParts[i];
-    if (part === 'OR') {
-      currentGroup++;
-      orGroups[currentGroup] = [];
-    } else if (part === 'AND') {
-      continue;
-    } else {
-      if (!orGroups[currentGroup]) {
-        orGroups[currentGroup] = [];
-      }
-      orGroups[currentGroup].push(part);
-    }
-  }
-
-  // Evaluate Groups (OR) -> Each Group (AND)
-  return orGroups.some(group => {
-    if (group.length === 0) return false;
-    return group.every(part => {
-      if (memoTags.includes(part)) return true;
-      if (searchBody) {
-        if (memo.title?.toLowerCase().includes(part.toLowerCase())) return true;
-        if (memo.body?.toLowerCase().includes(part.toLowerCase())) return true;
-      }
-      return false;
-    });
-  });
-}
