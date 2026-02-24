@@ -1,13 +1,17 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTrashedMemos, restoreMemo, permanentlyDeleteMemo } from "~/features/memos/models/memo.server";
+import { runTrashCleanup } from "~/features/memos/services/trashCleanup";
 import { getDevUserId } from "~/features/auth/utils/devUser.server";
 
 export const loader: LoaderFunction = async () => {
     try {
         const userId = await getDevUserId();
+
+        // Lazy Deletion: Return the list only after cleaning up mathematically expired memos
+        await runTrashCleanup(30);
+
         const trashedMemos = await getTrashedMemos(userId);
 
-        // エラーオブジェクトが返された場合の処理
         if (trashedMemos && typeof trashedMemos === 'object' && 'error' in trashedMemos) {
             console.error("API loader error:", trashedMemos.error);
             return Response.json({ error: trashedMemos.error }, { status: 500 });

@@ -151,9 +151,10 @@ async function aiParse(text: string): Promise<Omit<ParsedSearchResult, 'source'>
  */
 export async function parseSearchQuery(text: string): Promise<ParsedSearchResult> {
     // APIキーがない場合は直接ヒューリスティックを使用
+    console.debug('[searchParser] parsing:', text);
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
 
-    if (!apiKey) {
+    if (!apiKey && false) {
         return { source: "heuristic", ...heuristicParse(text) };
     }
 

@@ -32,6 +32,7 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const SHOW_DELETE_MODAL = false;
 
   const {
     title, setTitle,
@@ -102,7 +103,13 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
         lastSaved={lastSaved}
         onDiscard={handleDiscardChanges}
         canDiscard={historyIndex > 0}
-        onDelete={() => setIsDeleteModalOpen(true)}
+        onDelete={() => {
+          if (SHOW_DELETE_MODAL) {
+            setIsDeleteModalOpen(true);
+          } else {
+            handleDeleteConfirm();
+          }
+        }}
         editMode={editMode}
         onToggleMode={() => setEditMode(!editMode)}
       />
@@ -145,12 +152,14 @@ const EditMemoForm: React.FC<EditMemoFormProps> = ({
         />
       )}
 
-      <DeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setIsDeleteModalOpen(false)}
-        memoTitle={title}
-      />
+      {SHOW_DELETE_MODAL && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setIsDeleteModalOpen(false)}
+          memoTitle={title}
+        />
+      )}
     </div>
   );
 };

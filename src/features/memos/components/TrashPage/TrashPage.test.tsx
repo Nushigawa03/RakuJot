@@ -3,6 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TrashPage from './TrashPage';
 import { memoService } from '../../services/memoService';
 
+const mockNavigate = vi.fn();
+vi.mock('react-router', () => ({
+    useNavigate: () => mockNavigate,
+}));
+
 
 // モックデータ
 const mockTrashedMemos = [
@@ -74,7 +79,6 @@ describe('TrashPage', () => {
 
         await waitFor(() => {
             expect(memoService.restoreMemo).toHaveBeenCalledWith('memo-1');
-            expect(alertMock).toHaveBeenCalledWith('メモを復元しました');
         });
 
         alertMock.mockRestore();
@@ -84,8 +88,6 @@ describe('TrashPage', () => {
         (memoService.getTrashedMemos as any).mockResolvedValue(mockTrashedMemos);
         (memoService.permanentlyDeleteMemo as any).mockResolvedValue({ ok: true });
 
-        // window.confirm と window.alert をモック
-        const confirmMock = vi.spyOn(window, 'confirm').mockReturnValue(true);
         const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
         render(<TrashPage />);
@@ -97,13 +99,20 @@ describe('TrashPage', () => {
         const deleteButton = screen.getByText('完全削除');
         fireEvent.click(deleteButton);
 
+        // ConfirmModalが表示されるのを待つ
         await waitFor(() => {
-            expect(confirmMock).toHaveBeenCalled();
-            expect(memoService.permanentlyDeleteMemo).toHaveBeenCalledWith('trash-1');
-            expect(alertMock).toHaveBeenCalledWith('メモを完全削除しました');
+            expect(screen.getByText('メモの完全削除')).toBeInTheDocument();
         });
 
-        confirmMock.mockRestore();
+        // モーダル内の「削除する」ボタンをクリック
+        const confirmButton = screen.getByRole('button', { name: '削除する' });
+        fireEvent.click(confirmButton);
+
+        await waitFor(() => {
+            expect(memoService.permanentlyDeleteMemo).toHaveBeenCalledWith('trash-1');
+            // expect(alertMock).toHaveBeenCalledWith('メモを完全削除しました'); // removed from implementation
+        });
+
         alertMock.mockRestore();
     });
 
@@ -115,5 +124,56 @@ describe('TrashPage', () => {
         await waitFor(() => {
             expect(screen.getByText(/残り 25 日/)).toBeInTheDocument();
         });
+    });
+
+    it('戻るボタンをクリックすると前のページに戻る', async () => {
+        (memoService.getTrashedMemos as any).mockResolvedValue(mockTrashedMemos);
+
+        render(<TrashPage />);
+
+        await waitFor(() => {
+            expect(screen.getByText('ゴミ箱を空にする')).toBeInTheDocument();
+        });
+
+        const backButton = screen.getByRole('button', { name: '戻る' });
+        fireEvent.click(backButton);
+
+        expect(mockNavigate).toHaveBeenCalledWith(-1);
+    });
+
+    it('ゴミ箱を空にするボタンで一括削除される', async () => {
+        const twoMemos = [
+            ...mockTrashedMemos,
+            { ...mockTrashedMemos[0], id: 'trash-2', originalId: 'memo-2' }
+        ];
+        (memoService.getTrashedMemos as any).mockResolvedValue(twoMemos);
+        (memoService.permanentlyDeleteMemo as any).mockResolvedValue({ ok: true });
+
+        const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => { });
+
+        render(<TrashPage />);
+
+        await waitFor(() => {
+            expect(screen.getByText('ゴミ箱を空にする')).toBeInTheDocument();
+        });
+
+        const emptyButton = screen.getByText('ゴミ箱を空にする');
+        fireEvent.click(emptyButton);
+
+        // ConfirmModalが表示されるのを待つ
+        await waitFor(() => {
+            expect(screen.getByText('ゴミ箱を空にする', { selector: 'h2' })).toBeInTheDocument();
+        });
+
+        // モーダル内の「削除する」ボタンをクリック
+        const confirmButton = screen.getByRole('button', { name: '削除する' });
+        fireEvent.click(confirmButton);
+
+        await waitFor(() => {
+            expect(memoService.permanentlyDeleteMemo).toHaveBeenCalledWith('trash-1');
+            expect(memoService.permanentlyDeleteMemo).toHaveBeenCalledWith('trash-2');
+        });
+
+        alertMock.mockRestore();
     });
 });

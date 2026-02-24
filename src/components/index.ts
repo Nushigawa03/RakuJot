@@ -5,3 +5,4 @@ export { default as DatePickerInput } from './DatePickerInput';
 export { default as TagChips } from './TagChips';
 export { TagSuggestionInput } from './TagSuggestionInput';
 export { default as Textarea } from './Textarea';
+export * from './ConfirmModal/ConfirmModal';
