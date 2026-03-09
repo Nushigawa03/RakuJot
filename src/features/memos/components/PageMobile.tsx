@@ -36,7 +36,7 @@ const PageMobile: React.FC = () => {
 
   const handleSettings = () => {
     try {
-      navigate('/settings');
+      navigate('/app/settings');
     } catch (e) {
       console.debug('NavigationBarMobile.settings.navigate.failed', e);
     }

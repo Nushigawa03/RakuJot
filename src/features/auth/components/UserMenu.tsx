@@ -62,7 +62,11 @@ const UserMenu: React.FC = () => {
 
     return (
         <div className="user-menu">
-            <div className="user-menu__info">
+            <button
+                className="user-menu__info"
+                onClick={() => window.location.href = '/app/settings'}
+                title="設定を開く"
+            >
                 {authState.user.picture ? (
                     <img
                         src={authState.user.picture}
@@ -84,7 +88,7 @@ const UserMenu: React.FC = () => {
                         </span>
                     )}
                 </div>
-            </div>
+            </button>
             {!authState.isDevMode && (
                 <button
                     className="user-menu__logout"

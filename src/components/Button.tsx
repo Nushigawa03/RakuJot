@@ -1,7 +1,7 @@
 import React from "react";
 import "./Button.css";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 interface ButtonProps {
   children: React.ReactNode;

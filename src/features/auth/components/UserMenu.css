@@ -13,6 +13,20 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-3);
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: var(--spacing-2);
+    margin: calc(var(--spacing-2) * -1);
+    /* counter padding to keep alignment */
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color var(--transition-base) var(--ease-out);
+    text-align: left;
+}
+
+.user-menu__info:hover {
+    background-color: var(--color-surface);
 }
 
 .user-menu__avatar {
