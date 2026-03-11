@@ -9,6 +9,7 @@
     "start:local": "env-cmd -f .env npm run start",
     "build:local": "env-cmd -f .env npm run build",
     "test:local": "env-cmd -f .env.testing npm run test",
+    "build:deploy": "prisma generate && prisma migrate deploy && npm run build",
     "typecheck": "tsc",
     "test": "vitest",
     "test:ui": "vitest --ui",

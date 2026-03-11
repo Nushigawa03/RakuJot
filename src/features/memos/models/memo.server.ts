@@ -1,8 +1,40 @@
-import prismaPackage, { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 import { prisma } from "~/db.server";
 import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
 import { ensureTags } from "./tag.server";
+
+type PrismaErrorShape = {
+  code?: string;
+  name?: string;
+  message?: string;
+};
+
+const isPrismaClientInitializationError = (
+  error: unknown
+): error is PrismaErrorShape => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as PrismaErrorShape).name === "PrismaClientInitializationError"
+  );
+};
+
+const getPrismaKnownRequestErrorCode = (error: unknown): string | null => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as PrismaErrorShape).name === "PrismaClientKnownRequestError" &&
+    "code" in error &&
+    typeof (error as PrismaErrorShape).code === "string"
+  ) {
+    return (error as PrismaErrorShape).code ?? null;
+  }
+
+  return null;
+};
 
 // Helper function to convert Prisma objects to JSON-serializable format
 const serializeMemo = (memo: any) => {
@@ -37,12 +69,13 @@ export const getMemos = async (userId: string) => {
     return dbMemos.map(serializeMemo);
   } catch (error) {
     console.error("データベースエラー:", error);
-    if (error instanceof Prisma.PrismaClientInitializationError) {
+    if (isPrismaClientInitializationError(error)) {
       return { error: "データベースに接続できません。サーバーが起動していることを確認してください。" };
     }
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      switch (error.code) {
+    const prismaErrorCode = getPrismaKnownRequestErrorCode(error);
+    if (prismaErrorCode) {
+      switch (prismaErrorCode) {
         case 'P2002':
           return { error: "同じタイトルのメモが既に存在します。" };
         case 'P2025':
