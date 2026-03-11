@@ -1,13 +1,16 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTags, createTag, updateTag, deleteTag } from "~/features/memos/models/tag.server";
-import { getDevUserId } from "~/features/auth/utils/devUser.server";
+import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.server";
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
   try {
-    const userId = await getDevUserId();
+    const userId = await requireAuthenticatedUserId(request);
     const tags = await getTags(userId);
     return Response.json(tags);
   } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
     console.error("API tags loader error:", error);
     return Response.json({ error: "タグの取得に失敗しました" }, { status: 500 });
   }
@@ -15,7 +18,7 @@ export const loader: LoaderFunction = async () => {
 
 export const action: ActionFunction = async ({ request }) => {
   try {
-    const userId = await getDevUserId();
+    const userId = await requireAuthenticatedUserId(request);
     const body = await request.json();
 
     switch (request.method) {
@@ -48,6 +51,9 @@ export const action: ActionFunction = async ({ request }) => {
         return Response.json({ error: "サポートされていないメソッドです" }, { status: 405 });
     }
   } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
     console.error("タグ操作エラー:", error);
     return Response.json({ error: "タグの操作に失敗しました" }, { status: 500 });
   }

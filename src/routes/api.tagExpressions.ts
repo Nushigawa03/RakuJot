@@ -1,15 +1,18 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTagExpressions, createTagExpression, updateTagExpression, deleteTagExpression } from "~/features/memos/models/tagExpression.server";
-import { getDevUserId } from "~/features/auth/utils/devUser.server";
+import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.server";
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
   try {
-    const userId = await getDevUserId();
+    const userId = await requireAuthenticatedUserId(request);
     // フロントは name の有無でフィルタ/カテゴリを振り分けるため、
     // 統合された TagExpression をそのまま返す
     const combined = await getTagExpressions(userId);
     return Response.json(combined);
   } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
     console.error("API tagExpressions loader error:", error);
     return Response.json({ error: "tagExpressions の取得に失敗しました" }, { status: 500 });
   }
@@ -17,7 +20,7 @@ export const loader: LoaderFunction = async () => {
 
 export const action: ActionFunction = async ({ request }) => {
   try {
-    const userId = await getDevUserId();
+    const userId = await requireAuthenticatedUserId(request);
     const body = await request.json();
 
     switch (request.method) {
@@ -43,6 +46,9 @@ export const action: ActionFunction = async ({ request }) => {
         return Response.json({ error: "サポートされていないメソッドです" }, { status: 405 });
     }
   } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
     console.error("tagExpressions 操作エラー:", error);
     return Response.json({ error: "tagExpressions の操作に失敗しました" }, { status: 500 });
   }

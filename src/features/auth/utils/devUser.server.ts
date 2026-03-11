@@ -1,14 +1,15 @@
 import { findUserByEmail, createUser } from "~/features/auth/models/user.server";
+import { getDevUserProfile } from "~/features/auth/config/authEnvironment.server";
 
 /**
  * Development utility to get or create a default user.
  * This allows the app to function locally without full OAuth flow implementation yet.
  */
 export const getDevUserId = async (): Promise<string> => {
-    const devEmail = "dev@example.com";
+    const devUser = getDevUserProfile();
 
     // Try to find existing dev user (via Models layer)
-    const user = await findUserByEmail(devEmail);
+    const user = await findUserByEmail(devUser.email);
 
     if (user) {
         return user.id;
@@ -16,9 +17,10 @@ export const getDevUserId = async (): Promise<string> => {
 
     // Create dev user if not exists (via Models layer)
     const newUser = await createUser({
-        email: devEmail,
-        name: "Dev User",
-        googleId: "dev-google-id", // Dummy ID
+        email: devUser.email,
+        name: devUser.name,
+        googleId: devUser.googleId,
+        picture: devUser.picture ?? undefined,
     });
 
     return newUser.id;

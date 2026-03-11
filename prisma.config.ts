@@ -1,5 +1,9 @@
-import 'dotenv/config'
+import { config as loadEnv } from 'dotenv'
+import { resolve } from 'node:path'
 import { defineConfig, env } from 'prisma/config'
+
+loadEnv({ path: resolve(process.cwd(), '.env') })
+loadEnv({ path: resolve(process.cwd(), '.env.local'), override: true })
 
 export default defineConfig({
     schema: 'prisma/schema.prisma',

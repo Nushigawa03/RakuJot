@@ -1,5 +1,15 @@
-import { Link } from "react-router";
-import type { MetaFunction } from "react-router";
+import { Link, redirect } from "react-router";
+import type { LoaderFunction, MetaFunction } from "react-router";
+import { getCurrentUser } from "~/features/auth/utils/authMode.server";
+
+export const loader: LoaderFunction = async ({ request }) => {
+  const currentUser = await getCurrentUser(request);
+  if (currentUser) {
+    throw redirect('/app');
+  }
+
+  return null;
+};
 
 export const meta: MetaFunction = () => {
   return [
@@ -28,10 +38,10 @@ export default function Index() {
             <span className="text-2xl font-bold text-gray-900 dark:text-white">RakuJot</span>
           </div>
           <Link 
-            to="/app" 
+            to="/login" 
             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
           >
-            アプリを開く
+            ログイン
           </Link>
         </nav>
       </header>
@@ -49,10 +59,10 @@ export default function Index() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
-              to="/app" 
+              to="/login" 
               className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-lg transition-colors shadow-lg hover:shadow-xl"
             >
-              今すぐ始める
+              Googleで始める
             </Link>
           </div>
         </div>
@@ -105,10 +115,10 @@ export default function Index() {
             今すぐRakuJotで、あなたのアイデアを整理し始めましょう
           </p>
           <Link 
-            to="/app" 
+            to="/login" 
             className="inline-block px-8 py-4 bg-white hover:bg-gray-100 text-blue-600 rounded-lg font-bold text-lg transition-colors shadow-lg"
           >
-            無料で始める
+            ログインして始める
           </Link>
         </div>
       </main>

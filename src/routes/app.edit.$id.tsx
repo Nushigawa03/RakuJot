@@ -3,16 +3,16 @@ import type { LoaderFunction } from "react-router";
 import { getMemo } from "~/features/memos/models/memo.server";
 import { getTags } from "~/features/memos/models/tag.server";
 import Page from '~/features/memos.edit/components/Page';
-import { getDevUserId } from "~/features/auth/utils/devUser.server";
+import { requireAuthenticatedPageUserId } from "~/features/auth/utils/authMode.server";
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({ request, params }) => {
   const { id } = params;
 
   if (!id) {
     return Response.json({ error: "メモIDが指定されていません。" }, { status: 400 });
   }
 
-  const userId = await getDevUserId();
+  const userId = await requireAuthenticatedPageUserId(request);
   const [memo, availableTags] = await Promise.all([
     getMemo(id, userId),
     getTags(userId)

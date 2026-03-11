@@ -1,47 +1,114 @@
 import { useState, useEffect } from 'react';
+import {
+    DEFAULT_SETTINGS,
+    SETTINGS_KEY,
+    isPersistedSettingsKey,
+    type Settings,
+} from '../settings';
 
-// Defines the shape of our settings
-export interface Settings {
-    aiUsageEnabled: boolean;
-    googleApiKey: string;
-    // We can add more settings here in the future
-}
-
-// Default settings if none exist in localStorage
-const DEFAULT_SETTINGS: Settings = {
-    aiUsageEnabled: true,
-    googleApiKey: '',
+type SettingsApiResponse = {
+    settings: Pick<Settings, 'aiUsageEnabled'>;
+    hasStoredSettings: boolean;
 };
 
-const SETTINGS_KEY = 'rakujot_user_settings';
+const loadLocalSettings = (): Partial<Settings> => {
+    try {
+        const stored = localStorage.getItem(SETTINGS_KEY);
+        if (!stored) {
+            return {};
+        }
+
+        const parsed = JSON.parse(stored);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return {};
+        }
+
+        return parsed as Partial<Settings>;
+    } catch (error) {
+        console.error('Failed to load settings from localStorage:', error);
+        return {};
+    }
+};
+
+const saveLocalSettings = (settings: Settings) => {
+    try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (error) {
+        console.error('Failed to save settings to localStorage:', error);
+    }
+};
+
+const persistServerSettings = async (settings: Partial<Pick<Settings, 'aiUsageEnabled'>>) => {
+    const response = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to persist settings');
+    }
+};
 
 export function useSettings() {
     const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Load settings from localStorage on initial render
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem(SETTINGS_KEY);
-            if (stored) {
-                setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+        const localSettings = loadLocalSettings();
+        const mergedLocalSettings = { ...DEFAULT_SETTINGS, ...localSettings };
+
+        setSettings(mergedLocalSettings);
+
+        const loadSettings = async () => {
+            try {
+                const response = await fetch('/api/settings');
+
+                if (!response.ok) {
+                    throw new Error('Failed to load server settings');
+                }
+
+                const data = (await response.json()) as SettingsApiResponse;
+
+                const mergedSettings: Settings = {
+                    ...DEFAULT_SETTINGS,
+                    ...data.settings,
+                    googleApiKey: mergedLocalSettings.googleApiKey,
+                };
+
+                setSettings(mergedSettings);
+                saveLocalSettings(mergedSettings);
+
+                if (!data.hasStoredSettings && typeof localSettings.aiUsageEnabled === 'boolean') {
+                    await persistServerSettings({
+                        aiUsageEnabled: localSettings.aiUsageEnabled,
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load settings from server:', error);
+                setSettings(mergedLocalSettings);
+            } finally {
+                setIsLoaded(true);
             }
-        } catch (error) {
-            console.error('Failed to load settings from localStorage:', error);
-        } finally {
-            setIsLoaded(true);
-        }
+        };
+
+        void loadSettings();
     }, []);
 
-    // Function to update a specific setting
     const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-        setSettings((prev) => {
+        setSettings((prev): Settings => {
             const newSettings = { ...prev, [key]: value };
-            try {
-                localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-            } catch (error) {
-                console.error('Failed to save settings to localStorage:', error);
+
+            saveLocalSettings(newSettings);
+
+            if (isPersistedSettingsKey(key)) {
+                void persistServerSettings({ [key]: value }).catch((error) => {
+                    console.error('Failed to save settings to server:', error);
+                });
             }
+
             return newSettings;
         });
     };

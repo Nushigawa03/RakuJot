@@ -3,6 +3,8 @@
  * 開発モードと本番モードで認証動作を切り替え
  */
 
+import { redirect } from "react-router";
+import { getDevUserProfile, getPublicAuthConfig } from "~/features/auth/config/authEnvironment.server";
 import { getUserIdFromSession } from "./session.server";
 import { getDevUserId } from "./devUser.server";
 
@@ -12,11 +14,7 @@ import { getDevUserId } from "./devUser.server";
  * - GOOGLE_CLIENT_ID が未設定
  */
 export const isDevMode = (): boolean => {
-    const isDevelopment = process.env.NODE_ENV !== "production";
-    const hasGoogleClientId = !!process.env.GOOGLE_CLIENT_ID;
-
-    // 開発環境で GOOGLE_CLIENT_ID がない場合のみ開発モード
-    return isDevelopment && !hasGoogleClientId;
+    return getPublicAuthConfig().isDevMode;
 };
 
 /**
@@ -57,6 +55,19 @@ export const requireAuthenticatedUserId = async (
     return userId;
 };
 
+export const requireAuthenticatedPageUserId = async (
+    request: Request,
+    redirectTo: string = "/login"
+): Promise<string> => {
+    const userId = await getAuthenticatedUserId(request);
+
+    if (!userId) {
+        throw redirect(redirectTo);
+    }
+
+    return userId;
+};
+
 /**
  * 現在のユーザー情報を取得（UI表示用）
  */
@@ -74,21 +85,29 @@ export const getCurrentUser = async (
     const userId = await getAuthenticatedUserId(request);
     if (!userId) return null;
 
-    // 開発モードの場合
+    const { findUserById } = await import("../models/user.server");
+    const user = await findUserById(userId);
+
+    if (user) {
+        return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            picture: user.picture,
+            isDevMode: isDevMode(),
+        };
+    }
+
     if (isDevMode()) {
+        const devUser = getDevUserProfile();
         return {
             id: userId,
-            email: "dev@example.com",
-            name: "開発ユーザー",
-            picture: null,
+            email: devUser.email,
+            name: devUser.name,
+            picture: devUser.picture,
             isDevMode: true,
         };
     }
 
-    // 本番モード: DB からユーザー情報を取得
-    const { findUserByEmail } = await import("../models/user.server");
-    // セッションにはuserIdが入っているので、それで検索する必要があるが
-    // 現状はemailで検索しているので、モデル層を拡張する必要がある
-    // 暫定的に null を返す（後で拡張）
     return null;
 };

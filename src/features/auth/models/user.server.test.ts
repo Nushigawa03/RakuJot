@@ -5,6 +5,7 @@ const mockPrisma = vi.hoisted(() => ({
     user: {
         findUnique: vi.fn(),
         create: vi.fn(),
+        update: vi.fn(),
     },
 }));
 
@@ -18,6 +19,9 @@ import {
     findUserByGoogleId,
     createUser,
     findOrCreateUserByEmail,
+    getUserSettings,
+    syncGoogleUser,
+    updateUserSettings,
 } from './user.server';
 
 describe('user.server', () => {
@@ -34,6 +38,15 @@ describe('user.server', () => {
 
             expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
                 where: { email: 'test@example.com' },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    picture: true,
+                    googleId: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
             });
             expect(user).toEqual(mockUser);
         });
@@ -64,6 +77,15 @@ describe('user.server', () => {
 
             expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
                 where: { googleId: 'google-123' },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    picture: true,
+                    googleId: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
             });
             expect(user).toEqual(mockUser);
         });
@@ -91,6 +113,15 @@ describe('user.server', () => {
                     name: 'New User',
                     googleId: 'google-456',
                     picture: undefined,
+                },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    picture: true,
+                    googleId: true,
+                    createdAt: true,
+                    updatedAt: true,
                 },
             });
             expect(user).toEqual(newUser);
@@ -134,6 +165,92 @@ describe('user.server', () => {
             expect(mockPrisma.user.findUnique).toHaveBeenCalled();
             expect(mockPrisma.user.create).toHaveBeenCalled();
             expect(user).toEqual(newUser);
+        });
+    });
+
+    describe('getUserSettings', () => {
+        it('保存済みの設定を返す', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce({
+                settings: { aiUsageEnabled: false },
+            });
+
+            const result = await getUserSettings('user-1');
+
+            expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+                where: { id: 'user-1' },
+                select: { settings: true },
+            });
+            expect(result).toEqual({
+                settings: { aiUsageEnabled: false },
+                hasStoredSettings: true,
+            });
+        });
+
+        it('設定がない場合はデフォルトを返す', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce({ settings: null });
+
+            const result = await getUserSettings('user-1');
+
+            expect(result).toEqual({
+                settings: { aiUsageEnabled: true },
+                hasStoredSettings: false,
+            });
+        });
+    });
+
+    describe('updateUserSettings', () => {
+        it('既存設定にパッチをマージして保存する', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce({
+                settings: { aiUsageEnabled: true },
+            });
+            mockPrisma.user.update.mockResolvedValueOnce({
+                settings: { aiUsageEnabled: false },
+            });
+
+            const result = await updateUserSettings('user-1', {
+                aiUsageEnabled: false,
+            });
+
+            expect(mockPrisma.user.update).toHaveBeenCalledWith({
+                where: { id: 'user-1' },
+                data: {
+                    settings: { aiUsageEnabled: false },
+                },
+                select: { settings: true },
+            });
+            expect(result).toEqual({ aiUsageEnabled: false });
+        });
+    });
+
+    describe('syncGoogleUser', () => {
+        it('Google IDが既存ならプロフィールを更新する', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce({
+                id: '1',
+                googleId: 'google-123',
+                email: 'test@example.com',
+            });
+            mockPrisma.user.update.mockResolvedValueOnce({
+                id: '1',
+                googleId: 'google-123',
+                email: 'updated@example.com',
+                name: 'Updated User',
+                picture: 'https://example.com/avatar.png',
+            });
+
+            const user = await syncGoogleUser({
+                email: 'updated@example.com',
+                name: 'Updated User',
+                googleId: 'google-123',
+                picture: 'https://example.com/avatar.png',
+            });
+
+            expect(user).toEqual({
+                id: '1',
+                googleId: 'google-123',
+                email: 'updated@example.com',
+                name: 'Updated User',
+                picture: 'https://example.com/avatar.png',
+            });
         });
     });
 });

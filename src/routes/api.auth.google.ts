@@ -1,12 +1,13 @@
 import type { ActionFunction } from "react-router";
+import { OAuth2Client } from "google-auth-library";
 import {
     createUserSession,
     getSessionCookieHeader,
 } from "~/features/auth/utils/session.server";
 import {
-    findUserByGoogleId,
-    createUser,
+    syncGoogleUser,
 } from "~/features/auth/models/user.server";
+import { getGoogleClientId } from "~/features/auth/config/authEnvironment.server";
 import { isDevMode } from "~/features/auth/utils/authMode.server";
 
 /**
@@ -26,6 +27,7 @@ export const action: ActionFunction = async ({ request }) => {
     try {
         const data = await request.json();
         const { credential } = data;
+        const googleClientId = getGoogleClientId();
 
         if (!credential) {
             return Response.json(
@@ -34,28 +36,33 @@ export const action: ActionFunction = async ({ request }) => {
             );
         }
 
-        // Google ID Token をデコード（本番では公開鍵で検証すべき）
-        // 簡易実装: JWT のペイロードをデコード
-        const payload = decodeGoogleIdToken(credential);
+        if (!googleClientId) {
+            return Response.json(
+                { error: "Google Client ID が設定されていません" },
+                { status: 500 }
+            );
+        }
 
-        if (!payload || !payload.sub || !payload.email) {
+        const client = new OAuth2Client(googleClientId);
+        const ticket = await client.verifyIdToken({
+            idToken: credential,
+            audience: googleClientId,
+        });
+        const payload = ticket.getPayload();
+
+        if (!payload || !payload.sub || !payload.email || !payload.email_verified) {
             return Response.json(
                 { error: "無効なトークンです" },
                 { status: 400 }
             );
         }
 
-        // ユーザーを検索、なければ作成
-        let user = await findUserByGoogleId(payload.sub);
-
-        if (!user) {
-            user = await createUser({
-                email: payload.email,
-                name: payload.name,
-                googleId: payload.sub,
-                picture: payload.picture,
-            });
-        }
+        const user = await syncGoogleUser({
+            email: payload.email,
+            name: payload.name ?? undefined,
+            googleId: payload.sub,
+            picture: payload.picture ?? undefined,
+        });
 
         // セッション作成
         const sessionValue = createUserSession(user.id);
@@ -86,27 +93,3 @@ export const action: ActionFunction = async ({ request }) => {
         );
     }
 };
-
-/**
- * Google ID Token のペイロードをデコード
- * 注意: 本番では Google の公開鍵で署名を検証すべき
- */
-function decodeGoogleIdToken(token: string): {
-    sub: string;
-    email: string;
-    name?: string;
-    picture?: string;
-} | null {
-    try {
-        const parts = token.split(".");
-        if (parts.length !== 3) return null;
-
-        const payload = JSON.parse(
-            Buffer.from(parts[1], "base64url").toString("utf-8")
-        );
-
-        return payload;
-    } catch {
-        return null;
-    }
-}

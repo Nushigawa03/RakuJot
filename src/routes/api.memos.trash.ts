@@ -1,14 +1,14 @@
 import type { LoaderFunction, ActionFunction } from "react-router";
 import { getTrashedMemos, restoreMemo, permanentlyDeleteMemo } from "~/features/memos/models/memo.server";
 import { runTrashCleanup } from "~/features/memos/services/trashCleanup";
-import { getDevUserId } from "~/features/auth/utils/devUser.server";
+import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.server";
 
-export const loader: LoaderFunction = async () => {
+export const loader: LoaderFunction = async ({ request }) => {
     try {
-        const userId = await getDevUserId();
+        const userId = await requireAuthenticatedUserId(request);
 
         // Lazy Deletion: Return the list only after cleaning up mathematically expired memos
-        await runTrashCleanup(30);
+        await runTrashCleanup(30, userId);
 
         const trashedMemos = await getTrashedMemos(userId);
 
@@ -19,6 +19,9 @@ export const loader: LoaderFunction = async () => {
 
         return Response.json(trashedMemos);
     } catch (error) {
+        if (error instanceof Response) {
+            return error;
+        }
         console.error("API loader error:", error);
         return Response.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
     }
@@ -26,7 +29,7 @@ export const loader: LoaderFunction = async () => {
 
 export const action: ActionFunction = async ({ request }) => {
     try {
-        const userId = await getDevUserId();
+        const userId = await requireAuthenticatedUserId(request);
         const data = await request.json();
         const { id, originalId, action: actionType } = data;
 
@@ -55,6 +58,9 @@ export const action: ActionFunction = async ({ request }) => {
                 return Response.json({ error: 'アクションがサポートされていません' }, { status: 405 });
         }
     } catch (error) {
+        if (error instanceof Response) {
+            return error;
+        }
         console.error("API action error:", error);
         if (error instanceof SyntaxError) {
             return Response.json({ error: "無効なJSONデータです" }, { status: 400 });

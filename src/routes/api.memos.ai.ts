@@ -1,11 +1,11 @@
 import type { ActionFunction } from "react-router";
 import { aiMemoProcessor, aiMemoEditor } from "~/features/App/services/aiMemoProcessor.server";
 import { getTags } from "~/features/memos/models/tag.server";
-import { getDevUserId } from "~/features/auth/utils/devUser.server";
+import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.server";
 
 export const action: ActionFunction = async ({ request }) => {
   try {
-    const userId = await getDevUserId();
+    const userId = await requireAuthenticatedUserId(request);
     const url = new URL(request.url);
     const data = await request.json();
 
@@ -40,6 +40,9 @@ export const action: ActionFunction = async ({ request }) => {
       return Response.json(ai);
     }
   } catch (e) {
+    if (e instanceof Response) {
+      return e;
+    }
     console.error('AI route error', e);
     return Response.json({ error: 'AI processing failed' }, { status: 500 });
   }
