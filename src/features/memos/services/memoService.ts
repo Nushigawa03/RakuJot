@@ -2,8 +2,29 @@ import type { Memo } from "../types/memo";
 import { tagService } from './tagService';
 import { normalizeTagName } from '../utils/normalizeTagName';
 import { refreshTags } from '../utils/tagUtils';
+import {
+  getAllMemos as localGetAllMemos,
+  putMemo as localPutMemo,
+  markMemoDeleted as localMarkMemoDeleted,
+  getAllTrashedMemos as localGetAllTrashedMemos,
+  putTrashedMemo as localPutTrashedMemo,
+  deleteTrashedMemo as localDeleteTrashedMemo,
+  type LocalMemo,
+  type LocalTrashedMemo,
+} from '../../sync/localDb';
+import { performSync } from '../../sync/syncService';
+
 export type AiResult = { title?: string; tags?: string[]; date?: string;[k: string]: any };
 export type MemoPayload = { title: string; body: string; tags: string[]; date?: string };
+
+/**
+ * ローカルID生成（cuid 互換のユニークID）
+ */
+const generateLocalId = (): string => {
+  const timestamp = Date.now().toString(36);
+  const randomPart = Math.random().toString(36).substring(2, 10);
+  return `local_${timestamp}_${randomPart}`;
+};
 
 export class MemoService {
   private basePath = '/api';
@@ -26,43 +47,64 @@ export class MemoService {
     }
   }
 
+  /**
+   * メモを作成 — ローカルDBに即座に保存、オンラインならバックグラウンド同期
+   */
   async createMemo(payload: MemoPayload): Promise<{ ok: boolean; memo?: any; error?: string }> {
-    try {
-      const resp = await fetch(`${this.basePath}/memos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        return { ok: false, error: err?.error || '保存に失敗しました。' };
-      }
-      // return created memo object when available
-      const d = await resp.json().catch(() => null);
-      // try to refresh tag cache so UI/components see newly created tags
+    const now = new Date().toISOString();
+    const localMemo: LocalMemo = {
+      id: generateLocalId(),
+      title: payload.title,
+      date: payload.date || '',
+      tags: payload.tags,
+      body: payload.body,
+      createdAt: now,
+      updatedAt: now,
+      _syncStatus: 'pending-create',
+    };
+
+    // ローカルDBに保存
+    await localPutMemo(localMemo);
+
+    // オンラインなら直接APIにも送信
+    if (navigator.onLine) {
       try {
-        await refreshTags();
-      } catch (e) {
-        // don't fail memo creation if tag refresh fails
-        console.warn('refreshTags failed after createMemo:', e);
+        const resp = await fetch(`${this.basePath}/memos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (resp.ok) {
+          const serverMemo = await resp.json().catch(() => null);
+          if (serverMemo?.id) {
+            // サーバーのIDでローカルを更新
+            const { deleteMemo: localDeleteById } = await import('../../sync/localDb');
+            await localDeleteById(localMemo.id);
+            await localPutMemo({
+              ...localMemo,
+              id: serverMemo.id,
+              createdAt: serverMemo.createdAt || now,
+              updatedAt: serverMemo.updatedAt || now,
+              _syncStatus: 'synced',
+            });
+          }
+          try { await refreshTags(); } catch { }
+          return { ok: true, memo: serverMemo };
+        }
+      } catch {
+        // ネットワークエラー — ローカルに保存済みなので OK
       }
-      return { ok: true, memo: d };
-    } catch (e: any) {
-      return { ok: false, error: e?.message || '保存中にエラーが発生しました' };
     }
+
+    return { ok: true, memo: localMemo };
   }
 
-  /**
-   * Build payload by calling AI, merging tags with existing tags, deduping and creating memo.
-   * Returns { ok, payload, memo?, error }
-   */
   async createMemoWithAiSuggestions(content: string, opts?: { tagLimit?: number }): Promise<{ ok: boolean; payload?: MemoPayload; memo?: any; error?: string }> {
     try {
       const ai = await this.callAi(content);
       const fallbackTitle = content.trim().split('\n')[0].slice(0, 80) || '無題';
       const aiTags: string[] = Array.isArray(ai?.tags) ? ai.tags : [];
 
-      // get available tags from tagService (cached)
       const available = await tagService.getTags();
       const normalizedAvailable = available.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
 
@@ -72,7 +114,6 @@ export class MemoService {
         return found ? found.name : tag;
       }).map(t => t.trim()).filter(Boolean);
 
-      // dedupe preserving order
       const deduped: string[] = [];
       const seen = new Set<string>();
       for (const t of mapped) {
@@ -104,18 +145,12 @@ export class MemoService {
     }
   }
 
-  /**
-   * Generate suggestion by calling AI and mapping tags to available tags.
-   * Does NOT create a memo, only returns a suggested payload.
-   */
   async suggestForContent(content: string, opts?: { tagLimit?: number }): Promise<MemoPayload> {
-    // call AI service
     const ai = await this.callAi(content);
 
     const fallbackTitle = content.trim().split('\n')[0].slice(0, 80) || '無題';
     const aiTags: string[] = Array.isArray(ai?.tags) ? ai.tags : [];
 
-    // get available tags from tagService (cached)
     const available = await tagService.getTags();
     const normalizedAvailable = available.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
 
@@ -125,7 +160,6 @@ export class MemoService {
       return found ? found.name : tag;
     }).map(t => t.trim()).filter(Boolean);
 
-    // dedupe preserving order
     const deduped: string[] = [];
     const seen = new Set<string>();
     for (const t of mapped) {
@@ -149,11 +183,6 @@ export class MemoService {
     return payload;
   }
 
-  /**
-   * Given an original memo content and a short edit instruction (quick edit),
-   * request AI to produce a suggested payload that applies the instruction
-   * to the original. Returns a suggested MemoPayload but does NOT create a memo.
-   */
   async suggestEditForContent(original: string, instruction: string, opts?: { tagLimit?: number }): Promise<MemoPayload> {
     try {
       const resp = await fetch(`${this.basePath}/memos/ai`, {
@@ -173,7 +202,6 @@ export class MemoService {
       const fallbackTitle = original.trim().split('\n')[0].slice(0, 80) || '無題';
       const aiTags: string[] = Array.isArray(ai?.tags) ? ai.tags : [];
 
-      // get available tags from tagService (cached)
       const available = await tagService.getTags();
       const normalizedAvailable = available.map(t => ({ ...t, _norm: normalizeTagName(t.name) }));
 
@@ -183,7 +211,6 @@ export class MemoService {
         return found ? found.name : tag;
       }).map(t => t.trim()).filter(Boolean);
 
-      // dedupe preserving order
       const deduped: string[] = [];
       const seen = new Set<string>();
       for (const t of mapped) {
@@ -210,108 +237,197 @@ export class MemoService {
     }
   }
 
+  /**
+   * メモ一覧取得 — ローカルDBから即座に返す
+   */
   async getMemos(): Promise<Memo[]> {
     try {
-      const r = await fetch(`${this.basePath}/memos`);
-      if (!r.ok) return [];
-      const d = await r.json();
-      if (!Array.isArray(d)) return [];
+      const localMemos = await localGetAllMemos();
 
-      // Normalize tags to ensure they are string[] (ids), handling generic objects from API
-      return d.map((memo: any) => ({
-        ...memo,
-        tags: Array.isArray(memo.tags)
-          ? memo.tags.map((t: any) => (typeof t === 'string' ? t : t.id))
-          : []
-      }));
+      if (localMemos.length > 0) {
+        return localMemos.map((m) => ({
+          id: m.id,
+          title: m.title,
+          date: m.date,
+          tags: m.tags,
+          body: m.body,
+          embedding: m.embedding,
+          createdAt: m.createdAt,
+          updatedAt: m.updatedAt,
+        }));
+      }
+
+      // ローカルDB が空の場合はサーバーから取得（初回）
+      if (navigator.onLine) {
+        const r = await fetch(`${this.basePath}/memos`);
+        if (!r.ok) return [];
+        const d = await r.json();
+        if (!Array.isArray(d)) return [];
+
+        const memos = d.map((memo: any) => ({
+          ...memo,
+          tags: Array.isArray(memo.tags)
+            ? memo.tags.map((t: any) => (typeof t === 'string' ? t : t.id))
+            : []
+        }));
+
+        // ローカルDBにキャッシュ
+        for (const memo of memos) {
+          await localPutMemo({
+            ...memo,
+            _syncStatus: 'synced' as const,
+          });
+        }
+
+        return memos;
+      }
+
+      return [];
     } catch {
       return [];
     }
   }
 
+  /**
+   * メモ更新 — ローカルDBに即座に反映、オンラインならサーバーにも送信
+   */
   async updateMemo(id: string, payload: MemoPayload): Promise<{ ok: boolean; memo?: any; error?: string }> {
-    try {
-      const resp = await fetch(`${this.basePath}/memos`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ...payload }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        return { ok: false, error: err?.error || '更新に失敗しました。' };
-      }
-      const d = await resp.json().catch(() => null);
+    const now = new Date().toISOString();
+
+    // ローカルDBを更新
+    const { getMemo: localGetMemo } = await import('../../sync/localDb');
+    const existing = await localGetMemo(id);
+    const updatedMemo: LocalMemo = {
+      id,
+      title: payload.title,
+      date: payload.date || '',
+      tags: payload.tags,
+      body: payload.body,
+      embedding: existing?.embedding,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+      _syncStatus: existing?._syncStatus === 'pending-create' ? 'pending-create' : 'pending-update',
+    };
+    await localPutMemo(updatedMemo);
+
+    // オンラインならサーバーにも送信
+    if (navigator.onLine) {
       try {
-        await refreshTags();
-      } catch (e) {
-        console.warn('refreshTags failed after updateMemo:', e);
+        const resp = await fetch(`${this.basePath}/memos`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...payload }),
+        });
+        if (resp.ok) {
+          const d = await resp.json().catch(() => null);
+          // 同期済みに更新
+          updatedMemo._syncStatus = 'synced';
+          if (d?.updatedAt) updatedMemo.updatedAt = d.updatedAt;
+          await localPutMemo(updatedMemo);
+          try { await refreshTags(); } catch { }
+          return { ok: true, memo: d };
+        }
+      } catch {
+        // オフライン — ローカルに保存済み
       }
-      return { ok: true, memo: d };
-    } catch (e: any) {
-      return { ok: false, error: e?.message || '更新中にエラーが発生しました' };
     }
+
+    return { ok: true, memo: updatedMemo };
   }
 
+  /**
+   * メモ削除 — ローカルDBで pending-delete マーク、オンラインならサーバーにも送信
+   */
   async deleteMemo(id: string): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const resp = await fetch(`${this.basePath}/memos`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        return { ok: false, error: err?.error || '削除に失敗しました。' };
+    await localMarkMemoDeleted(id);
+
+    if (navigator.onLine) {
+      try {
+        const resp = await fetch(`${this.basePath}/memos`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        if (resp.ok) {
+          // サーバーで削除成功 → ローカルも物理削除
+          const { deleteMemo: localDeleteById } = await import('../../sync/localDb');
+          await localDeleteById(id);
+          return { ok: true };
+        }
+      } catch {
+        // オフライン — ローカルでマーク済み
       }
-      return { ok: true };
-    } catch (e: any) {
-      return { ok: false, error: e?.message || '削除中にエラーが発生しました' };
     }
+
+    return { ok: true };
   }
 
   async getTrashedMemos(): Promise<any[]> {
     try {
-      const r = await fetch(`${this.basePath}/memos/trash`);
-      if (!r.ok) return [];
-      const d = await r.json();
-      return Array.isArray(d) ? d : [];
+      // ローカルDBから取得
+      const localTrashed = await localGetAllTrashedMemos();
+      if (localTrashed.length > 0) {
+        return localTrashed;
+      }
+
+      // ローカルが空ならサーバーから取得
+      if (navigator.onLine) {
+        const r = await fetch(`${this.basePath}/memos/trash`);
+        if (!r.ok) return [];
+        const d = await r.json();
+        return Array.isArray(d) ? d : [];
+      }
+
+      return [];
     } catch {
       return [];
     }
   }
 
   async restoreMemo(originalId: string): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const resp = await fetch(`${this.basePath}/memos/trash`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ originalId, action: 'restore' }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        return { ok: false, error: err?.error || '復元に失敗しました。' };
+    if (navigator.onLine) {
+      try {
+        const resp = await fetch(`${this.basePath}/memos/trash`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ originalId, action: 'restore' }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          return { ok: false, error: err?.error || '復元に失敗しました。' };
+        }
+        // 同期してローカルDBを更新
+        performSync().catch(console.error);
+        return { ok: true };
+      } catch (e: any) {
+        return { ok: false, error: e?.message || '復元中にエラーが発生しました' };
       }
-      return { ok: true };
-    } catch (e: any) {
-      return { ok: false, error: e?.message || '復元中にエラーが発生しました' };
     }
+
+    return { ok: false, error: 'オフライン中は復元できません' };
   }
 
   async permanentlyDeleteMemo(id: string): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const resp = await fetch(`${this.basePath}/memos/trash`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: 'permanent-delete' }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        return { ok: false, error: err?.error || '完全削除に失敗しました。' };
+    if (navigator.onLine) {
+      try {
+        const resp = await fetch(`${this.basePath}/memos/trash`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action: 'permanent-delete' }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          return { ok: false, error: err?.error || '完全削除に失敗しました。' };
+        }
+        // ローカルからも削除
+        await localDeleteTrashedMemo(id);
+        return { ok: true };
+      } catch (e: any) {
+        return { ok: false, error: e?.message || '完全削除中にエラーが発生しました' };
       }
-      return { ok: true };
-    } catch (e: any) {
-      return { ok: false, error: e?.message || '完全削除中にエラーが発生しました' };
     }
+
+    return { ok: false, error: 'オフライン中は完全削除できません' };
   }
 }
 

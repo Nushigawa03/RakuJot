@@ -1,0 +1,55 @@
+.sync-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: default;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+.sync-status-icon {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.sync-status-label {
+  line-height: 1;
+}
+
+/* ─── 状態別スタイル ─── */
+
+.sync-idle {
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.sync-syncing {
+  color: var(--color-primary, #3b82f6);
+}
+
+.sync-syncing .sync-status-icon {
+  animation: sync-spin 1s linear infinite;
+}
+
+.sync-offline {
+  color: var(--color-text-secondary, #9ca3af);
+  opacity: 0.8;
+}
+
+.sync-error {
+  color: var(--color-danger, #ef4444);
+}
+
+@keyframes sync-spin {
+  from {
+    display: inline-block;
+    transform: rotate(0deg);
+  }
+  to {
+    display: inline-block;
+    transform: rotate(360deg);
+  }
+}

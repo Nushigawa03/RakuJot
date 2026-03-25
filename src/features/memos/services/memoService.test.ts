@@ -5,6 +5,22 @@ import { MemoService } from './memoService';
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
+// localDb と syncService をモック（IndexedDB の代替）
+vi.mock('../../sync/localDb', () => ({
+  getAllMemos: vi.fn().mockResolvedValue([]),
+  getMemo: vi.fn().mockResolvedValue(undefined),
+  putMemo: vi.fn().mockResolvedValue(undefined),
+  deleteMemo: vi.fn().mockResolvedValue(undefined),
+  markMemoDeleted: vi.fn().mockResolvedValue(undefined),
+  getAllTrashedMemos: vi.fn().mockResolvedValue([]),
+  putTrashedMemo: vi.fn().mockResolvedValue(undefined),
+  deleteTrashedMemo: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../sync/syncService', () => ({
+  performSync: vi.fn().mockResolvedValue(undefined),
+}));
+
 // tagService と refreshTags をモック
 vi.mock('./tagService', () => ({
     tagService: {
@@ -18,6 +34,9 @@ vi.mock('./tagService', () => ({
 vi.mock('../utils/tagUtils', () => ({
     refreshTags: vi.fn().mockResolvedValue(undefined),
 }));
+
+// navigator.onLine をモック (テスト時はオンラインとみなす)
+Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
 
 describe('MemoService', () => {
     let memoService: MemoService;
@@ -86,7 +105,7 @@ describe('MemoService', () => {
             expect(result.memo).toEqual(newMemo);
         });
 
-        it('作成失敗時はエラーを返す', async () => {
+        it('サーバー失敗時でもローカル保存は成功する（オフラインファースト）', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: false,
                 json: () => Promise.resolve({ error: '保存に失敗しました' }),
@@ -98,8 +117,8 @@ describe('MemoService', () => {
                 tags: [],
             });
 
-            expect(result.ok).toBe(false);
-            expect(result.error).toBe('保存に失敗しました');
+            // オフラインファースト: ローカルDBには常に保存成功
+            expect(result.ok).toBe(true);
         });
     });
 
@@ -143,7 +162,7 @@ describe('MemoService', () => {
             expect(result.ok).toBe(true);
         });
 
-        it('削除失敗時はエラーを返す', async () => {
+        it('サーバー失敗時でもローカル削除は成功する（オフラインファースト）', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: false,
                 json: () => Promise.resolve({ error: '削除に失敗しました' }),
@@ -151,8 +170,8 @@ describe('MemoService', () => {
 
             const result = await memoService.deleteMemo('1');
 
-            expect(result.ok).toBe(false);
-            expect(result.error).toBe('削除に失敗しました');
+            // オフラインファースト: ローカルDBでは常にpending-deleteにマーク成功
+            expect(result.ok).toBe(true);
         });
     });
 

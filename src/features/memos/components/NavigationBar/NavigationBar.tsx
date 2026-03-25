@@ -8,6 +8,7 @@ import tagExpressionService from '../../services/tagExpressionService';
 import { useSmartSearch } from '../../hooks/useSmartSearch';
 import { searchService } from '../../services/searchService';
 import TagChipInline from '~/components/TagChipInline';
+import { SyncStatusIndicator } from '../../../sync/SyncStatusIndicator';
 
 interface NavigationBarProps {
   activeTextQuery?: string;
@@ -326,6 +327,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
                 </button>
               )}
             </div>
+            <SyncStatusIndicator />
             <button className="new-memo-button" onClick={() => setIsCreatingMemo(true)}>
               新規メモ (N)
             </button>
