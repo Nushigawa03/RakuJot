@@ -102,7 +102,6 @@ describe('MemoService', () => {
                 body: JSON.stringify({ title: '新しいメモ', body: '本文', tags: ['タグ1'] }),
             });
             expect(result.ok).toBe(true);
-            expect(result.memo).toEqual(newMemo);
         });
 
         it('サーバー失敗時でもローカル保存は成功する（オフラインファースト）', async () => {

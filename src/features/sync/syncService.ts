@@ -165,6 +165,14 @@ export const performSync = async (): Promise<void> => {
 
       // 4. 最終同期日時を更新
       await setLastSyncAt(result.syncedAt);
+
+      // 5. IDマッピングがあれば UI に通知（MemoList がリフレッシュできるように）
+      const idMapping: Array<{ localId: string; serverId: string }> = result.idMapping || [];
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('syncComplete', { detail: { idMapping } })
+        );
+      }
     }
 
     setState('idle');

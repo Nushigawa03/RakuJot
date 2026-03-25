@@ -84,6 +84,8 @@ export const action: ActionFunction = async ({ request }) => {
 
     // ─── 1. クライアントの pending changes をサーバーに適用 ───
     const errors: Array<{ type: string; id: string; error: string }> = [];
+    // ローカルID → サーバーIDのマッピング（pending-create で新規作成されたメモ用）
+    const idMapping: Array<{ localId: string; serverId: string }> = [];
 
     // Memo changes
     for (const memo of pendingChanges.memos) {
@@ -99,6 +101,8 @@ export const action: ActionFunction = async ({ request }) => {
               body: memo.body || "",
             },
           });
+          // ローカルID → サーバーIDのマッピングを記録
+          idMapping.push({ localId: memo.id, serverId: newMemo.id });
           // Compute embedding in background (non-blocking)
           computeMemoEmbedding({ title: newMemo.title, date: newMemo.date || "", body: newMemo.body || "" })
             .then(embedding => {
@@ -249,6 +253,7 @@ export const action: ActionFunction = async ({ request }) => {
         trashedMemos: serverTrashedMemos,
       },
       errors,
+      idMapping,
       syncedAt,
     });
   } catch (error) {

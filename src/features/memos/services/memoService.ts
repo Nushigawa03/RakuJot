@@ -18,13 +18,15 @@ export type AiResult = { title?: string; tags?: string[]; date?: string;[k: stri
 export type MemoPayload = { title: string; body: string; tags: string[]; date?: string };
 
 /**
- * ローカルID生成（cuid 互換のユニークID）
+ * ローカル用 UUID を生成。
+ * オフライン時のローカル保存専用。オンライン時はサーバーが正規IDを発行する。
  */
-const generateLocalId = (): string => {
-  const timestamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).substring(2, 10);
-  return `local_${timestamp}_${randomPart}`;
-};
+const generateId = (): string =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 
 export class MemoService {
   private basePath = '/api';
@@ -49,11 +51,15 @@ export class MemoService {
 
   /**
    * メモを作成 — ローカルDBに即座に保存、オンラインならバックグラウンド同期
+   *
+   * オンライン: サーバーがIDを発行し、ローカルをそのIDで更新
+   * オフライン: クライアントがUUIDを生成、同期時にサーバーが正規IDに置換
    */
   async createMemo(payload: MemoPayload): Promise<{ ok: boolean; memo?: any; error?: string }> {
     const now = new Date().toISOString();
+    const tempId = generateId();
     const localMemo: LocalMemo = {
-      id: generateLocalId(),
+      id: tempId,
       title: payload.title,
       date: payload.date || '',
       tags: payload.tags,
@@ -66,7 +72,7 @@ export class MemoService {
     // ローカルDBに保存
     await localPutMemo(localMemo);
 
-    // オンラインなら直接APIにも送信
+    // オンラインならサーバーにAPI送信（IDはサーバーが生成）
     if (navigator.onLine) {
       try {
         const resp = await fetch(`${this.basePath}/memos`, {
@@ -77,9 +83,9 @@ export class MemoService {
         if (resp.ok) {
           const serverMemo = await resp.json().catch(() => null);
           if (serverMemo?.id) {
-            // サーバーのIDでローカルを更新
+            // サーバーが発行したIDでローカルを置換
             const { deleteMemo: localDeleteById } = await import('../../sync/localDb');
-            await localDeleteById(localMemo.id);
+            await localDeleteById(tempId);
             await localPutMemo({
               ...localMemo,
               id: serverMemo.id,
@@ -92,7 +98,7 @@ export class MemoService {
           return { ok: true, memo: serverMemo };
         }
       } catch {
-        // ネットワークエラー — ローカルに保存済みなので OK
+        // ネットワークエラー — ローカルに保存済なので OK
       }
     }
 
