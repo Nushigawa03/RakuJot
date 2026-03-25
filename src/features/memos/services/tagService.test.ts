@@ -1,9 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TagService } from './tagService';
 
+// localDb と syncService をモック（IndexedDB の代替）
+vi.mock('../../sync/localDb', () => ({
+  getAllTags: vi.fn().mockResolvedValue([]),
+  putTag: vi.fn().mockResolvedValue(undefined),
+  deleteTag: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../sync/syncService', () => ({
+  performSync: vi.fn().mockResolvedValue(undefined),
+}));
+
 // fetch をモック
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
+
+// navigator.onLine をモック (テスト時はオンラインとみなす)
+Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
 
 describe('TagService', () => {
     let tagService: TagService;
@@ -97,7 +111,7 @@ describe('TagService', () => {
             expect(result).toEqual({ ok: true, tag: newTag });
         });
 
-        it('作成失敗時はエラーを返す', async () => {
+        it('サーバー失敗時でもローカル保存は成功する（オフラインファースト）', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: false,
                 json: () => Promise.resolve({ error: '作成エラー' }),
@@ -105,8 +119,8 @@ describe('TagService', () => {
 
             const result = await tagService.createTag('タグ');
 
-            expect(result.ok).toBe(false);
-            expect(result.error).toBe('作成エラー');
+            // オフラインファースト: ローカルDBには常に保存成功
+            expect(result.ok).toBe(true);
         });
 
         it('作成後にキャッシュをクリアする', async () => {

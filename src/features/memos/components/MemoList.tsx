@@ -62,8 +62,20 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
     };
 
     window.addEventListener('memoSaved', handleMemoSaved);
+    // 同期完了時にメモ一覧を再読み込み（ローカルID→サーバーID置換を反映）
+    const handleSyncComplete = async () => {
+      try {
+        await initializeTags();
+        const memosData = await memoService.getMemos();
+        setMemos(memosData);
+      } catch (e) {
+        console.error('同期後のリロードエラー:', e);
+      }
+    };
+    window.addEventListener('syncComplete', handleSyncComplete);
     return () => {
       window.removeEventListener('memoSaved', handleMemoSaved);
+      window.removeEventListener('syncComplete', handleSyncComplete);
     };
   }, []);
 

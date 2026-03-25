@@ -11,6 +11,12 @@ const config = defineConfig({
     }),
     tsconfigPaths(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      registerType: 'autoUpdate',
+      // SSR フレームワークでは auto 注入が動かないため手動登録
+      injectRegister: false,
       manifest: {
         name: "RakuJot - メモ管理アプリ",
         short_name: "RakuJot",
@@ -22,6 +28,37 @@ const config = defineConfig({
         start_url: "/",
         orientation: "portrait-primary",
         categories: ["productivity"],
+        icons: [
+          {
+            src: "/favicon.ico",
+            sizes: "32x32",
+            type: "image/x-icon",
+          },
+          {
+            src: "/logo-light.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/logo-light.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/logo-dark.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "maskable",
+          },
+          {
+            src: "/logo-dark.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+        ],
         screenshots: [
           {
             src: "/logo-light.png",
@@ -31,39 +68,12 @@ const config = defineConfig({
           },
         ],
       },
-      registerType: "autoUpdate",
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "google-fonts-cache",
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-            },
-          },
-          {
-            urlPattern: /^\/api\/.*/,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              networkTimeoutSeconds: 5,
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 5,
-              },
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: true,
         suppressWarnings: true,
-        navigateFallback: "index.html",
         type: "module",
       },
     }),

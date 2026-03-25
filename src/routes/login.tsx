@@ -4,6 +4,7 @@ import { Link, redirect, useLoaderData, useNavigate } from 'react-router';
 import type { LoaderFunction, MetaFunction } from 'react-router';
 import { getCurrentUser } from '~/features/auth/utils/authMode.server';
 import { getPublicAuthConfig } from '~/features/auth/config/authEnvironment.server';
+import { BiometricLoginButton } from '~/features/auth/components/BiometricAuthButton';
 
 type LoaderData = ReturnType<typeof getPublicAuthConfig>;
 
@@ -128,6 +129,23 @@ export default function LoginRoute() {
                                 Google 側の同意が完了すると、そのまま RakuJot に戻ります。
                             </p>
                         </>
+                    )}
+
+                    {/* 生体認証ログイン */}
+                    {!isDevMode && googleAuthAvailable && (
+                        <div className="mt-4">
+                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                                <hr className="flex-1 border-white/10" />
+                                <span>または</span>
+                                <hr className="flex-1 border-white/10" />
+                            </div>
+                            <div className="mt-3 flex justify-center">
+                                <BiometricLoginButton
+                                    onSuccess={() => navigate('/app')}
+                                    onError={(error) => setErrorMessage(error)}
+                                />
+                            </div>
+                        </div>
                     )}
 
                     {isSubmitting && <p className="mt-4 text-sm text-slate-300">ログインしています...</p>}

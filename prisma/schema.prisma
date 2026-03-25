@@ -26,6 +26,20 @@ model User {
   tags            Tag[]
   tagExpressions  TagExpression[]
   trashedMemos    TrashedMemo[]
+  webauthnCredentials WebAuthnCredential[]
+}
+
+model WebAuthnCredential {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId    String   @unique    // base64url encoded credential ID
+  publicKey       Bytes              // CBOR encoded public key
+  counter         BigInt   @default(0)
+  transports      String[]           // e.g. ["internal", "hybrid"]
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
 }
 
 model Memo {
