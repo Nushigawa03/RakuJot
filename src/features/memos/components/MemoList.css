@@ -72,6 +72,14 @@
   box-shadow: var(--shadow-sm);
 }
 
+.memo-list li.memo-item-async {
+  opacity: 0.92;
+}
+
+.memo-list li.memo-item-async .memo-title {
+  font-weight: var(--font-weight-medium);
+}
+
 /* Memo Date */
 .memo-date {
   flex: 0 0 100px;

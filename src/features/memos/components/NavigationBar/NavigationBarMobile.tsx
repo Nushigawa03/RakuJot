@@ -13,6 +13,13 @@ type Props = {
   onSettings?: () => void;
 };
 
+type AuthUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  picture: string | null;
+};
+
 const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
   const {
     isOrSearch,
@@ -23,6 +30,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
 
   const [isFocused, setIsFocused] = useState(false);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // スマート検索フック
@@ -57,6 +65,24 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
     searchService.fetchTags().then(setAvailableTags).catch((error) => {
       console.error('タグの取得エラー:', error);
     });
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          setAuthUser(null);
+          return;
+        }
+        const data = await res.json();
+        setAuthUser(data?.user ?? null);
+      } catch {
+        setAuthUser(null);
+      }
+    };
+
+    fetchCurrentUser();
   }, []);
 
   // サジェストからタグを選択
@@ -127,6 +153,22 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
 
   const stop = (e: React.MouseEvent) => {
     e.stopPropagation();
+  };
+
+  const handleUserButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!authUser) {
+      window.location.href = '/login';
+      return;
+    }
+
+    if (onSettings) {
+      onSettings();
+      return;
+    }
+
+    window.location.href = '/app/settings';
   };
 
   // Close detail when clicking/tapping outside the wrapped area.
@@ -214,10 +256,21 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
 
         <button
           className="nav-right"
-          onClick={(e) => { e.stopPropagation(); if (onSettings) onSettings(); else console.debug('settings clicked'); }}
-          aria-label="設定"
+          onClick={handleUserButtonClick}
+          aria-label={authUser ? 'ユーザー設定' : 'ログイン'}
+          title={authUser ? (authUser.name || authUser.email || 'ユーザー') : 'ログイン'}
         >
-          ⚙
+          {authUser?.picture ? (
+            <img
+              src={authUser.picture}
+              alt={authUser.name || 'ユーザー'}
+              className="nav-user-avatar"
+            />
+          ) : (
+            <span className="nav-user-fallback">
+              {authUser ? (authUser.name || authUser.email).slice(0, 1).toUpperCase() : '👤'}
+            </span>
+          )}
         </button>
       </div>
 

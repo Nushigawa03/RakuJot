@@ -40,6 +40,28 @@
   transform: scale(0.95);
 }
 
+.nav-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  display: block;
+}
+
+.nav-user-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-neutral-200);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
 /* Center Section */
 .nav-center {
   flex: 1 1 auto;

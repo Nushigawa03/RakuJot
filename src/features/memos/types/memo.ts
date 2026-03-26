@@ -3,6 +3,7 @@ export interface Memo {
   title: string;
   date?: string;
   tags: string[];
+  _syncStatus?: 'synced' | 'pending-create' | 'pending-update' | 'pending-delete';
   // precomputed tag ids that matched the current filter/query (used for UI highlighting)
   matchedTagIds?: string[];
   body?: string;

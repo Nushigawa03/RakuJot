@@ -256,6 +256,7 @@ export class MemoService {
           title: m.title,
           date: m.date,
           tags: m.tags,
+          _syncStatus: m._syncStatus,
           body: m.body,
           embedding: m.embedding,
           createdAt: m.createdAt,
@@ -272,6 +273,7 @@ export class MemoService {
 
         const memos = d.map((memo: any) => ({
           ...memo,
+          _syncStatus: 'synced' as const,
           tags: Array.isArray(memo.tags)
             ? memo.tags.map((t: any) => (typeof t === 'string' ? t : t.id))
             : []

@@ -10,33 +10,36 @@ import { getTagNameById, initializeTags } from "../utils/tagUtils";
 const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, textQuery, tagQuery }) => {
   // デバッグ用: タグを常に表示するかどうか
   const DEBUG_ALWAYS_SHOW_TAGS = false;
+  // 非同期（未同期）メモの見た目差分を有効化
+  const ENABLE_ASYNC_MEMO_VISUAL = true;
   const navigate = useNavigate();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortKey, setSortKey] = useState<"date" | "title">("date");
   const [memos, setMemos] = useState<Memo[]>([]);
-
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [, setTagCacheVersion] = useState(0);
 
   // 全データを一括で取得
   useEffect(() => {
+    const loadTagsInBackground = async () => {
+      try {
+        await initializeTags();
+        setTagCacheVersion((prev) => prev + 1);
+      } catch (error) {
+        console.error('タグの読み込みエラー:', error);
+      }
+    };
+
     const loadAllData = async () => {
       try {
-        setIsDataLoaded(false);
-
-        // タグを最初に初期化してから、並行して他のデータを取得
-        await initializeTags();
+        // メモ一覧を先に表示したいので、タグ初期化は待たずに並列で開始
+        loadTagsInBackground();
 
         const memosData = await memoService.getMemos();
 
         console.log("Number of memos:", memosData.length);
         setMemos(memosData);
-
-        // expression lists are no longer stored here
-
-        setIsDataLoaded(true);
       } catch (error) {
         console.error('データの読み込みエラー:', error);
-        setIsDataLoaded(true); // エラーでも表示する
       }
     };
 
@@ -47,7 +50,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
       const newMemo = event.detail;
       if (newMemo) {
         // 新しいタグが追加されている可能性があるので、タグ一覧を更新
-        await initializeTags();
+        await loadTagsInBackground();
         setMemos((prevMemos) => {
           // 既に存在するメモなら更新、なければ追加
           const existingIndex = prevMemos.findIndex((m) => m.id === newMemo.id);
@@ -65,7 +68,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
     // 同期完了時にメモ一覧を再読み込み（ローカルID→サーバーID置換を反映）
     const handleSyncComplete = async () => {
       try {
-        await initializeTags();
+        await loadTagsInBackground();
         const memosData = await memoService.getMemos();
         setMemos(memosData);
       } catch (e) {
@@ -95,14 +98,6 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   console.log("Tag query:", tagQuery);
   console.log("Processed memos:", sortedMemos.length);
 
-  if (!isDataLoaded) {
-    return (
-      <div className="memo-list">
-        <div className="memo-list-loading">データを読み込んでいます...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="memo-list">
       <div className="memo-list-header">
@@ -131,6 +126,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
         {sortedMemos.map((memo) => (
           <li
             key={memo.id}
+            className={ENABLE_ASYNC_MEMO_VISUAL && memo._syncStatus && memo._syncStatus !== 'synced' ? 'memo-item-async' : ''}
             onClick={() => navigate(`/app/edit/${memo.id}`)}
             onMouseEnter={() => {
               window.dispatchEvent(
