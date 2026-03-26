@@ -12,9 +12,8 @@ import UserMenu from '~/features/auth/components/UserMenu';
 
 const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
   const { activeExpression, activeQuery, handleExpressionClick } = useTagExpression(onFilterChange);
-  const [expressions, setExpressions] = useState<TagExpression[]>([]);
+  const [expressions, setExpressions] = useState<TagExpression[]>(() => tagExpressionService.getCachedExpressions());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   const getExpressionClassName = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
 
@@ -35,14 +34,19 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
 
   const loadData = async () => {
     try {
-      setIsLoading(true);
-      await initializeTags();
-      const exprs = await tagExpressionService.load();
-      setExpressions(exprs || []);
+      initializeTags().catch((error) => {
+        console.error('タグ初期化エラー:', error);
+      });
+
+      const localExprs = await tagExpressionService.loadLocal();
+      setExpressions(localExprs || []);
+
+      if (navigator.onLine) {
+        const latestExprs = await tagExpressionService.refreshFromServer();
+        setExpressions(latestExprs || localExprs || []);
+      }
     } catch (error) {
       console.error('TagExpression の読み込みエラー:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -93,42 +97,38 @@ const Sidebar: React.FC<SidebarProps> = ({ onFilterChange }) => {
       </div>
 
       <div className="sidebar-content">
-        {isLoading ? (
-          <div className="sidebar-loading">読み込み中...</div>
-        ) : (
-          <ul>
-            {expressions.filter(e => e.name).map((expr) => (
-              <li
-                key={expr.id}
-                className={`category ${expr.color ? 'has-color' : ''} ${activeExpression === expr.id ? 'active' : ''} ${expr.color ? `category-color--${getExpressionClassName(expr.id)}` : ''}`}
-                onClick={() => handleExpressionClick(expr)}
-              >
-                <span className="category-label">
-                  <span className="category-name">{expr.name}</span>
-                </span>
-              </li>
-            ))}
+        <ul>
+          {expressions.filter(e => e.name).map((expr) => (
+            <li
+              key={expr.id}
+              className={`category ${expr.color ? 'has-color' : ''} ${activeExpression === expr.id ? 'active' : ''} ${expr.color ? `category-color--${getExpressionClassName(expr.id)}` : ''}`}
+              onClick={() => handleExpressionClick(expr)}
+            >
+              <span className="category-label">
+                <span className="category-name">{expr.name}</span>
+              </span>
+            </li>
+          ))}
 
-            {expressions.filter(e => !e.name).map((expr) => (
-              <li
-                key={expr.id}
-                className={`filter ${activeExpression === expr.id ? 'active' : ''}`}
-                onClick={() => handleExpressionClick(expr)}
+          {expressions.filter(e => !e.name).map((expr) => (
+            <li
+              key={expr.id}
+              className={`filter ${activeExpression === expr.id ? 'active' : ''}`}
+              onClick={() => handleExpressionClick(expr)}
+            >
+              <span className="filter-name">
+                {formatLogicalText(generateExpressionName(expr.orTerms))}
+              </span>
+              <button
+                className="delete-filter-button"
+                onClick={(e) => handleDeleteExpression(expr.id, e)}
+                title="式を削除"
               >
-                <span className="filter-name">
-                  {formatLogicalText(generateExpressionName(expr.orTerms))}
-                </span>
-                <button
-                  className="delete-filter-button"
-                  onClick={(e) => handleDeleteExpression(expr.id, e)}
-                  title="式を削除"
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {activeQuery && (

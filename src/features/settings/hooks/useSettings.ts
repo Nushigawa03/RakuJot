@@ -7,7 +7,7 @@ import {
 } from '../settings';
 
 type SettingsApiResponse = {
-    settings: Pick<Settings, 'aiUsageEnabled'>;
+    settings: Pick<Settings, 'aiUsageEnabled' | 'detailSearchAlwaysVisible'>;
     hasStoredSettings: boolean;
 };
 
@@ -38,7 +38,7 @@ const saveLocalSettings = (settings: Settings) => {
     }
 };
 
-const persistServerSettings = async (settings: Partial<Pick<Settings, 'aiUsageEnabled'>>) => {
+const persistServerSettings = async (settings: Partial<Pick<Settings, 'aiUsageEnabled' | 'detailSearchAlwaysVisible'>>) => {
     const response = await fetch('/api/settings', {
         method: 'PATCH',
         headers: {
@@ -81,10 +81,20 @@ export function useSettings() {
                 setSettings(mergedSettings);
                 saveLocalSettings(mergedSettings);
 
-                if (!data.hasStoredSettings && typeof localSettings.aiUsageEnabled === 'boolean') {
-                    await persistServerSettings({
-                        aiUsageEnabled: localSettings.aiUsageEnabled,
-                    });
+                if (!data.hasStoredSettings) {
+                    const initialPatch: Partial<Pick<Settings, 'aiUsageEnabled' | 'detailSearchAlwaysVisible'>> = {};
+
+                    if (typeof localSettings.aiUsageEnabled === 'boolean') {
+                        initialPatch.aiUsageEnabled = localSettings.aiUsageEnabled;
+                    }
+
+                    if (typeof localSettings.detailSearchAlwaysVisible === 'boolean') {
+                        initialPatch.detailSearchAlwaysVisible = localSettings.detailSearchAlwaysVisible;
+                    }
+
+                    if (Object.keys(initialPatch).length > 0) {
+                        await persistServerSettings(initialPatch);
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load settings from server:', error);

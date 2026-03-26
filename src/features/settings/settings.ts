@@ -1,5 +1,6 @@
 export interface PersistedUserSettings {
     aiUsageEnabled: boolean;
+    detailSearchAlwaysVisible: boolean;
 }
 
 export interface LocalOnlySettings {
@@ -10,6 +11,7 @@ export interface Settings extends PersistedUserSettings, LocalOnlySettings {}
 
 export const DEFAULT_PERSISTED_USER_SETTINGS: PersistedUserSettings = {
     aiUsageEnabled: true,
+    detailSearchAlwaysVisible: false,
 };
 
 export const DEFAULT_LOCAL_ONLY_SETTINGS: LocalOnlySettings = {
@@ -23,7 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const SETTINGS_KEY = 'rakujot_user_settings';
 
-export const PERSISTED_SETTINGS_KEYS = ['aiUsageEnabled'] as const;
+export const PERSISTED_SETTINGS_KEYS = ['aiUsageEnabled', 'detailSearchAlwaysVisible'] as const;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -49,6 +51,10 @@ export const sanitizePersistedUserSettings = (
             typeof value.aiUsageEnabled === 'boolean'
                 ? value.aiUsageEnabled
                 : DEFAULT_PERSISTED_USER_SETTINGS.aiUsageEnabled,
+        detailSearchAlwaysVisible:
+            typeof value.detailSearchAlwaysVisible === 'boolean'
+                ? value.detailSearchAlwaysVisible
+                : DEFAULT_PERSISTED_USER_SETTINGS.detailSearchAlwaysVisible,
     };
 };
 
@@ -66,6 +72,13 @@ export const sanitizePersistedUserSettingsPatch = (
             return null;
         }
         patch.aiUsageEnabled = value.aiUsageEnabled;
+    }
+
+    if ('detailSearchAlwaysVisible' in value) {
+        if (typeof value.detailSearchAlwaysVisible !== 'boolean') {
+            return null;
+        }
+        patch.detailSearchAlwaysVisible = value.detailSearchAlwaysVisible;
     }
 
     return patch;

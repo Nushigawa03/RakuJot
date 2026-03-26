@@ -28,20 +28,32 @@ export const useSearchFilters = (
     const [textQuery, setTextQuery] = useState<string>('');
     const [queryEmbedding, setQueryEmbedding] = useState<number[] | undefined>(undefined);
     const [tagQuery, setTagQuery] = useState<SearchTag[]>([]);
-    const [expressions, setExpressions] = useState<TagExpression[]>([]);
+    const [expressions, setExpressions] = useState<TagExpression[]>(() => tagExpressionService.getCachedExpressions());
     const { activeExpression, handleExpressionClick } = useTagExpression((query) => setFilterQuery(query));
 
     // Load tag expressions
     useEffect(() => {
         const loadFiltersAndCategories = async () => {
             try {
-                const exprs = await tagExpressionService.load();
-                setExpressions(exprs as any);
+                const localExprs = await tagExpressionService.loadLocal();
+                setExpressions(localExprs as any);
+
+                if (navigator.onLine) {
+                    const latestExprs = await tagExpressionService.refreshFromServer();
+                    setExpressions(latestExprs as any);
+                }
             } catch (error) {
                 console.error('TagExpression の読み込みエラー:', error);
             }
         };
+
+        const onSyncComplete = () => {
+            loadFiltersAndCategories();
+        };
+
         loadFiltersAndCategories();
+        window.addEventListener('syncComplete', onSyncComplete);
+        return () => window.removeEventListener('syncComplete', onSyncComplete);
     }, []);
 
     // Generate embedding when textQuery changes (for Semantic Search)

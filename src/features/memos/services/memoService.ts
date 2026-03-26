@@ -2,6 +2,7 @@ import type { Memo } from "../types/memo";
 import { tagService } from './tagService';
 import { normalizeTagName } from '../utils/normalizeTagName';
 import { refreshTags } from '../utils/tagUtils';
+import { SETTINGS_KEY } from '../../settings/settings';
 import {
   getAllMemos as localGetAllMemos,
   putMemo as localPutMemo,
@@ -31,12 +32,30 @@ const generateId = (): string =>
 export class MemoService {
   private basePath = '/api';
 
+  private getPreferredGoogleApiKey(): string | undefined {
+    if (typeof window === 'undefined') return undefined;
+
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return undefined;
+      const parsed = JSON.parse(raw);
+      const key = typeof parsed?.googleApiKey === 'string' ? parsed.googleApiKey.trim() : '';
+      return key || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async callAi(content: string): Promise<AiResult> {
     try {
+      const preferredApiKey = this.getPreferredGoogleApiKey();
       const resp = await fetch(`${this.basePath}/memos/ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content.trim() }),
+        body: JSON.stringify({
+          content: content.trim(),
+          ...(preferredApiKey ? { googleApiKey: preferredApiKey } : {}),
+        }),
       });
       if (!resp.ok) return {};
       try {
@@ -191,10 +210,16 @@ export class MemoService {
 
   async suggestEditForContent(original: string, instruction: string, opts?: { tagLimit?: number }): Promise<MemoPayload> {
     try {
+      const preferredApiKey = this.getPreferredGoogleApiKey();
       const resp = await fetch(`${this.basePath}/memos/ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'edit', original: original || '', instruction: instruction || '' }),
+        body: JSON.stringify({
+          mode: 'edit',
+          original: original || '',
+          instruction: instruction || '',
+          ...(preferredApiKey ? { googleApiKey: preferredApiKey } : {}),
+        }),
       });
       let ai: AiResult & { body?: string } = {};
       if (resp.ok) {

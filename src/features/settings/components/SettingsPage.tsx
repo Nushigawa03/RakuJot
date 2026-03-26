@@ -88,6 +88,32 @@ const SettingsPage: React.FC = () => {
                     </div>
                 </section>
 
+                <section className="settings-section animate-slideInUp">
+                    <h2 className="settings-section-title">検索表示</h2>
+
+                    <div className="setting-item hover-lift">
+                        <div className="setting-item-info">
+                            <label htmlFor="detail-search-toggle" className="setting-item-label">
+                                詳細検索を常時表示
+                            </label>
+                            <p className="setting-item-description">
+                                オフの場合は「詳細」を押したときだけ開始日・終了日などの詳細条件を表示します。
+                            </p>
+                        </div>
+                        <div className="setting-item-control">
+                            <label className="rakujot-toggle">
+                                <input
+                                    type="checkbox"
+                                    id="detail-search-toggle"
+                                    checked={settings.detailSearchAlwaysVisible}
+                                    onChange={(e) => updateSetting('detailSearchAlwaysVisible', e.target.checked)}
+                                />
+                                <span className="rakujot-toggle-slider" />
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
                 {/* Additional setting sections can go here in the future */}
             </main>
         </div>

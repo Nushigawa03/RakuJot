@@ -8,6 +8,9 @@ export const action: ActionFunction = async ({ request }) => {
     const userId = await requireAuthenticatedUserId(request);
     const url = new URL(request.url);
     const data = await request.json();
+    const preferredApiKey = typeof data?.googleApiKey === 'string' && data.googleApiKey.trim()
+      ? data.googleApiKey.trim()
+      : undefined;
 
     // Check if this is an edit request (path ends with /edit or has edit flag)
     if (url.pathname.endsWith('/edit') || data?.mode === 'edit') {
@@ -22,7 +25,7 @@ export const action: ActionFunction = async ({ request }) => {
       console.debug('[api.memos.ai/edit] received instruction:', instruction);
       const tags = await getTags(userId);
       console.debug('[api.memos.ai/edit] tags count:', tags.length);
-      const ai = await aiMemoEditor(original, instruction, tags);
+      const ai = await aiMemoEditor(original, instruction, tags, preferredApiKey);
       console.debug('[api.memos.ai/edit] ai result:', ai);
       return Response.json(ai);
     } else {
@@ -35,7 +38,7 @@ export const action: ActionFunction = async ({ request }) => {
       console.debug('[api.memos.ai] received content:', content);
       const tags = await getTags(userId);
       console.debug('[api.memos.ai] tags count:', tags.length);
-      const ai = await aiMemoProcessor(content, tags);
+      const ai = await aiMemoProcessor(content, tags, preferredApiKey);
       console.debug('[api.memos.ai] ai result:', ai);
       return Response.json(ai);
     }

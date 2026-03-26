@@ -21,14 +21,48 @@ const generateLocalId = (): string => {
 };
 
 class TagExpressionService {
-  /**
-   * ローカルDB優先で TagExpression を読み込む
-   */
-  async load(): Promise<TagExpression[]> {
+  private cachedExpressions: TagExpression[] | null = null;
+
+  private fromLocal(local: LocalTagExpression[]): TagExpression[] {
+    return local.map(te => ({
+      id: te.id,
+      orTerms: te.orTerms,
+      name: te.name,
+      color: te.color,
+      icon: te.icon,
+      createdAt: te.createdAt,
+      updatedAt: te.updatedAt,
+    }));
+  }
+
+  getCachedExpressions(): TagExpression[] {
+    return this.cachedExpressions || [];
+  }
+
+  async loadLocal(): Promise<TagExpression[]> {
     try {
       const local = await localGetAllTagExpressions();
-      if (local.length > 0) {
-        return local.map(te => ({
+      const expressions = this.fromLocal(local);
+      this.cachedExpressions = expressions;
+      return expressions;
+    } catch {
+      return this.cachedExpressions || [];
+    }
+  }
+
+  async refreshFromServer(): Promise<TagExpression[]> {
+    if (!navigator.onLine) {
+      return this.cachedExpressions || this.loadLocal();
+    }
+
+    try {
+      const resp = await fetch('/api/tagExpressions');
+      if (!resp.ok) throw new Error('tagExpressions の取得に失敗しました');
+      const data = await resp.json();
+      const expressions = Array.isArray(data) ? (data as TagExpression[]) : [];
+
+      for (const te of expressions) {
+        await localPutTagExpression({
           id: te.id,
           orTerms: te.orTerms,
           name: te.name,
@@ -36,36 +70,27 @@ class TagExpressionService {
           icon: te.icon,
           createdAt: te.createdAt,
           updatedAt: te.updatedAt,
-        }));
+          _syncStatus: 'synced',
+        });
       }
 
-      // ローカルが空ならサーバーから取得
-      if (navigator.onLine) {
-        const resp = await fetch('/api/tagExpressions');
-        if (!resp.ok) throw new Error('tagExpressions の取得に失敗しました');
-        const data = await resp.json();
-        const expressions = data as TagExpression[];
-
-        // ローカルDBにキャッシュ
-        for (const te of expressions) {
-          await localPutTagExpression({
-            id: te.id,
-            orTerms: te.orTerms,
-            name: te.name,
-            color: te.color,
-            icon: te.icon,
-            createdAt: te.createdAt,
-            updatedAt: te.updatedAt,
-            _syncStatus: 'synced',
-          });
-        }
-
-        return expressions;
-      }
-
-      return [];
+      this.cachedExpressions = expressions;
+      return expressions;
     } catch {
-      return [];
+      return this.cachedExpressions || this.loadLocal();
+    }
+  }
+
+  /**
+   * ローカルDB優先で TagExpression を読み込む
+   */
+  async load(): Promise<TagExpression[]> {
+    try {
+      const local = await this.loadLocal();
+      if (local.length > 0) return local;
+      return this.refreshFromServer();
+    } catch {
+      return this.cachedExpressions || [];
     }
   }
 

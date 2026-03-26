@@ -1,9 +1,32 @@
+import { tagService } from './tagService';
+import { refreshTags } from '../utils/tagUtils';
+
 // タグAPIやパースAPIなどのサービスクラス
 export class SearchService {
   async fetchTags(): Promise<any[]> {
-    const response = await fetch('/api/tags');
-    if (!response.ok) throw new Error('タグの取得エラー');
-    return response.json();
+    try {
+      const localTags = await tagService.getTags();
+
+      // ローカルがあれば即返し、オンライン時は裏で更新
+      if (localTags.length > 0) {
+        if (navigator.onLine) {
+          refreshTags().catch((error) => {
+            console.warn('[searchService] タグのバックグラウンド更新に失敗:', error);
+          });
+        }
+        return localTags;
+      }
+
+      // ローカルが空の時のみオンライン取得を待つ
+      if (navigator.onLine) {
+        await refreshTags();
+        return tagService.getTags();
+      }
+
+      return localTags;
+    } catch {
+      return [];
+    }
   }
 
   async parseSearchQuery(text: string): Promise<{ start?: string, end?: string, tag?: string }> {

@@ -7,6 +7,7 @@ import { Tag } from '../../types/tags';
 import { useSmartSearch } from '../../hooks/useSmartSearch';
 import { searchService } from '../../services/searchService';
 import TagChipInline from '~/components/TagChipInline';
+import { useSettings } from '~/features/settings/hooks/useSettings';
 
 type Props = {
   onBack: () => void;
@@ -32,6 +33,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { settings } = useSettings();
 
   // スマート検索フック
   const {
@@ -286,6 +288,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
           onEndDateChange={setSelectedEndDate}
           onTagAdd={handleTagAdd}
           onClear={handleClearSearch}
+          alwaysExpanded={settings.detailSearchAlwaysVisible}
         />
       )}
     </div>

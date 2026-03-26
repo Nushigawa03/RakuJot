@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import ToggleSwitch from '~/components/ToggleSwitch';
 import DatePickerInput from '~/components/DatePickerInput';
 import './DetailSearch.css';
@@ -17,6 +17,7 @@ interface DetailSearchProps {
   onOrSearchToggle: () => void;
   onDetailSearchToggle: () => void;
   onClear?: () => void;
+  alwaysExpanded?: boolean;
 }
 
 const DetailSearch: React.FC<DetailSearchProps> = ({
@@ -33,11 +34,27 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
   onOrSearchToggle,
   onDetailSearchToggle,
   onClear,
+  alwaysExpanded = false,
 }) => {
+  const [isExpanded, setIsExpanded] = useState<boolean>(alwaysExpanded);
+
+  useEffect(() => {
+    setIsExpanded(alwaysExpanded);
+  }, [alwaysExpanded]);
+
   return (
     <div className="detail-search">
-      {/* <p>詳細検索オプション</p> */}
-      <div className="search-options">
+      <button
+        type="button"
+        className="detail-search-toggle"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        aria-expanded={isExpanded}
+      >
+        詳細
+      </button>
+
+      {isExpanded && (
+        <div className="search-options">
         {/* 日付検索 */}
         <DatePickerInput 
           label="開始日"
@@ -100,7 +117,8 @@ const DetailSearch: React.FC<DetailSearchProps> = ({
             </button>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

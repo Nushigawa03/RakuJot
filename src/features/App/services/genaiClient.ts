@@ -3,11 +3,26 @@ import { GoogleGenAI } from "@google/genai";
 // Centralized GenAI client for all AI calls.
 // Exports thin wrappers so other modules don't instantiate clients directly.
 
-const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
-if (!apiKey) {
+const defaultApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
+if (!defaultApiKey) {
   console.warn("[genaiClient] No API key found. Set GOOGLE_API_KEY or GEMINI_API_KEY environment variable.");
 }
-const genAI = new GoogleGenAI({ apiKey });
+
+const clientCache = new Map<string, GoogleGenAI>();
+
+const getClient = (apiKeyOverride?: string): GoogleGenAI => {
+  const resolvedApiKey = (apiKeyOverride || defaultApiKey || '').trim();
+  if (!resolvedApiKey) {
+    throw new Error('[genaiClient] No API key available');
+  }
+
+  const cached = clientCache.get(resolvedApiKey);
+  if (cached) return cached;
+
+  const client = new GoogleGenAI({ apiKey: resolvedApiKey });
+  clientCache.set(resolvedApiKey, client);
+  return client;
+};
 
 // Models to use in fallback order
 const MODEL_PRIMARY = 'gemini-2.5-flash-lite';
@@ -73,21 +88,25 @@ async function callWithFallback<T>(
 }
 
 export async function generateContent(params: any) {
-  const requestedModel = params?.model || DEFAULT_GENERATE_MODEL;
+  const { apiKey, ...rest } = params || {};
+  const client = getClient(apiKey);
+  const requestedModel = rest?.model || DEFAULT_GENERATE_MODEL;
 
   return callWithFallback(async (model) => {
-    const final = { ...params, model };
+    const final = { ...rest, model };
     // Use the existing client method which accepts the model in the params
-    return genAI.models.generateContent(final as any);
+    return client.models.generateContent(final as any);
   }, requestedModel);
 }
 
 export async function embedContent(params: any) {
+  const { apiKey, ...rest } = params || {};
+  const client = getClient(apiKey);
   // For embeddings, usually we stick to one model because dimensions must match.
   // Swapping embedding models on the fly is dangerous if the vector DB expects a specific dimension/latent space.
   // The user request specifically mentioned the generation models "Gemini ... -> Gemma ...".
   // I will NOT apply fallback to embeddings unless explicitly asked, as it breaks vector search compatibility.
   // But I will keep the code clean.
-  const final = { ...params, model: params?.model || DEFAULT_EMBED_MODEL };
-  return genAI.models.embedContent(final as any);
+  const final = { ...rest, model: rest?.model || DEFAULT_EMBED_MODEL };
+  return client.models.embedContent(final as any);
 }

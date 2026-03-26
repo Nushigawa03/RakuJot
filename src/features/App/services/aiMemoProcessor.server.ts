@@ -10,9 +10,9 @@ import type { Tag } from "~/features/memos/types/tags";
 export type AiResult = { title?: string; tags?: string[]; date?: string | null };
 
 // accept optional tags so caller can provide current tag list/descriptions
-export async function aiMemoProcessor(content: string, tags?: Tag[]): Promise<AiResult> {
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!GEMINI_API_KEY) {
+export async function aiMemoProcessor(content: string, tags?: Tag[], preferredApiKey?: string): Promise<AiResult> {
+  const effectiveApiKey = preferredApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!effectiveApiKey) {
     console.warn('GEMINI_API_KEY or GOOGLE_API_KEY not set; skipping AI processing');
     return {};
   }
@@ -25,6 +25,7 @@ export async function aiMemoProcessor(content: string, tags?: Tag[]): Promise<Ai
 
   try {
     const response = await generateContent({
+      apiKey: effectiveApiKey,
       model: 'gemini-2.5-flash-lite',
       // pass the user's content directly so the model input is exactly the memo text
       contents: content,
@@ -103,9 +104,9 @@ export async function aiMemoProcessor(content: string, tags?: Tag[]): Promise<Ai
  * AI editor for applying edit instructions to existing memo content.
  * Returns an object like: { title?: string, body?: string, tags?: string[], date?: string | null }
  */
-export async function aiMemoEditor(original: string, instruction: string, tags?: Tag[]): Promise<AiResult & { body?: string }> {
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!GEMINI_API_KEY) {
+export async function aiMemoEditor(original: string, instruction: string, tags?: Tag[], preferredApiKey?: string): Promise<AiResult & { body?: string }> {
+  const effectiveApiKey = preferredApiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!effectiveApiKey) {
     console.warn('GEMINI_API_KEY or GOOGLE_API_KEY not set; skipping AI processing');
     return {};
   }
@@ -121,6 +122,7 @@ export async function aiMemoEditor(original: string, instruction: string, tags?:
 
   try {
     const response = await generateContent({
+      apiKey: effectiveApiKey,
       model: 'gemini-2.5-flash-lite',
       contents: content,
       config: {

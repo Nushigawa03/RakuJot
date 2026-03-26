@@ -9,6 +9,7 @@ import { useSmartSearch } from '../../hooks/useSmartSearch';
 import { searchService } from '../../services/searchService';
 import TagChipInline from '~/components/TagChipInline';
 import { SyncStatusIndicator } from '../../../sync/SyncStatusIndicator';
+import { useSettings } from '~/features/settings/hooks/useSettings';
 
 interface NavigationBarProps {
   activeTextQuery?: string;
@@ -27,6 +28,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
   const [isSavingFilter, setIsSavingFilter] = useState(false);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { settings } = useSettings();
 
   // スマート検索フック
   const {
@@ -346,6 +348,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
               onCategorySelect={(category) => console.log('カテゴリ選択:', category)}
               onOrSearchToggle={toggleOrSearch}
               onDetailSearchToggle={toggleDetailSearch}
+              alwaysExpanded={settings.detailSearchAlwaysVisible}
             />
           )}
         </div>
