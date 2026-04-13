@@ -6,6 +6,7 @@
  * - オフライン時: ローカルDBに pending-* で書き込み
  * - オンライン復帰時: pending changes をサーバーに送信 → サーバーの全データで上書き
  * - 競合解決: Last-Write-Wins (updatedAt ベース)
+ * - 未ログイン時: 同期をスキップ（ローカルのみで動作）
  */
 
 import {
@@ -18,6 +19,11 @@ import {
   bulkReplaceTrashedMemos,
   getLastSyncAt,
   setLastSyncAt,
+  setCurrentUserId,
+  getCurrentUserId,
+  deleteUserDb,
+  migrateAnonymousToUser,
+  clearAnonymousData,
   type LocalMemo,
   type LocalTag,
   type LocalTagExpression,
@@ -25,7 +31,7 @@ import {
 } from './localDb';
 
 // ─── 同期状態 ────────────────────────────────────────
-export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
+export type SyncState = 'idle' | 'syncing' | 'offline' | 'error' | 'unauthenticated';
 
 type SyncListener = (state: SyncState) => void;
 
@@ -44,6 +50,47 @@ export const subscribeSyncState = (fn: SyncListener): (() => void) => {
   return () => listeners.delete(fn);
 };
 
+// ─── 認証状態 ────────────────────────────────────────
+let loggedInUserId: string | null = null;
+
+/**
+ * ログイン状態の設定
+ * ログイン後に呼び出して、ユーザーDBを使う
+ */
+export const setLoggedIn = async (userId: string): Promise<void> => {
+  loggedInUserId = userId;
+  setCurrentUserId(userId);
+
+  // 匿名DBからデータを移行
+  const migrated = await migrateAnonymousToUser(userId);
+  if (migrated) {
+    console.log('[sync] Migrated anonymous data to user DB');
+  }
+
+  // DBがユーザーのものに切り替わったので状態リセット
+  setState(navigator.onLine ? 'idle' : 'offline');
+};
+
+/**
+ * ログアウト状態の設定
+ * ユーザーDBを削除して匿名DBに戻す
+ */
+export const setLoggedOut = async (): Promise<void> => {
+  const prevUserId = loggedInUserId;
+  loggedInUserId = null;
+
+  // ユーザーDBを削除
+  if (prevUserId) {
+    await deleteUserDb(prevUserId);
+  }
+
+  // 匿名DBに切り替え
+  setCurrentUserId(null);
+  setState('unauthenticated');
+};
+
+export const isLoggedIn = (): boolean => loggedInUserId !== null;
+
 // ─── ネットワーク監視 ────────────────────────────────
 let initialized = false;
 
@@ -52,9 +99,14 @@ export const initSyncListeners = () => {
   initialized = true;
 
   window.addEventListener('online', () => {
-    setState('idle');
-    // オンライン復帰時に自動同期
-    performSync().catch(console.error);
+    if (loggedInUserId) {
+      setState('idle');
+      // オンライン復帰時に自動同期
+      performSync().catch(console.error);
+    } else {
+      // 未ログインでもofflineからは脱出
+      setState('unauthenticated');
+    }
   });
 
   window.addEventListener('offline', () => {
@@ -69,6 +121,12 @@ let syncing = false;
 export const performSync = async (): Promise<void> => {
   if (!navigator.onLine) {
     setState('offline');
+    return;
+  }
+
+  // 未ログイン時は同期をスキップ
+  if (!loggedInUserId) {
+    setState('unauthenticated');
     return;
   }
 
@@ -102,15 +160,32 @@ export const performSync = async (): Promise<void> => {
       }),
     });
 
+    // 401 = セッション切れ
+    if (resp.status === 401) {
+      loggedInUserId = null;
+      setState('unauthenticated');
+      return;
+    }
+
     if (!resp.ok) {
       throw new Error(`Sync failed: ${resp.status}`);
     }
 
     const result = await resp.json();
 
-    // 3. サーバーの全データでローカルを上書き
+    // 3. サーバーの全データでローカルを上書き（pending保護あり）
     if (result.serverData) {
       const { memos, tags, tagExpressions, trashedMemos } = result.serverData;
+
+      // idMapping を使ってローカルのtempIDメモを事前に削除
+      // これにより bulkReplaceMemos でpending保護されるのは新規作成のみ
+      const idMapping: Array<{ localId: string; serverId: string }> = result.idMapping || [];
+      if (idMapping.length > 0) {
+        const { deleteMemo: localDeleteById } = await import('./localDb');
+        for (const mapping of idMapping) {
+          await localDeleteById(mapping.localId);
+        }
+      }
 
       await Promise.all([
         bulkReplaceMemos(
@@ -167,7 +242,6 @@ export const performSync = async (): Promise<void> => {
       await setLastSyncAt(result.syncedAt);
 
       // 5. IDマッピングがあれば UI に通知（MemoList がリフレッシュできるように）
-      const idMapping: Array<{ localId: string; serverId: string }> = result.idMapping || [];
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('syncComplete', { detail: { idMapping } })
@@ -186,9 +260,16 @@ export const performSync = async (): Promise<void> => {
 
 /**
  * 初期同期（アプリ起動時）
+ * 必ず認証確認後に呼ぶこと
  */
 export const initialSync = async (): Promise<void> => {
   initSyncListeners();
+
+  if (!loggedInUserId) {
+    setState(navigator.onLine ? 'unauthenticated' : 'offline');
+    return;
+  }
+
   if (navigator.onLine) {
     await performSync();
   } else {

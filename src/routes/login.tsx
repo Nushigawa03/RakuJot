@@ -5,6 +5,7 @@ import type { LoaderFunction, MetaFunction } from 'react-router';
 import { getCurrentUser } from '~/features/auth/utils/authMode.server';
 import { getPublicAuthConfig } from '~/features/auth/config/authEnvironment.server';
 import { BiometricLoginButton } from '~/features/auth/components/BiometricAuthButton';
+import { setLoggedIn, performSync } from '~/features/sync/syncService';
 
 type LoaderData = ReturnType<typeof getPublicAuthConfig>;
 
@@ -58,6 +59,12 @@ export default function LoginRoute() {
 
             if (!res.ok) {
                 throw new Error(data.error || 'ログインに失敗しました。');
+            }
+
+            // ログイン成功：匿名データをユーザーDBに移行して同期
+            if (data.user?.id) {
+                await setLoggedIn(data.user.id);
+                performSync().catch(console.error);
             }
 
             navigate('/app');
@@ -140,8 +147,15 @@ export default function LoginRoute() {
                                 <hr className="flex-1 border-white/10" />
                             </div>
                             <div className="mt-3 flex justify-center">
-                                <BiometricLoginButton
-                                    onSuccess={() => navigate('/app')}
+                            <BiometricLoginButton
+                                    onSuccess={async (user?: any) => {
+                                        // 生体認証ログイン成功：匿名データを移行して同期
+                                        if (user?.id) {
+                                            await setLoggedIn(user.id);
+                                            performSync().catch(console.error);
+                                        }
+                                        navigate('/app');
+                                    }}
                                     onError={(error) => setErrorMessage(error)}
                                 />
                             </div>

@@ -6,6 +6,7 @@ import { useSearchFilters } from './useSearchFilters';
 vi.mock('../services/tagExpressionService', () => ({
     default: {
         load: vi.fn().mockResolvedValue([]),
+        getCachedExpressions: vi.fn().mockReturnValue([]),
     }
 }));
 

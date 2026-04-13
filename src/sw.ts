@@ -99,3 +99,13 @@ self.addEventListener('install', () => {
 self.addEventListener('activate', () => {
   self.clients.claim();
 });
+
+// ─── メッセージハンドラー ─────────────────────────────
+// ログアウト時にAPIキャッシュをクリアするため
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'CLEAR_API_CACHE') {
+    caches.delete('api-cache').catch(() => {});
+    caches.delete('pages-cache').catch(() => {});
+    caches.delete('rr-manifest-cache').catch(() => {});
+  }
+});

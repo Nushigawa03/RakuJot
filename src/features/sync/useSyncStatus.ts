@@ -18,5 +18,6 @@ export const useSyncStatus = () => {
     isSyncing: state === 'syncing',
     isError: state === 'error',
     isIdle: state === 'idle',
+    isUnauthenticated: state === 'unauthenticated',
   };
 };

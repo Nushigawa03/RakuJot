@@ -7,7 +7,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { getSessionSecret } from "~/features/auth/config/authEnvironment.server";
 
 const SESSION_COOKIE_NAME = "rakujot_session";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const SESSION_REFRESH_THRESHOLD = SESSION_MAX_AGE / 2; // 残り半分でリフレッシュ
 
 type SessionPayload = {
     userId: string;
@@ -90,7 +91,52 @@ export const getUserIdFromSession = (request: Request): string | null => {
     }
 
     const sessionData = decodePayload(payload);
-    return sessionData?.userId || null;
+    if (!sessionData?.userId) return null;
+
+    // セッション有効期限チェック
+    const ageMs = Date.now() - sessionData.createdAt;
+    if (ageMs > SESSION_MAX_AGE * 1000) {
+        return null; // 期限切れ
+    }
+
+    return sessionData.userId;
+};
+
+/**
+ * セッションのリフレッシュが必要かどうか判定
+ * 有効期限の半分以上を経過していればリフレッシュを推奨
+ */
+export const shouldRefreshSession = (request: Request): boolean => {
+    const cookieHeader = request.headers.get("Cookie");
+    if (!cookieHeader) return false;
+
+    const cookies = parseCookies(cookieHeader);
+    const sessionValue = cookies[SESSION_COOKIE_NAME];
+    if (!sessionValue) return false;
+
+    const [payload, signature] = sessionValue.split(".");
+    if (!payload || !signature || !isValidSignature(payload, signature)) {
+        return false;
+    }
+
+    const sessionData = decodePayload(payload);
+    if (!sessionData?.createdAt) return false;
+
+    const ageMs = Date.now() - sessionData.createdAt;
+    return ageMs > SESSION_REFRESH_THRESHOLD * 1000;
+};
+
+/**
+ * セッションをリフレッシュした Set-Cookie ヘッダーを返す
+ * リフレッシュ不要の場合は null を返す
+ */
+export const getRefreshSessionCookieHeader = (request: Request): string | null => {
+    const userId = getUserIdFromSession(request);
+    if (!userId || !shouldRefreshSession(request)) {
+        return null;
+    }
+    const newSession = createUserSession(userId);
+    return getSessionCookieHeader(newSession);
 };
 
 /**

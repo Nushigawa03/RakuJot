@@ -60,7 +60,11 @@ describe('MemoService', () => {
             const memos = await memoService.getMemos();
 
             expect(mockFetch).toHaveBeenCalledWith('/api/memos');
-            expect(memos).toEqual(mockMemos);
+            // getMemos はサーバーデータに _syncStatus: 'synced' を付与して返す
+            expect(memos).toEqual([
+                { ...mockMemos[0], _syncStatus: 'synced' },
+                { ...mockMemos[1], _syncStatus: 'synced' },
+            ]);
         });
 
         it('API失敗時は空配列を返す', async () => {

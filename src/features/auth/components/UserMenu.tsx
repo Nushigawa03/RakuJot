@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './UserMenu.css';
+import { setLoggedOut } from '~/features/sync/syncService';
 
 type User = {
     id: string;
@@ -45,7 +46,19 @@ const UserMenu: React.FC = () => {
 
     const handleLogout = async () => {
         try {
+            // 1. ユーザーDBを削除して匿名DBに切替
+            await setLoggedOut();
+
+            // 2. Service Worker の API キャッシュをクリア
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'CLEAR_API_CACHE',
+                });
+            }
+
+            // 3. サーバーのセッションを破棄
             await fetch('/api/auth/logout', { method: 'POST' });
+
             window.location.href = '/';
         } catch (error) {
             console.error('Logout failed:', error);

@@ -1,7 +1,8 @@
 import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
-import { initialSync } from "./features/sync/syncService";
+import { setLoggedIn, initialSync, initSyncListeners } from "./features/sync/syncService";
+import { setCurrentUserId } from "./features/sync/localDb";
 
 startTransition(() => {
   hydrateRoot(
@@ -40,7 +41,28 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       console.warn("[SW] Service Worker registration failed:", error);
     }
 
-    // 初期同期
-    initialSync().catch(console.error);
+    // ─── 認証確認後に初期同期 ─────────────────────────
+    initSyncListeners();
+
+    try {
+      if (navigator.onLine) {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user?.id) {
+            // ログイン済み → ユーザーDBに切り替え＆同期
+            await setLoggedIn(data.user.id);
+            await initialSync();
+            return;
+          }
+        }
+      }
+    } catch {
+      // ネットワークエラー → オフラインとして扱う
+    }
+
+    // 未ログインまたはオフライン → 匿名DBで動作
+    setCurrentUserId(null);
+    await initialSync();
   });
 }

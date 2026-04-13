@@ -2,6 +2,10 @@
  * IndexedDB ローカルデータベース
  * idb ライブラリを使った軽量ラッパー
  * オフライン時のデータ保持と同期状態管理を担う
+ *
+ * ユーザーごとに別のDB名を使用:
+ *   - ログイン済: rakujot-{userId}
+ *   - 未ログイン: rakujot-anonymous
  */
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
@@ -91,18 +95,43 @@ interface RakuJotDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'rakujot-local';
+const DB_PREFIX = 'rakujot';
+const ANONYMOUS_USER_ID = 'anonymous';
 const DB_VERSION = 1;
 
-let dbInstance: IDBPDatabase<RakuJotDB> | null = null;
+// ─── ユーザー管理 ────────────────────────────────────
+let currentUserId: string = ANONYMOUS_USER_ID;
+
+// ユーザーID毎にDBインスタンスをキャッシュ
+const dbInstances = new Map<string, IDBPDatabase<RakuJotDB>>();
 
 /**
- * データベース接続を取得（シングルトン）
+ * 現在のユーザーIDを設定
+ * DBインスタンスを切り替える（次の getDb() で新しいDBが開く）
  */
-export const getDb = async (): Promise<IDBPDatabase<RakuJotDB>> => {
-  if (dbInstance) return dbInstance;
+export const setCurrentUserId = (userId: string | null): void => {
+  const newId = userId || ANONYMOUS_USER_ID;
+  if (currentUserId !== newId) {
+    currentUserId = newId;
+  }
+};
 
-  dbInstance = await openDB<RakuJotDB>(DB_NAME, DB_VERSION, {
+/**
+ * 現在のユーザーIDを取得
+ */
+export const getCurrentUserId = (): string => currentUserId;
+
+/**
+ * ユーザーIDからDB名を取得
+ */
+const getDbName = (userId: string): string => `${DB_PREFIX}-${userId}`;
+
+/**
+ * 共通のDB作成ロジック
+ */
+const openUserDb = async (userId: string): Promise<IDBPDatabase<RakuJotDB>> => {
+  const dbName = getDbName(userId);
+  return openDB<RakuJotDB>(dbName, DB_VERSION, {
     upgrade(db) {
       // memos
       const memoStore = db.createObjectStore('memos', { keyPath: 'id' });
@@ -124,14 +153,25 @@ export const getDb = async (): Promise<IDBPDatabase<RakuJotDB>> => {
       db.createObjectStore('syncMeta', { keyPath: 'key' });
     },
   });
+};
 
-  return dbInstance;
+/**
+ * データベース接続を取得（ユーザー毎にキャッシュ）
+ */
+export const getDb = async (): Promise<IDBPDatabase<RakuJotDB>> => {
+  const existing = dbInstances.get(currentUserId);
+  if (existing) return existing;
+
+  const db = await openUserDb(currentUserId);
+  dbInstances.set(currentUserId, db);
+  return db;
 };
 
 // ─── テスト用ヘルパー ────────────────────────────────
 /** テスト時にDB接続をリセット */
 export const _resetDbInstance = () => {
-  dbInstance = null;
+  dbInstances.clear();
+  currentUserId = ANONYMOUS_USER_ID;
 };
 
 // ─── Memo CRUD ───────────────────────────────────────
@@ -253,35 +293,81 @@ export const setLastSyncAt = async (isoString: string): Promise<void> => {
 
 // ─── バルク操作 ──────────────────────────────────────
 /**
- * サーバーから取得した全データでローカルDBを上書き（初回同期用）
+ * サーバーから取得した全データでローカルDBを上書き
+ * ★改善: pending（未同期）のメモは保護する
  */
 export const bulkReplaceMemos = async (memos: LocalMemo[]): Promise<void> => {
   const db = await getDb();
   const tx = db.transaction('memos', 'readwrite');
+
+  // 既存のpendingメモを保護
+  const existing = await tx.store.getAll();
+  const pendingMemos = existing.filter(
+    (m) => m._syncStatus !== 'synced'
+  );
+
+  // 全クリアしてサーバーデータを書き込み
   await tx.store.clear();
   for (const memo of memos) {
     await tx.store.put(memo);
   }
+
+  // pendingメモを復元（サーバーにあるIDと重複する場合はサーバー版を優先）
+  for (const pending of pendingMemos) {
+    const existsInServer = memos.some((m) => m.id === pending.id);
+    if (!existsInServer) {
+      // サーバーにない = まだ同期されていない新規メモ
+      await tx.store.put(pending);
+    }
+    // サーバーにある場合: サーバー版が最新なのでそのまま
+  }
+
   await tx.done;
 };
 
 export const bulkReplaceTags = async (tags: LocalTag[]): Promise<void> => {
   const db = await getDb();
   const tx = db.transaction('tags', 'readwrite');
+
+  // 既存のpendingタグを保護
+  const existing = await tx.store.getAll();
+  const pendingTags = existing.filter((t) => t._syncStatus !== 'synced');
+
   await tx.store.clear();
   for (const tag of tags) {
     await tx.store.put(tag);
   }
+
+  for (const pending of pendingTags) {
+    const existsInServer = tags.some((t) => t.id === pending.id);
+    if (!existsInServer) {
+      await tx.store.put(pending);
+    }
+  }
+
   await tx.done;
 };
 
 export const bulkReplaceTagExpressions = async (tes: LocalTagExpression[]): Promise<void> => {
   const db = await getDb();
   const tx = db.transaction('tagExpressions', 'readwrite');
+
+  // 既存のpending TagExpressionを保護
+  const existing = await tx.store.getAll();
+  const pendingTes = existing.filter((te) => te._syncStatus !== 'synced');
+
   await tx.store.clear();
   for (const te of tes) {
     await tx.store.put(te);
   }
+
+  for (const pending of pendingTes) {
+    const existsInServer = tes.some((s) => s.id === pending.id);
+    if (!existsInServer) {
+      await tx.store.put(pending);
+    }
+  }
+
   await tx.done;
 };
 
@@ -296,7 +382,7 @@ export const bulkReplaceTrashedMemos = async (tms: LocalTrashedMemo[]): Promise<
 };
 
 /**
- * 全ローカルデータをクリア（ログアウト用）
+ * 現在のユーザーの全ローカルデータをクリア
  */
 export const clearAllLocalData = async (): Promise<void> => {
   const db = await getDb();
@@ -310,4 +396,146 @@ export const clearAllLocalData = async (): Promise<void> => {
   await tx.objectStore('trashedMemos').clear();
   await tx.objectStore('syncMeta').clear();
   await tx.done;
+};
+
+// ─── ユーザー切替 ────────────────────────────────────
+/**
+ * 匿名DBのデータをユーザーDBに移行
+ * pending-create のメモ/タグ/タグ式をすべてユーザーDBにコピー
+ */
+export const migrateAnonymousToUser = async (userId: string): Promise<boolean> => {
+  // 匿名DBを開く
+  let anonDb: IDBPDatabase<RakuJotDB>;
+  try {
+    anonDb = await openUserDb(ANONYMOUS_USER_ID);
+  } catch {
+    return false;
+  }
+
+  try {
+    const anonMemos = await anonDb.getAll('memos');
+    const anonTags = await anonDb.getAll('tags');
+    const anonTagExpressions = await anonDb.getAll('tagExpressions');
+
+    // 移行するデータがなければスキップ
+    if (anonMemos.length === 0 && anonTags.length === 0 && anonTagExpressions.length === 0) {
+      return false;
+    }
+
+    // ユーザーDBに切り替えて保存
+    const prevUserId = currentUserId;
+    setCurrentUserId(userId);
+    const userDb = await getDb();
+
+    // タグを移行
+    const tagTx = userDb.transaction('tags', 'readwrite');
+    for (const tag of anonTags) {
+      // 既存のタグと名前が重複しない場合のみ追加
+      const existingTags = await tagTx.store.getAll();
+      const dup = existingTags.find((t) => t.name === tag.name);
+      if (!dup) {
+        await tagTx.store.put(tag);
+      }
+    }
+    await tagTx.done;
+
+    // メモを移行
+    const memoTx = userDb.transaction('memos', 'readwrite');
+    for (const memo of anonMemos) {
+      // _syncStatusを維持してそのまま追加
+      await memoTx.store.put(memo);
+    }
+    await memoTx.done;
+
+    // タグ式を移行
+    const teTx = userDb.transaction('tagExpressions', 'readwrite');
+    for (const te of anonTagExpressions) {
+      await teTx.store.put(te);
+    }
+    await teTx.done;
+
+    // 匿名DBをクリア
+    await clearAnonymousData();
+
+    // ユーザーIDを戻す
+    setCurrentUserId(prevUserId);
+
+    return true; // データが移行された
+  } finally {
+    anonDb.close();
+    dbInstances.delete(ANONYMOUS_USER_ID);
+  }
+};
+
+/**
+ * 匿名DBのデータをクリア
+ */
+export const clearAnonymousData = async (): Promise<void> => {
+  let anonDb: IDBPDatabase<RakuJotDB>;
+  try {
+    anonDb = await openUserDb(ANONYMOUS_USER_ID);
+  } catch {
+    return;
+  }
+
+  try {
+    const tx = anonDb.transaction(
+      ['memos', 'tags', 'tagExpressions', 'trashedMemos', 'syncMeta'],
+      'readwrite'
+    );
+    await tx.objectStore('memos').clear();
+    await tx.objectStore('tags').clear();
+    await tx.objectStore('tagExpressions').clear();
+    await tx.objectStore('trashedMemos').clear();
+    await tx.objectStore('syncMeta').clear();
+    await tx.done;
+  } finally {
+    anonDb.close();
+    dbInstances.delete(ANONYMOUS_USER_ID);
+  }
+};
+
+/**
+ * ユーザーDBを削除（ログアウト時に使用）
+ * ※ IndexedDB 自体を削除
+ */
+export const deleteUserDb = async (userId: string): Promise<void> => {
+  // キャッシュから削除
+  const cached = dbInstances.get(userId);
+  if (cached) {
+    cached.close();
+    dbInstances.delete(userId);
+  }
+
+  // IndexedDBを削除
+  const dbName = getDbName(userId);
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(dbName);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => {
+      console.warn(`[localDb] DB deletion blocked: ${dbName}`);
+      resolve(); // ブロックされてもcontinue
+    };
+  });
+};
+
+/**
+ * 匿名DBにデータがあるかチェック
+ */
+export const hasAnonymousData = async (): Promise<boolean> => {
+  let anonDb: IDBPDatabase<RakuJotDB>;
+  try {
+    anonDb = await openUserDb(ANONYMOUS_USER_ID);
+  } catch {
+    return false;
+  }
+
+  try {
+    const memoCount = await anonDb.count('memos');
+    return memoCount > 0;
+  } finally {
+    anonDb.close();
+    dbInstances.delete(ANONYMOUS_USER_ID);
+  }
 };

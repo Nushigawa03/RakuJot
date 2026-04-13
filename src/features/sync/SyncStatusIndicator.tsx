@@ -10,12 +10,14 @@ import './SyncStatusIndicator.css';
 export const SyncStatusIndicator: React.FC = () => {
   const { syncState } = useSyncStatus();
 
-  const config = {
+  const configMap: Record<string, { icon: string; label: string; className: string }> = {
     idle: { icon: '🟢', label: 'オンライン', className: 'sync-idle' },
     syncing: { icon: '🔄', label: '同期中...', className: 'sync-syncing' },
     offline: { icon: '🔴', label: 'オフライン', className: 'sync-offline' },
     error: { icon: '⚠️', label: '同期エラー', className: 'sync-error' },
-  }[syncState];
+    unauthenticated: { icon: '👤', label: 'ローカルモード', className: 'sync-offline' },
+  };
+  const config = configMap[syncState] || configMap.offline;
 
   return (
     <div

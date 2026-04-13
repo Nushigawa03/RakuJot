@@ -8,6 +8,7 @@
 
 import type { ActionFunction } from "react-router";
 import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.server";
+import { getRefreshSessionCookieHeader } from "~/features/auth/utils/session.server";
 import { prisma } from "~/db.server";
 import { ensureTags } from "~/features/memos/models/tag.server";
 import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
@@ -233,7 +234,16 @@ export const action: ActionFunction = async ({ request }) => {
       }),
     ]);
 
-    return Response.json({
+    const responseHeaders: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    // セッションのsliding window: 古ければリフレッシュ
+    const refreshCookie = getRefreshSessionCookieHeader(request);
+    if (refreshCookie) {
+      responseHeaders['Set-Cookie'] = refreshCookie;
+    }
+
+    return new Response(JSON.stringify({
       serverData: {
         memos: serverMemos.map(serializeMemo),
         tags: serverTags.map((t: any) => ({
@@ -255,7 +265,7 @@ export const action: ActionFunction = async ({ request }) => {
       errors,
       idMapping,
       syncedAt,
-    });
+    }), { headers: responseHeaders });
   } catch (error) {
     if (error instanceof Response) {
       return error;
