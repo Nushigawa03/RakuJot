@@ -19,41 +19,36 @@ const Page: React.FC<PageProps> = ({ memo: initialMemo, availableTags: initialTa
   const [memo, setMemo] = useState(initialMemo);
   const [availableTags, setAvailableTags] = useState(initialTags);
 
-  // バックグラウンド同期完了時にローカルDBからメモを再取得
+  // バックグラウンド同期完了時にタグ一覧だけ更新
+  // メモ内容はユーザーが編集中なので上書きしない
+  // ただし、もしこのメモが新規作成で tempID だった場合、サーバーからの正規IDに置き換える
   useEffect(() => {
-    const handleSyncComplete = async () => {
+    const handleSyncComplete = async (event: any) => {
       try {
-        const { getMemo: localGetMemo, getAllTags: localGetAllTags } = await import(
+        const { getAllTags: localGetAllTags } = await import(
           '~/features/sync/localDb'
         );
-        const freshMemo = await localGetMemo(memo.id);
         const allTags = await localGetAllTags();
+        setAvailableTags(allTags.map((t) => ({ id: t.id, name: t.name })));
 
-        if (freshMemo) {
-          const tagIdToObj = new Map(allTags.map(t => [t.id, { id: t.id, name: t.name }]));
-          const memoTags = (freshMemo.tags || []).map((tagId: string) =>
-            tagIdToObj.get(tagId) || { id: tagId, name: tagId }
-          );
-          setMemo({
-            id: freshMemo.id,
-            title: freshMemo.title || '',
-            date: freshMemo.date || '',
-            tags: memoTags,
-            body: freshMemo.body || '',
-            embedding: freshMemo.embedding,
-            createdAt: freshMemo.createdAt,
-            updatedAt: freshMemo.updatedAt,
-          });
-          setAvailableTags(allTags.map((t) => ({ id: t.id, name: t.name })));
+        // 新規作成したメモのIDがサーバーによって発行された正規のIDに変わった場合
+        if (event.detail && Array.isArray(event.detail.idMapping)) {
+          const mapping = event.detail.idMapping.find((m: any) => m.localId === memo.id);
+          if (mapping) {
+            console.log(`[EditPage] Updating memo ID from ${mapping.localId} to ${mapping.serverId}`);
+            setMemo((prev: any) => ({ ...prev, id: mapping.serverId }));
+            // URLもこっそり書き換える
+            navigate(`/app/edit/${mapping.serverId}`, { replace: true });
+          }
         }
       } catch (e) {
-        console.error('[EditPage] syncComplete refresh failed:', e);
+        console.error('[EditPage] syncComplete tag refresh failed:', e);
       }
     };
 
     window.addEventListener('syncComplete', handleSyncComplete);
     return () => window.removeEventListener('syncComplete', handleSyncComplete);
-  }, [memo.id]);
+  }, [memo.id, navigate]);
 
   const handleSubmit = async (title: string, body: string, tags: string[], date: string): Promise<boolean> => {
     setError(null);

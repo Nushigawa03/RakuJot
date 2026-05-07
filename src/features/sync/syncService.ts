@@ -115,8 +115,9 @@ export const initSyncListeners = () => {
   });
 };
 
-// ─── 同期ロック ──────────────────────────────────────
+// ─── 同期ロック ──────────────────────────────────────────────────
 let syncing = false;
+let syncQueued = false; // 同期中に新たな変更があった場合のリトライフラグ
 
 // ─── メイン同期処理 ──────────────────────────────────
 export const performSync = async (): Promise<void> => {
@@ -125,13 +126,34 @@ export const performSync = async (): Promise<void> => {
     return;
   }
 
-  // 未ログイン時は同期をスキップ
+  // loggedInUserId が未設定の場合、サーバーに問い合わせて自動検出を試みる
+  // （entry.client.tsx の非同期auth完了前にsyncが呼ばれた場合のフォールバック）
   if (!loggedInUserId) {
-    setState('unauthenticated');
-    return;
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user?.id) {
+          await setLoggedIn(data.user.id);
+        } else {
+          setState('unauthenticated');
+          return;
+        }
+      } else {
+        setState('unauthenticated');
+        return;
+      }
+    } catch {
+      setState('unauthenticated');
+      return;
+    }
   }
 
-  if (syncing) return; // 二重実行防止
+  if (syncing) {
+    // 同期中に呼ばれた場合、現在の同期完了後に再実行を予約
+    syncQueued = true;
+    return;
+  }
   syncing = true;
 
   setState('syncing');
@@ -265,6 +287,15 @@ export const performSync = async (): Promise<void> => {
     setState('error');
   } finally {
     syncing = false;
+
+    // 同期中に新たな変更があった場合、再同期を実行
+    if (syncQueued) {
+      syncQueued = false;
+      // 少し待ってから再同期（連続呼び出しを防止）
+      setTimeout(() => {
+        performSync().catch(console.error);
+      }, 500);
+    }
   }
 };
 

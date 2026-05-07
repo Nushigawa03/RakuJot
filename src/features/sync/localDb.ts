@@ -295,16 +295,22 @@ export const setLastSyncAt = async (isoString: string): Promise<void> => {
 /**
  * サーバーから取得した全データでローカルDBを上書き
  * ★改善: pending（未同期）のメモは保護する
+ *   - サーバーにないpendingメモ = まだ未同期 → 復元
+ *   - サーバーにあるが、ローカルのpending版のupdatedAtが新しい
+ *     = 同期中にユーザーが再編集した → ローカル版を維持
  */
 export const bulkReplaceMemos = async (memos: LocalMemo[]): Promise<void> => {
   const db = await getDb();
   const tx = db.transaction('memos', 'readwrite');
 
-  // 既存のpendingメモを保護
+  // 既存のpendingメモを保護（トランザクション内で最新を取得）
   const existing = await tx.store.getAll();
   const pendingMemos = existing.filter(
     (m) => m._syncStatus !== 'synced'
   );
+
+  // サーバーデータをMapに変換（高速ルックアップ用）
+  const serverMemoMap = new Map(memos.map(m => [m.id, m]));
 
   // 全クリアしてサーバーデータを書き込み
   await tx.store.clear();
@@ -312,14 +318,23 @@ export const bulkReplaceMemos = async (memos: LocalMemo[]): Promise<void> => {
     await tx.store.put(memo);
   }
 
-  // pendingメモを復元（サーバーにあるIDと重複する場合はサーバー版を優先）
+  // pendingメモを復元
   for (const pending of pendingMemos) {
-    const existsInServer = memos.some((m) => m.id === pending.id);
-    if (!existsInServer) {
-      // サーバーにない = まだ同期されていない新規メモ
+    const serverVersion = serverMemoMap.get(pending.id);
+    if (!serverVersion) {
+      // サーバーにない = まだ同期されていない新規メモ → 復元
       await tx.store.put(pending);
+    } else {
+      // サーバーにある: ローカルのpending版がサーバー版より新しいか確認
+      // （同期中にユーザーが再編集した場合）
+      const localTime = new Date(pending.updatedAt).getTime();
+      const serverTime = new Date(serverVersion.updatedAt).getTime();
+      if (localTime > serverTime) {
+        // ローカルの方が新しい = 同期中に再編集された → ローカル版を維持
+        await tx.store.put(pending);
+      }
+      // サーバーの方が新しいか同じ = サーバー版が正 → そのまま
     }
-    // サーバーにある場合: サーバー版が最新なのでそのまま
   }
 
   await tx.done;
