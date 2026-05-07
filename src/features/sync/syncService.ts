@@ -13,6 +13,7 @@ import {
   getPendingMemos,
   getPendingTags,
   getPendingTagExpressions,
+  getAllTags,
   bulkReplaceMemos,
   bulkReplaceTags,
   bulkReplaceTagExpressions,
@@ -145,6 +146,15 @@ export const performSync = async (): Promise<void> => {
 
     const lastSyncAt = await getLastSyncAt();
 
+    // pendingMemos のタグIDをタグ名に変換（サーバーの ensureTags は名前を期待する）
+    const allTags = await getAllTags();
+    const tagIdToName = new Map(allTags.map(t => [t.id, t.name]));
+
+    const memosForSync = pendingMemos.map(m => ({
+      ...m,
+      tags: (m.tags || []).map(tagId => tagIdToName.get(tagId) || tagId),
+    }));
+
     // 2. サーバーに同期リクエスト送信
     const resp = await fetch('/api/sync', {
       method: 'POST',
@@ -152,7 +162,7 @@ export const performSync = async (): Promise<void> => {
       body: JSON.stringify({
         lastSyncAt,
         pendingChanges: {
-          memos: pendingMemos,
+          memos: memosForSync,
           tags: pendingTags,
           tagExpressions: pendingTagExpressions,
           trashedMemos: [], // トラッシュはサーバーが管理

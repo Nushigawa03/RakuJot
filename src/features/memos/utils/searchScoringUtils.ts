@@ -209,8 +209,10 @@ export function sortMemosByFuzzyScore(
     console.log(`[FuzzySearch] Sorting descending by score.`);
     console.groupEnd();
 
-    // スコア降順でソート（スコア0でも除外せず末尾に残す）
+    // スコア降順でソート、スコア0のメモは除外（検索に無関係なメモを排除）
     scoredMemos.sort((a, b) => b.searchScore - a.searchScore);
 
-    return scoredMemos.map(item => item.memo);
+    return scoredMemos
+        .filter(item => item.searchScore > 0)
+        .map(item => item.memo);
 }

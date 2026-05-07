@@ -26,54 +26,58 @@ export const loader: LoaderFunction = async ({ request, params }) => {
   return Response.json({ memo, availableTags });
 };
 
-// ─── クライアントローダー（オフライン時に IndexedDB から取得） ──
+// ─── クライアントローダー（ローカルDB優先・バックグラウンド同期） ──
 export const clientLoader = async ({ params, serverLoader }: ClientLoaderFunctionArgs) => {
-  // オンラインでもまず serverLoader を試し、サーバーにメモがなければ IndexedDB にフォールバック
-  if (navigator.onLine) {
-    try {
-      const data = await serverLoader<{ memo: any; availableTags: any[] }>();
-      // サーバーにメモがある場合のみ返す（404 時は { error: "..." } が返り memo は undefined）
-      if (data?.memo) {
-        return data;
-      }
-      // サーバーにメモがない → IndexedDB で探す（オフラインで作成されたメモの可能性）
-    } catch {
-      // サーバー応答失敗 → IndexedDB にフォールバック
-    }
-  }
-
-  // オフラインまたはサーバー失敗 → IndexedDB から読み込み
   const { getMemo: localGetMemo, getAllTags: localGetAllTags } = await import(
     "~/features/sync/localDb"
   );
 
+  // まずローカルDBからメモを取得（即座に表示）
   const memo = await localGetMemo(params.id!);
   const allTags = await localGetAllTags();
 
-  if (!memo) {
-    throw new Response("メモが見つかりません（オフライン）", { status: 404 });
+  if (memo) {
+    // ローカルにメモがある → 即座に返す
+    // オンラインならバックグラウンドで同期（syncCompleteイベントでUIが更新される）
+    if (navigator.onLine) {
+      import("~/features/sync/syncService").then(({ performSync }) => {
+        performSync().catch(console.error);
+      });
+    }
+
+    const tagIdToObj = new Map(allTags.map(t => [t.id, { id: t.id, name: t.name }]));
+    const memoTags = (memo.tags || []).map((tagId: string) =>
+      tagIdToObj.get(tagId) || { id: tagId, name: tagId }
+    );
+
+    return {
+      memo: {
+        id: memo.id,
+        title: memo.title || '',
+        date: memo.date || '',
+        tags: memoTags,
+        body: memo.body || '',
+        embedding: memo.embedding,
+        createdAt: memo.createdAt,
+        updatedAt: memo.updatedAt,
+      },
+      availableTags: allTags.map((t) => ({ id: t.id, name: t.name })),
+    };
   }
 
-  // タグIDを {id, name} オブジェクトに変換
-  // （useMemoForm は tags: {id, name}[] を期待する）
-  const tagIdToObj = new Map(allTags.map(t => [t.id, { id: t.id, name: t.name }]));
-  const memoTags = (memo.tags || []).map((tagId: string) =>
-    tagIdToObj.get(tagId) || { id: tagId, name: tagId }
-  );
+  // ローカルDBにメモがない → サーバーから取得を試みる
+  if (navigator.onLine) {
+    try {
+      const data = await serverLoader<{ memo: any; availableTags: any[] }>();
+      if (data?.memo) {
+        return data;
+      }
+    } catch {
+      // サーバー応答失敗
+    }
+  }
 
-  return {
-    memo: {
-      id: memo.id,
-      title: memo.title || '',
-      date: memo.date || '',
-      tags: memoTags,
-      body: memo.body || '',
-      embedding: memo.embedding,
-      createdAt: memo.createdAt,
-      updatedAt: memo.updatedAt,
-    },
-    availableTags: allTags.map((t) => ({ id: t.id, name: t.name })),
-  };
+  throw new Response("メモが見つかりません", { status: 404 });
 };
 
 clientLoader.hydrate = true as const;

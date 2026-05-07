@@ -8,7 +8,8 @@ export function parseFuzzyDate(input: string, preferEnd: boolean): string | null
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const lastDayOf = (y: number, mZeroBased: number) => new Date(y, mZeroBased + 1, 0).getDate();
 
-  const ymd = s.match(/^\d{4}年(?:\s*(\d{1,2})月(?:\s*(\d{1,2})日?)?)?$/);
+  // 和暦年月日: 2024年3月15日, 和暦年月: 2024年3月, 和暦年: 2024年
+  const ymd = s.match(/^(\d{4})年(?:\s*(\d{1,2})月(?:\s*(\d{1,2})日?)?)?$/);
   if (ymd) {
     const y = parseInt(ymd[1], 10);
     const m = ymd[2] ? parseInt(ymd[2], 10) : null;
@@ -41,12 +42,12 @@ export function parseFuzzyDate(input: string, preferEnd: boolean): string | null
     }
   }
 
-  if (/^去年$/.test(s)) {
-    const y = cy - 1;
-    return preferEnd ? `${y}-12-31` : `${y}-01-01`;
-  }
   if (/^一昨年$/.test(s)) {
     const y = cy - 2;
+    return preferEnd ? `${y}-12-31` : `${y}-01-01`;
+  }
+  if (/^去年$/.test(s)) {
+    const y = cy - 1;
     return preferEnd ? `${y}-12-31` : `${y}-01-01`;
   }
   if (/^今年$/.test(s)) {

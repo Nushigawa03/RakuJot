@@ -14,6 +14,7 @@ import { SearchTag } from '../types/searchTag';
 import { Tag } from '../types/tags';
 import { searchService } from '../services/searchService';
 import { buildDateQuery } from '../utils/dateUtils';
+import { clientParseSearch } from '../utils/clientSearchParser';
 
 // ========================================
 // Types
@@ -80,7 +81,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
         selectedStartDate !== null ||
         selectedEndDate !== null;
 
-    // AI解析をdebounceで呼び出し
+    // クライアント側パースをdebounceで実行（高速・オフライン対応）
     useEffect(() => {
         const query = tagSearch.searchQuery.trim();
 
@@ -95,35 +96,51 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
             clearTimeout(debounceTimer.current);
         }
 
-        // 500ms後にAI解析を実行
+        // 300ms後にクライアント側パースを実行
         debounceTimer.current = setTimeout(async () => {
             // 日付が既に設定されている場合はスキップ
             if (selectedStartDate || selectedEndDate) {
                 return;
             }
 
-            setIsParsing(true);
-            try {
-                const result = await searchService.parseSearchQuery(query);
+            // 1. まずクライアント側ヒューリスティックで即座にパース
+            const tagNames = availableTags.map(t => t.name);
+            const clientResult = clientParseSearch(query, tagNames);
+
+            if (clientResult.start || clientResult.end || clientResult.tag) {
                 setParsedPreview({
-                    start: result.start ?? null,
-                    end: result.end ?? null,
-                    tag: result.tag ?? null
+                    start: clientResult.start,
+                    end: clientResult.end,
+                    tag: clientResult.tag,
                 });
-            } catch (err) {
-                console.warn('[useSmartSearch] parse failed:', err);
-                setParsedPreview(null);
-            } finally {
-                setIsParsing(false);
+                return;
             }
-        }, 500);
+
+            // 2. クライアント側で解決できない場合のみサーバーAPIを呼ぶ
+            if (navigator.onLine) {
+                setIsParsing(true);
+                try {
+                    const result = await searchService.parseSearchQuery(query);
+                    setParsedPreview({
+                        start: result.start ?? null,
+                        end: result.end ?? null,
+                        tag: result.tag ?? null
+                    });
+                } catch (err) {
+                    console.warn('[useSmartSearch] parse failed:', err);
+                    setParsedPreview(null);
+                } finally {
+                    setIsParsing(false);
+                }
+            }
+        }, 300);
 
         return () => {
             if (debounceTimer.current) {
                 clearTimeout(debounceTimer.current);
             }
         };
-    }, [tagSearch.searchQuery, selectedStartDate, selectedEndDate]);
+    }, [tagSearch.searchQuery, selectedStartDate, selectedEndDate, availableTags]);
 
     // 検索実行
     const handleSearch = useCallback(async () => {
@@ -135,32 +152,45 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
         // パースプレビューがない場合でも、検索実行時にパースを試みる（即エンター対応）
         // 日付が未指定の場合のみパースを行う
         if (!selectedStartDate && !selectedEndDate && query) {
-            setIsParsing(true);
-            try {
-                // プレビューがあればそれを使用、なければAPIをコール
-                let result = parsedPreview;
-                if (!result) {
+            // まずクライアント側で即座にパース
+            const tagNames = availableTags.map(t => t.name);
+            let result = parsedPreview;
+            if (!result) {
+                const clientResult = clientParseSearch(query, tagNames);
+                if (clientResult.start || clientResult.end || clientResult.tag) {
+                    result = {
+                        start: clientResult.start,
+                        end: clientResult.end,
+                        tag: clientResult.tag,
+                    };
+                }
+            }
+
+            // クライアント側で解決できない場合のみサーバーAPIを呼ぶ
+            if (!result && navigator.onLine) {
+                setIsParsing(true);
+                try {
                     const apiResult = await searchService.parseSearchQuery(query);
                     result = {
                         start: apiResult.start ?? null,
                         end: apiResult.end ?? null,
                         tag: apiResult.tag ?? null
                     };
+                } catch (err) {
+                    console.warn('[handleSearch] parse failed:', err);
+                } finally {
+                    setIsParsing(false);
                 }
+            }
 
-                if (result) {
-                    if (result.start) effectiveStart = result.start;
-                    if (result.end) effectiveEnd = result.end;
-                    if (result.tag) effectiveTag = result.tag;
+            if (result) {
+                if (result.start) effectiveStart = result.start;
+                if (result.end) effectiveEnd = result.end;
+                if (result.tag) effectiveTag = result.tag;
 
-                    // UIにも反映（次回レンダリング用）
-                    if (result.start) setSelectedStartDate(result.start);
-                    if (result.end) setSelectedEndDate(result.end);
-                }
-            } catch (err) {
-                console.warn('[handleSearch] parse failed:', err);
-            } finally {
-                setIsParsing(false);
+                // UIにも反映（次回レンダリング用）
+                if (result.start) setSelectedStartDate(result.start);
+                if (result.end) setSelectedEndDate(result.end);
             }
         } else if (parsedPreview) {
             // 既にプレビューがある場合（debounce完了後）
@@ -227,9 +257,9 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
 
         // 1.5 抽出済みの文言を除去（AIやヒューリスティックで抽出された場合）
         if (effectiveStart || effectiveEnd || effectiveTag) {
-            // 日付キーワードの除去
+            // 日付キーワードの除去（長いパターンを先にマッチ）
             residualQuery = residualQuery.replace(
-                /(先々月|先月|来月|去年|今年|来年|今日|昨日|明日|\d{4}年\d{1,2}月|\d{4}年|\d{4}-\d{2}-\d{2}|春|夏|秋|冬)/g,
+                /(一昨年|先々月|先月|来月|去年|今年|来年|今日|昨日|明日|\d{4}年\d{1,2}月\d{1,2}日|\d{4}年\d{1,2}月|\d{4}年|\d{4}-\d{2}-\d{2}|春|夏|秋|冬)/g,
                 ''
             );
             // 単独で残った「の」や「に関する」などの助詞・接続表現を前後から除去

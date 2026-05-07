@@ -109,33 +109,10 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
 
     if (e.key === 'Enter') {
       console.log('[NavigationBar] Enter pressed with query:', searchQuery);
-      const input = searchQuery.trim();
-
-      if (!input) {
-        // Input is empty, but we allow Enter to trigger "Clear/Refresh" of search
-        handleSearch();
-        setSuggestions([]);
-        setShowSuggestions(false);
-        return;
-      }
-
-      const isExclude = input.startsWith('-');
-      const tagName = isExclude ? input.slice(1) : input;
-      const foundTag = findTagByName(tagName);
-
-      if (foundTag) {
-        // 既存タグの場合のみタグチップとして追加
-        handleTagAdd(input);
-        setSearchQuery('');
-        setSuggestions([]);
-        setShowSuggestions(false);
-      } else {
-        // 存在しないタグの場合はテキスト検索として残す（チップ化しない）
-        // 検索実行
-        handleSearch();
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
+      // 常にhandleSearchを呼ぶ（タグ解決はhandleSearch内で一元的に行う）
+      handleSearch();
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
     if (e.key === 'Backspace' && (!searchQuery || (e.target as HTMLInputElement).selectionStart === 0)) {
       // Backspaceキーでタグを削除（検索欄が空か、カーソルが先頭にある場合）
