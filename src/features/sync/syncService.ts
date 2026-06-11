@@ -229,7 +229,7 @@ export const performSync = async (): Promise<void> => {
       }));
 
       await Promise.all([
-        bulkReplaceMemos(serverMemos),
+        bulkReplaceMemos(serverMemos, idMapping),
         bulkReplaceTags(
           (tags || []).map((t: any): LocalTag => ({
             id: t.id,

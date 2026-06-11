@@ -7,6 +7,7 @@ import {
   replaceMemoId,
   markMemoDeleted,
   getPendingMemos,
+  getCanonicalMemoId,
   getAllTags,
   putTag,
   getPendingTags,
@@ -68,12 +69,13 @@ describe('localDb', () => {
       expect(memo?._syncStatus).toBe('pending-delete');
     });
 
-    it('markMemoDeleted: pending-create → 物理削除', async () => {
+    it('markMemoDeleted: pending-create → pending-delete に変更', async () => {
       await putMemo(makeMemo({ id: 'memo-1', _syncStatus: 'pending-create' }));
       await markMemoDeleted('memo-1');
 
       const memo = await getMemo('memo-1');
-      expect(memo).toBeUndefined();
+      expect(memo?._syncStatus).toBe('pending-delete');
+      expect(await getAllMemos()).toHaveLength(0);
     });
 
     it('getPendingMemos: synced 以外を返す', async () => {
@@ -202,6 +204,7 @@ describe('localDb', () => {
       const replaced = await getMemo('server-1');
       expect(replaced?.body).toBe('local newer');
       expect(replaced?._syncStatus).toBe('pending-update');
+      expect(await getCanonicalMemoId('temp-1')).toBe('server-1');
     });
 
     it('同期後にサーバーから消えた pending-delete メモを復元しない', async () => {
@@ -241,6 +244,32 @@ describe('localDb', () => {
       const retryMemo = await getMemo('memo-delete-retry');
       expect(retryMemo?._syncStatus).toBe('pending-delete');
       expect(await getPendingMemos()).toHaveLength(1);
+    });
+
+    it('作成同期中に削除された仮IDメモは正式IDへ削除状態を引き継ぐ', async () => {
+      const pendingDelete: LocalMemo = {
+        id: 'temp-delete',
+        title: '作成直後に削除',
+        tags: [],
+        createdAt: '2026-03-25T00:00:00Z',
+        updatedAt: '2026-03-25T00:00:00Z',
+        _syncStatus: 'pending-delete',
+      };
+      const serverMemo: LocalMemo = {
+        ...pendingDelete,
+        id: 'server-delete',
+        _syncStatus: 'synced',
+      };
+
+      await putMemo(pendingDelete);
+      await bulkReplaceMemos([serverMemo], [{ localId: 'temp-delete', serverId: 'server-delete' }]);
+      await replaceMemoId('temp-delete', serverMemo);
+
+      expect(await getMemo('temp-delete')).toBeUndefined();
+      expect(await getAllMemos()).toHaveLength(0);
+      const canonicalDelete = await getMemo('server-delete');
+      expect(canonicalDelete?._syncStatus).toBe('pending-delete');
+      expect(await getCanonicalMemoId('temp-delete')).toBe('server-delete');
     });
   });
 

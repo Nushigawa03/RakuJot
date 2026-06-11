@@ -99,6 +99,7 @@ const DB_PREFIX = 'rakujot';
 const ANONYMOUS_USER_ID = 'anonymous';
 const DB_VERSION = 1;
 const LAST_USER_ID_KEY = 'rakujot:last-user-id';
+const MEMO_ID_ALIASES_KEY = 'memoIdAliases';
 
 // ─── ユーザー管理 ────────────────────────────────────
 const readStoredUserId = (): string | null => {
@@ -242,6 +243,17 @@ export const replaceMemoId = async (
   if (!localMemo) {
     await tx.store.put(existingServerMemo || serverMemo);
     await tx.done;
+    await rememberMemoIdAlias(localId, serverMemo.id);
+    return;
+  }
+
+  if (localMemo._syncStatus === 'pending-delete') {
+    await tx.store.put({
+      ...(existingServerMemo || serverMemo),
+      _syncStatus: 'pending-delete',
+    });
+    await tx.done;
+    await rememberMemoIdAlias(localId, serverMemo.id);
     return;
   }
 
@@ -263,19 +275,15 @@ export const replaceMemoId = async (
   }
 
   await tx.done;
+  await rememberMemoIdAlias(localId, serverMemo.id);
 };
 
 export const markMemoDeleted = async (id: string): Promise<void> => {
   const db = await getDb();
   const memo = await db.get('memos', id);
   if (memo) {
-    // 未同期の新規作成なら物理削除
-    if (memo._syncStatus === 'pending-create') {
-      await db.delete('memos', id);
-    } else {
-      memo._syncStatus = 'pending-delete';
-      await db.put('memos', memo);
-    }
+    memo._syncStatus = 'pending-delete';
+    await db.put('memos', memo);
   }
 };
 
@@ -371,6 +379,45 @@ export const setLastSyncAt = async (isoString: string): Promise<void> => {
   await db.put('syncMeta', { key: 'lastSyncAt', value: isoString });
 };
 
+const getMemoIdAliases = async (): Promise<Record<string, string>> => {
+  const db = await getDb();
+  const meta = await db.get('syncMeta', MEMO_ID_ALIASES_KEY);
+  if (!meta?.value) return {};
+
+  try {
+    const parsed = JSON.parse(meta.value);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const setMemoIdAliases = async (aliases: Record<string, string>): Promise<void> => {
+  const db = await getDb();
+  await db.put('syncMeta', { key: MEMO_ID_ALIASES_KEY, value: JSON.stringify(aliases) });
+};
+
+const rememberMemoIdAlias = async (localId: string, serverId: string): Promise<void> => {
+  if (!localId || !serverId || localId === serverId) return;
+
+  const aliases = await getMemoIdAliases();
+  aliases[localId] = serverId;
+  await setMemoIdAliases(aliases);
+};
+
+export const getCanonicalMemoId = async (id: string): Promise<string> => {
+  const aliases = await getMemoIdAliases();
+  const seen = new Set<string>();
+  let current = id;
+
+  while (aliases[current] && !seen.has(current)) {
+    seen.add(current);
+    current = aliases[current];
+  }
+
+  return current;
+};
+
 // ─── バルク操作 ──────────────────────────────────────
 /**
  * サーバーから取得した全データでローカルDBを上書き
@@ -379,7 +426,10 @@ export const setLastSyncAt = async (isoString: string): Promise<void> => {
  *   - サーバーにあるが、ローカルのpending版のupdatedAtが新しい
  *     = 同期中にユーザーが再編集した → ローカル版を維持
  */
-export const bulkReplaceMemos = async (memos: LocalMemo[]): Promise<void> => {
+export const bulkReplaceMemos = async (
+  memos: LocalMemo[],
+  idMapping: Array<{ localId: string; serverId: string }> = []
+): Promise<void> => {
   const db = await getDb();
   const tx = db.transaction('memos', 'readwrite');
 
@@ -391,6 +441,7 @@ export const bulkReplaceMemos = async (memos: LocalMemo[]): Promise<void> => {
 
   // サーバーデータをMapに変換（高速ルックアップ用）
   const serverMemoMap = new Map(memos.map(m => [m.id, m]));
+  const mappedServerIdByLocalId = new Map(idMapping.map(m => [m.localId, m.serverId]));
 
   // 全クリアしてサーバーデータを書き込み
   await tx.store.clear();
@@ -400,7 +451,8 @@ export const bulkReplaceMemos = async (memos: LocalMemo[]): Promise<void> => {
 
   // pendingメモを復元
   for (const pending of pendingMemos) {
-    const serverVersion = serverMemoMap.get(pending.id);
+    const mappedServerId = mappedServerIdByLocalId.get(pending.id);
+    const serverVersion = serverMemoMap.get(mappedServerId || pending.id);
     if (pending._syncStatus === 'pending-delete') {
       // 削除がサーバーに反映済みなら、サーバーデータには含まれない。
       // その場合に復元すると削除したメモが同期後に復活してしまう。

@@ -10,6 +10,7 @@ import {
   getAllTrashedMemos as localGetAllTrashedMemos,
   putTrashedMemo as localPutTrashedMemo,
   deleteTrashedMemo as localDeleteTrashedMemo,
+  getCanonicalMemoId as localGetCanonicalMemoId,
   type LocalMemo,
   type LocalTrashedMemo,
 } from '../../sync/localDb';
@@ -337,15 +338,16 @@ export class MemoService {
    */
   async updateMemo(id: string, payload: MemoPayload): Promise<{ ok: boolean; memo?: any; error?: string }> {
     const now = new Date().toISOString();
+    const canonicalId = await localGetCanonicalMemoId(id);
 
     // タグ名をタグIDに変換
     const tagIds = await this.resolveTagNamesToIds(payload.tags);
 
     // ローカルDBを更新
     const { getMemo: localGetMemo } = await import('../../sync/localDb');
-    const existing = await localGetMemo(id);
+    const existing = await localGetMemo(canonicalId);
     const updatedMemo: LocalMemo = {
-      id,
+      id: canonicalId,
       title: payload.title,
       date: payload.date || '',
       tags: tagIds,
@@ -369,7 +371,8 @@ export class MemoService {
    * メモ削除 — ローカルDBで pending-delete マーク、オンラインならサーバーにも送信
    */
   async deleteMemo(id: string): Promise<{ ok: boolean; error?: string }> {
-    await localMarkMemoDeleted(id);
+    const canonicalId = await localGetCanonicalMemoId(id);
+    await localMarkMemoDeleted(canonicalId);
 
     // オンラインならバックグラウンドで同期（Sync APIがゴミ箱移動を処理）
     if (navigator.onLine) {

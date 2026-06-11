@@ -13,6 +13,7 @@ vi.mock('../../sync/localDb', () => ({
   putMemo: vi.fn().mockResolvedValue(undefined),
   deleteMemo: vi.fn().mockResolvedValue(undefined),
   markMemoDeleted: vi.fn().mockResolvedValue(undefined),
+  getCanonicalMemoId: vi.fn((id: string) => Promise.resolve(id)),
   getAllTrashedMemos: vi.fn().mockResolvedValue([]),
   putTrashedMemo: vi.fn().mockResolvedValue(undefined),
   deleteTrashedMemo: vi.fn().mockResolvedValue(undefined),
