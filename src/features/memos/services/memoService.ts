@@ -5,6 +5,7 @@ import { refreshTags } from '../utils/tagUtils';
 import { SETTINGS_KEY } from '../../settings/settings';
 import {
   getAllMemos as localGetAllMemos,
+  hasAnyMemoRecords as localHasAnyMemoRecords,
   putMemo as localPutMemo,
   markMemoDeleted as localMarkMemoDeleted,
   getAllTrashedMemos as localGetAllTrashedMemos,
@@ -299,6 +300,12 @@ export class MemoService {
           createdAt: m.createdAt,
           updatedAt: m.updatedAt,
         }));
+      }
+
+      // pending-delete だけが残っている場合、表示上は空でもローカルDBは空ではない。
+      // ここでサーバーを直接読むと、削除同期中のメモが一瞬だけ復活して見える。
+      if (await localHasAnyMemoRecords()) {
+        return [];
       }
 
       // ローカルDB が空の場合はサーバーから取得（初回）

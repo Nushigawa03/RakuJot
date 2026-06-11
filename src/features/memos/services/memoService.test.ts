@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoService } from './memoService';
 import { performSync } from '../../sync/syncService';
+import { hasAnyMemoRecords } from '../../sync/localDb';
 
 // fetch をモック
 const mockFetch = vi.fn();
@@ -9,6 +10,7 @@ globalThis.fetch = mockFetch;
 // localDb と syncService をモック（IndexedDB の代替）
 vi.mock('../../sync/localDb', () => ({
   getAllMemos: vi.fn().mockResolvedValue([]),
+  hasAnyMemoRecords: vi.fn().mockResolvedValue(false),
   getMemo: vi.fn().mockResolvedValue(undefined),
   putMemo: vi.fn().mockResolvedValue(undefined),
   deleteMemo: vi.fn().mockResolvedValue(undefined),
@@ -86,6 +88,15 @@ describe('MemoService', () => {
             const memos = await memoService.getMemos();
 
             expect(memos).toEqual([]);
+        });
+
+        it('pending-delete だけが残っている場合はサーバー取得で一時復活させない', async () => {
+            vi.mocked(hasAnyMemoRecords).mockResolvedValueOnce(true);
+
+            const memos = await memoService.getMemos();
+
+            expect(memos).toEqual([]);
+            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos');
         });
     });
 

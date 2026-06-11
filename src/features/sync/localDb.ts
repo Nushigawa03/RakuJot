@@ -214,6 +214,11 @@ export const getAllMemos = async (): Promise<LocalMemo[]> => {
   return all.filter((m) => m._syncStatus !== 'pending-delete');
 };
 
+export const hasAnyMemoRecords = async (): Promise<boolean> => {
+  const db = await getDb();
+  return (await db.count('memos')) > 0;
+};
+
 export const getMemo = async (id: string): Promise<LocalMemo | undefined> => {
   const db = await getDb();
   return db.get('memos', id);
