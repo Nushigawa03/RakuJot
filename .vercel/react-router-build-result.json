@@ -1,0 +1,546 @@
+{
+  "buildManifest": {
+    "serverBundles": {
+      "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0": {
+        "id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+        "file": "build/server/nodejs_eyJydW50aW1lIjoibm9kZWpzIn0/index.js",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    },
+    "routeIdToServerBundleId": {
+      "routes/api.auth.webauthn.register": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.auth.webauthn.login": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.tagExpressions": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.tagExpressions.$id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.auth.google": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.auth.logout": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.parseSearch": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.embeddings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.settings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/app.edit.$id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/app.settings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.auth.me": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/memos.trash": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/app._index": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.memos": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.memos.trash": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.memos.ai": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.tags": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.tags.$id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/api.sync": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/landing": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/_index": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "routes/login": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "src/root.tsx",
+        "path": "",
+        "config": {}
+      },
+      "routes/api.auth.webauthn.register": {
+        "id": "routes/api.auth.webauthn.register",
+        "parentId": "root",
+        "file": "src/routes/api.auth.webauthn.register.ts",
+        "path": "api/auth/webauthn/register",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.auth.webauthn.login": {
+        "id": "routes/api.auth.webauthn.login",
+        "parentId": "root",
+        "file": "src/routes/api.auth.webauthn.login.ts",
+        "path": "api/auth/webauthn/login",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.tagExpressions": {
+        "id": "routes/api.tagExpressions",
+        "parentId": "root",
+        "file": "src/routes/api.tagExpressions.ts",
+        "path": "api/tagExpressions",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.tagExpressions.$id": {
+        "id": "routes/api.tagExpressions.$id",
+        "parentId": "routes/api.tagExpressions",
+        "file": "src/routes/api.tagExpressions.$id.ts",
+        "path": ":id",
+        "config": {}
+      },
+      "routes/api.auth.google": {
+        "id": "routes/api.auth.google",
+        "parentId": "root",
+        "file": "src/routes/api.auth.google.ts",
+        "path": "api/auth/google",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.auth.logout": {
+        "id": "routes/api.auth.logout",
+        "parentId": "root",
+        "file": "src/routes/api.auth.logout.ts",
+        "path": "api/auth/logout",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.parseSearch": {
+        "id": "routes/api.parseSearch",
+        "parentId": "root",
+        "file": "src/routes/api.parseSearch.ts",
+        "path": "api/parseSearch",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.embeddings": {
+        "id": "routes/api.embeddings",
+        "parentId": "root",
+        "file": "src/routes/api.embeddings.ts",
+        "path": "api/embeddings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.settings": {
+        "id": "routes/api.settings",
+        "parentId": "root",
+        "file": "src/routes/api.settings.ts",
+        "path": "api/settings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/app.edit.$id": {
+        "id": "routes/app.edit.$id",
+        "parentId": "root",
+        "file": "src/routes/app.edit.$id.tsx",
+        "path": "app/edit/:id",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/app.settings": {
+        "id": "routes/app.settings",
+        "parentId": "root",
+        "file": "src/routes/app.settings.tsx",
+        "path": "app/settings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.auth.me": {
+        "id": "routes/api.auth.me",
+        "parentId": "root",
+        "file": "src/routes/api.auth.me.ts",
+        "path": "api/auth/me",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/memos.trash": {
+        "id": "routes/memos.trash",
+        "parentId": "root",
+        "file": "src/routes/memos.trash.tsx",
+        "path": "memos/trash",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/app._index": {
+        "id": "routes/app._index",
+        "parentId": "root",
+        "file": "src/routes/app._index.tsx",
+        "path": "app",
+        "index": true,
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.memos": {
+        "id": "routes/api.memos",
+        "parentId": "root",
+        "file": "src/routes/api.memos.ts",
+        "path": "api/memos",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.memos.trash": {
+        "id": "routes/api.memos.trash",
+        "parentId": "routes/api.memos",
+        "file": "src/routes/api.memos.trash.ts",
+        "path": "trash",
+        "config": {}
+      },
+      "routes/api.memos.ai": {
+        "id": "routes/api.memos.ai",
+        "parentId": "routes/api.memos",
+        "file": "src/routes/api.memos.ai.ts",
+        "path": "ai",
+        "config": {}
+      },
+      "routes/api.tags": {
+        "id": "routes/api.tags",
+        "parentId": "root",
+        "file": "src/routes/api.tags.ts",
+        "path": "api/tags",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/api.tags.$id": {
+        "id": "routes/api.tags.$id",
+        "parentId": "routes/api.tags",
+        "file": "src/routes/api.tags.$id.ts",
+        "path": ":id",
+        "config": {}
+      },
+      "routes/api.sync": {
+        "id": "routes/api.sync",
+        "parentId": "root",
+        "file": "src/routes/api.sync.ts",
+        "path": "api/sync",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/landing": {
+        "id": "routes/landing",
+        "parentId": "root",
+        "file": "src/routes/landing.tsx",
+        "path": "landing",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/_index": {
+        "id": "routes/_index",
+        "parentId": "root",
+        "file": "src/routes/_index.tsx",
+        "index": true,
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "routes/login": {
+        "id": "routes/login",
+        "parentId": "root",
+        "file": "src/routes/login.tsx",
+        "path": "login",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    }
+  },
+  "reactRouterConfig": {
+    "appDirectory": "G:/works/git/RakuJot/src",
+    "basename": "/",
+    "buildDirectory": "G:/works/git/RakuJot/build",
+    "future": {
+      "unstable_optimizeDeps": false,
+      "unstable_subResourceIntegrity": false,
+      "v8_middleware": false,
+      "v8_splitRouteModules": false,
+      "v8_viteEnvironmentApi": false
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "root.tsx",
+        "path": ""
+      },
+      "routes/api.auth.webauthn.register": {
+        "id": "routes/api.auth.webauthn.register",
+        "parentId": "root",
+        "file": "routes/api.auth.webauthn.register.ts",
+        "path": "api/auth/webauthn/register"
+      },
+      "routes/api.auth.webauthn.login": {
+        "id": "routes/api.auth.webauthn.login",
+        "parentId": "root",
+        "file": "routes/api.auth.webauthn.login.ts",
+        "path": "api/auth/webauthn/login"
+      },
+      "routes/api.tagExpressions": {
+        "id": "routes/api.tagExpressions",
+        "parentId": "root",
+        "file": "routes/api.tagExpressions.ts",
+        "path": "api/tagExpressions"
+      },
+      "routes/api.tagExpressions.$id": {
+        "id": "routes/api.tagExpressions.$id",
+        "parentId": "routes/api.tagExpressions",
+        "file": "routes/api.tagExpressions.$id.ts",
+        "path": ":id"
+      },
+      "routes/api.auth.google": {
+        "id": "routes/api.auth.google",
+        "parentId": "root",
+        "file": "routes/api.auth.google.ts",
+        "path": "api/auth/google"
+      },
+      "routes/api.auth.logout": {
+        "id": "routes/api.auth.logout",
+        "parentId": "root",
+        "file": "routes/api.auth.logout.ts",
+        "path": "api/auth/logout"
+      },
+      "routes/api.parseSearch": {
+        "id": "routes/api.parseSearch",
+        "parentId": "root",
+        "file": "routes/api.parseSearch.ts",
+        "path": "api/parseSearch"
+      },
+      "routes/api.embeddings": {
+        "id": "routes/api.embeddings",
+        "parentId": "root",
+        "file": "routes/api.embeddings.ts",
+        "path": "api/embeddings"
+      },
+      "routes/api.settings": {
+        "id": "routes/api.settings",
+        "parentId": "root",
+        "file": "routes/api.settings.ts",
+        "path": "api/settings"
+      },
+      "routes/app.edit.$id": {
+        "id": "routes/app.edit.$id",
+        "parentId": "root",
+        "file": "routes/app.edit.$id.tsx",
+        "path": "app/edit/:id"
+      },
+      "routes/app.settings": {
+        "id": "routes/app.settings",
+        "parentId": "root",
+        "file": "routes/app.settings.tsx",
+        "path": "app/settings"
+      },
+      "routes/api.auth.me": {
+        "id": "routes/api.auth.me",
+        "parentId": "root",
+        "file": "routes/api.auth.me.ts",
+        "path": "api/auth/me"
+      },
+      "routes/memos.trash": {
+        "id": "routes/memos.trash",
+        "parentId": "root",
+        "file": "routes/memos.trash.tsx",
+        "path": "memos/trash"
+      },
+      "routes/app._index": {
+        "id": "routes/app._index",
+        "parentId": "root",
+        "file": "routes/app._index.tsx",
+        "path": "app",
+        "index": true
+      },
+      "routes/api.memos": {
+        "id": "routes/api.memos",
+        "parentId": "root",
+        "file": "routes/api.memos.ts",
+        "path": "api/memos"
+      },
+      "routes/api.memos.trash": {
+        "id": "routes/api.memos.trash",
+        "parentId": "routes/api.memos",
+        "file": "routes/api.memos.trash.ts",
+        "path": "trash"
+      },
+      "routes/api.memos.ai": {
+        "id": "routes/api.memos.ai",
+        "parentId": "routes/api.memos",
+        "file": "routes/api.memos.ai.ts",
+        "path": "ai"
+      },
+      "routes/api.tags": {
+        "id": "routes/api.tags",
+        "parentId": "root",
+        "file": "routes/api.tags.ts",
+        "path": "api/tags"
+      },
+      "routes/api.tags.$id": {
+        "id": "routes/api.tags.$id",
+        "parentId": "routes/api.tags",
+        "file": "routes/api.tags.$id.ts",
+        "path": ":id"
+      },
+      "routes/api.sync": {
+        "id": "routes/api.sync",
+        "parentId": "root",
+        "file": "routes/api.sync.ts",
+        "path": "api/sync"
+      },
+      "routes/landing": {
+        "id": "routes/landing",
+        "parentId": "root",
+        "file": "routes/landing.tsx",
+        "path": "landing"
+      },
+      "routes/_index": {
+        "id": "routes/_index",
+        "parentId": "root",
+        "file": "routes/_index.tsx",
+        "index": true
+      },
+      "routes/login": {
+        "id": "routes/login",
+        "parentId": "root",
+        "file": "routes/login.tsx",
+        "path": "login"
+      }
+    },
+    "routeDiscovery": {
+      "mode": "initial"
+    },
+    "serverBuildFile": "index.js",
+    "serverModuleFormat": "esm",
+    "ssr": true,
+    "unstable_routeConfig": [
+      {
+        "id": "root",
+        "path": "",
+        "file": "root.tsx",
+        "children": [
+          {
+            "id": "routes/api.auth.webauthn.register",
+            "file": "routes/api.auth.webauthn.register.ts",
+            "path": "api/auth/webauthn/register"
+          },
+          {
+            "id": "routes/api.auth.webauthn.login",
+            "file": "routes/api.auth.webauthn.login.ts",
+            "path": "api/auth/webauthn/login"
+          },
+          {
+            "id": "routes/api.tagExpressions",
+            "file": "routes/api.tagExpressions.ts",
+            "path": "api/tagExpressions",
+            "children": [
+              {
+                "id": "routes/api.tagExpressions.$id",
+                "file": "routes/api.tagExpressions.$id.ts",
+                "path": ":id"
+              }
+            ]
+          },
+          {
+            "id": "routes/api.auth.google",
+            "file": "routes/api.auth.google.ts",
+            "path": "api/auth/google"
+          },
+          {
+            "id": "routes/api.auth.logout",
+            "file": "routes/api.auth.logout.ts",
+            "path": "api/auth/logout"
+          },
+          {
+            "id": "routes/api.parseSearch",
+            "file": "routes/api.parseSearch.ts",
+            "path": "api/parseSearch"
+          },
+          {
+            "id": "routes/api.embeddings",
+            "file": "routes/api.embeddings.ts",
+            "path": "api/embeddings"
+          },
+          {
+            "id": "routes/api.settings",
+            "file": "routes/api.settings.ts",
+            "path": "api/settings"
+          },
+          {
+            "id": "routes/app.edit.$id",
+            "file": "routes/app.edit.$id.tsx",
+            "path": "app/edit/:id"
+          },
+          {
+            "id": "routes/app.settings",
+            "file": "routes/app.settings.tsx",
+            "path": "app/settings"
+          },
+          {
+            "id": "routes/api.auth.me",
+            "file": "routes/api.auth.me.ts",
+            "path": "api/auth/me"
+          },
+          {
+            "id": "routes/memos.trash",
+            "file": "routes/memos.trash.tsx",
+            "path": "memos/trash"
+          },
+          {
+            "id": "routes/app._index",
+            "file": "routes/app._index.tsx",
+            "path": "app",
+            "index": true
+          },
+          {
+            "id": "routes/api.memos",
+            "file": "routes/api.memos.ts",
+            "path": "api/memos",
+            "children": [
+              {
+                "id": "routes/api.memos.trash",
+                "file": "routes/api.memos.trash.ts",
+                "path": "trash"
+              },
+              {
+                "id": "routes/api.memos.ai",
+                "file": "routes/api.memos.ai.ts",
+                "path": "ai"
+              }
+            ]
+          },
+          {
+            "id": "routes/api.tags",
+            "file": "routes/api.tags.ts",
+            "path": "api/tags",
+            "children": [
+              {
+                "id": "routes/api.tags.$id",
+                "file": "routes/api.tags.$id.ts",
+                "path": ":id"
+              }
+            ]
+          },
+          {
+            "id": "routes/api.sync",
+            "file": "routes/api.sync.ts",
+            "path": "api/sync"
+          },
+          {
+            "id": "routes/landing",
+            "file": "routes/landing.tsx",
+            "path": "landing"
+          },
+          {
+            "id": "routes/_index",
+            "file": "routes/_index.tsx",
+            "index": true
+          },
+          {
+            "id": "routes/login",
+            "file": "routes/login.tsx",
+            "path": "login"
+          }
+        ]
+      }
+    ]
+  },
+  "viteConfig": {
+    "build": {
+      "assetsDir": "assets"
+    }
+  }
+}

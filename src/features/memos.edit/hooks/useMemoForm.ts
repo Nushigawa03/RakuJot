@@ -36,19 +36,27 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
     // History management
     const [history, setHistory] = useState<MemoData[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
+    const initialStateRef = useRef<MemoData>({
+        title: initialMemo.title || "",
+        body: initialMemo.body || "",
+        date: initialMemo.date || "",
+        tags: initialMemo.tags?.map(t => t.name) || []
+    });
+    const latestStateRef = useRef<MemoData>(initialStateRef.current);
+    const lastSubmittedJsonRef = useRef(JSON.stringify(initialStateRef.current));
+    const saveInFlightRef = useRef<Promise<boolean> | null>(null);
 
     // Initialize history
     useEffect(() => {
-        const initial: MemoData = {
-            title: initialMemo.title || "",
-            body: initialMemo.body || "",
-            date: initialMemo.date || "",
-            tags: initialMemo.tags?.map(t => t.name) || []
-        };
+        const initial = initialStateRef.current;
         setHistory([initial]);
         setHistoryIndex(0);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once on mount
+
+    useEffect(() => {
+        latestStateRef.current = { title, body, date, tags: selectedTags };
+    }, [title, body, date, selectedTags]);
 
     // Auto-save & History Capture Effect
     useEffect(() => {
@@ -78,7 +86,7 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
                 setHistoryIndex(prev => prev + 1);
 
                 // 2. Persist to server
-                performSave(title, body, selectedTags, date);
+                void flushSave(currentState);
             }
         }, 1500); // 1.5s delay after typing stops
 
@@ -115,6 +123,12 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
         try {
             const ok = await onSubmit(targetTitle, targetBody, targetTags, targetDate);
             if (ok) {
+                lastSubmittedJsonRef.current = JSON.stringify({
+                    title: targetTitle,
+                    body: targetBody,
+                    date: targetDate,
+                    tags: targetTags
+                });
                 setLastSaved(new Date());
                 return true;
             }
@@ -126,6 +140,44 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
             setIsSaving(false);
         }
     };
+
+    const flushSave = useCallback((snapshot?: MemoData): Promise<boolean> => {
+        const data = snapshot ?? latestStateRef.current;
+        const json = JSON.stringify(data);
+        if (json === lastSubmittedJsonRef.current) {
+            return Promise.resolve(true);
+        }
+
+        const savePromise = performSave(data.title, data.body, data.tags, data.date);
+        saveInFlightRef.current = savePromise;
+        savePromise.finally(() => {
+            if (saveInFlightRef.current === savePromise) {
+                saveInFlightRef.current = null;
+            }
+        });
+        return savePromise;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const flushLatest = () => {
+            void flushSave();
+        };
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                flushLatest();
+            }
+        };
+
+        window.addEventListener('pagehide', flushLatest);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener('pagehide', flushLatest);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            flushLatest();
+        };
+    }, [flushSave]);
 
     const setAllState = (data: MemoData) => {
         setTitle(data.title);
@@ -142,7 +194,7 @@ export const useMemoForm = ({ initialMemo, onSubmit }: UseMemoFormProps) => {
             clearTimeout(undoRedoTimeoutRef.current);
         }
         undoRedoTimeoutRef.current = setTimeout(() => {
-            performSave(data.title, data.body, data.tags, data.date);
+            void flushSave(data);
         }, 500);
     };
 

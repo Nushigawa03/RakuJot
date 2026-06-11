@@ -1,10 +1,12 @@
 import {
   getAllTags as localGetAllTags,
   putTag as localPutTag,
+  markTagDeleted as localMarkTagDeleted,
   type LocalTag,
 } from '../../sync/localDb';
+import { performSync } from '../../sync/syncService';
 
-export type Tag = { id: string; name: string };
+export type Tag = { id: string; name: string; description?: string };
 
 /**
  * ローカルID生成
@@ -29,7 +31,7 @@ export class TagService {
       // ローカルDBから取得
       const localTags = await localGetAllTags();
       if (localTags.length > 0) {
-        this.cachedTags = localTags.map(t => ({ id: t.id, name: t.name }));
+        this.cachedTags = localTags.map(t => ({ id: t.id, name: t.name, description: t.description }));
         return this.cachedTags;
       }
 
@@ -45,6 +47,7 @@ export class TagService {
           await localPutTag({
             id: tag.id,
             name: tag.name,
+            description: tag.description,
             _syncStatus: 'synced',
           });
         }
@@ -77,36 +80,46 @@ export class TagService {
     await localPutTag(localTag);
     this.clearCache();
 
-    // オンラインならサーバーにも送信
+    // オンラインなら同期サービスに任せる。通常API直叩きと二重化しない。
     if (navigator.onLine) {
-      try {
-        const resp = await fetch(`${this.basePath}/tags`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description }),
-        });
-        if (resp.ok) {
-          const d = await resp.json();
-          const serverTag = d?.tag ? { id: d.tag.id, name: d.tag.name } : undefined;
-          if (serverTag) {
-            // サーバーのIDでローカルを更新
-            const { deleteTag: localDeleteById } = await import('../../sync/localDb');
-            await localDeleteById(localTag.id);
-            await localPutTag({
-              id: serverTag.id,
-              name: serverTag.name,
-              _syncStatus: 'synced',
-            });
-            this.clearCache();
-            return { ok: true, tag: serverTag };
-          }
-        }
-      } catch {
-        // オフライン — ローカルに保存済み
-      }
+      performSync().catch(console.error);
     }
 
-    return { ok: true, tag: { id: localTag.id, name: localTag.name } };
+    return { ok: true, tag: { id: localTag.id, name: localTag.name, description: localTag.description } };
+  }
+
+  async updateTag(id: string, data: { name?: string; description?: string }): Promise<{ ok: boolean; tag?: Tag; error?: string }> {
+    const existing = (await localGetAllTags()).find((tag) => tag.id === id);
+    if (!existing) {
+      return { ok: false, error: 'タグが見つかりません' };
+    }
+
+    const updated: LocalTag = {
+      ...existing,
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
+      _syncStatus: existing._syncStatus === 'pending-create' ? 'pending-create' : 'pending-update',
+    };
+
+    await localPutTag(updated);
+    this.clearCache();
+
+    if (navigator.onLine) {
+      performSync().catch(console.error);
+    }
+
+    return { ok: true, tag: { id: updated.id, name: updated.name, description: updated.description } };
+  }
+
+  async deleteTag(id: string): Promise<{ ok: boolean; error?: string }> {
+    await localMarkTagDeleted(id);
+    this.clearCache();
+
+    if (navigator.onLine) {
+      performSync().catch(console.error);
+    }
+
+    return { ok: true };
   }
 }
 

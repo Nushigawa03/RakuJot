@@ -175,9 +175,28 @@ export const action: ActionFunction = async ({ request }) => {
           const existing = await prisma.tag.findFirst({ where: { name: tag.name, userId } });
           if (!existing) {
             await prisma.tag.create({
-              data: { userId, name: tag.name, description: tag.description || null },
+              data: { id: tag.id, userId, name: tag.name, description: tag.description || null },
             });
           }
+        } else if (tag._syncStatus === 'pending-update') {
+          await prisma.tag.updateMany({
+            where: { id: tag.id, userId },
+            data: {
+              name: tag.name,
+              description: tag.description || null,
+            },
+          });
+        } else if (tag._syncStatus === 'pending-delete') {
+          const memoCount = await prisma.memo.count({
+            where: {
+              userId,
+              tags: { some: { id: tag.id } },
+            },
+          });
+          if (memoCount > 0) {
+            throw new Error(`このタグは${memoCount}個のメモで使用されているため削除できません`);
+          }
+          await prisma.tag.deleteMany({ where: { id: tag.id, userId } });
         }
       } catch (e: any) {
         errors.push({ type: 'tag', id: tag.id, error: e?.message || '不明なエラー' });
@@ -190,6 +209,7 @@ export const action: ActionFunction = async ({ request }) => {
         if (te._syncStatus === 'pending-create') {
           await prisma.tagExpression.create({
             data: {
+              id: te.id,
               userId,
               orTerms: te.orTerms as any,
               name: te.name || null,

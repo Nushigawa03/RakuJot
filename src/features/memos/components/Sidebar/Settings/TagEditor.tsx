@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './TagEditor.css';
 import { Textarea } from '~/components';
 import { Tag } from '../../../types/tags';
+import { tagService } from '../../../services/tagService';
 
 interface TagEditorProps {
   onClose: () => void;
@@ -22,13 +23,8 @@ const TagEditor: React.FC = () => {
 
   const loadTags = async () => {
     try {
-      const response = await fetch('/api/tags');
-      if (response.ok) {
-        const tagsData = await response.json();
-        setTags(tagsData);
-      } else {
-        setError('タグの取得に失敗しました');
-      }
+      const tagsData = await tagService.getTags();
+      setTags(tagsData);
     } catch (error) {
       console.error('タグ取得エラー:', error);
       setError('タグの取得に失敗しました');
@@ -46,26 +42,15 @@ const TagEditor: React.FC = () => {
 
     try {
       const isEdit = editingTag !== null;
-      const url = '/api/tags';
-      const method = isEdit ? 'PUT' : 'POST';
-      const body = isEdit 
-        ? { id: editingTag.id, ...formData }
-        : formData;
+      const result = isEdit
+        ? await tagService.updateTag(editingTag.id, formData)
+        : await tagService.createTag(formData.name, formData.description);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (response.ok) {
+      if (result.ok) {
         await loadTags(); // リストを更新
         resetForm();
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || (isEdit ? 'タグの更新に失敗しました' : 'タグの作成に失敗しました'));
+        setError(result.error || (isEdit ? 'タグの更新に失敗しました' : 'タグの作成に失敗しました'));
       }
     } catch (error) {
       console.error('タグ保存エラー:', error);
@@ -90,19 +75,12 @@ const TagEditor: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/tags', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: tag.id }),
-      });
+      const result = await tagService.deleteTag(tag.id);
 
-      if (response.ok) {
+      if (result.ok) {
         await loadTags(); // リストを更新
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'タグの削除に失敗しました');
+        setError(result.error || 'タグの削除に失敗しました');
       }
     } catch (error) {
       console.error('タグ削除エラー:', error);

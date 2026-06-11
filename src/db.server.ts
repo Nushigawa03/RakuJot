@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-// @ts-expect-error type definition missing
 import pg from "pg";
 
 let prisma: PrismaClient;

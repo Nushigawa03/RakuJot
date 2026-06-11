@@ -4,6 +4,7 @@ import {
   getAllMemos,
   getMemo,
   putMemo,
+  replaceMemoId,
   markMemoDeleted,
   getPendingMemos,
   getAllTags,
@@ -157,6 +158,50 @@ describe('localDb', () => {
       const all = await getAllMemos();
       expect(all).toHaveLength(2);
       expect(all.map((m) => m.id).sort()).toEqual(['new-1', 'new-2']);
+    });
+
+    it('replaceMemoId: サーバー作成後も同期中の新しいローカル編集を維持する', async () => {
+      const makeReplaceMemo = (overrides: Partial<LocalMemo> = {}): LocalMemo => ({
+        id: 'memo-1',
+        title: 'テストメモ',
+        tags: [],
+        createdAt: '2026-03-25T00:00:00Z',
+        updatedAt: '2026-03-25T00:00:00Z',
+        _syncStatus: 'synced',
+        ...overrides,
+      });
+
+      await putMemo(makeReplaceMemo({
+        id: 'temp-1',
+        title: '編集中',
+        body: 'local newer',
+        createdAt: '2026-03-25T00:00:00Z',
+        updatedAt: '2026-03-25T00:00:02Z',
+        _syncStatus: 'pending-create',
+      }));
+
+      await putMemo(makeReplaceMemo({
+        id: 'server-1',
+        title: '作成時点',
+        body: 'server older',
+        createdAt: '2026-03-25T00:00:00Z',
+        updatedAt: '2026-03-25T00:00:01Z',
+        _syncStatus: 'synced',
+      }));
+
+      await replaceMemoId('temp-1', makeReplaceMemo({
+        id: 'server-1',
+        title: '作成時点',
+        body: 'server older',
+        createdAt: '2026-03-25T00:00:00Z',
+        updatedAt: '2026-03-25T00:00:01Z',
+        _syncStatus: 'synced',
+      }));
+
+      expect(await getMemo('temp-1')).toBeUndefined();
+      const replaced = await getMemo('server-1');
+      expect(replaced?.body).toBe('local newer');
+      expect(replaced?._syncStatus).toBe('pending-update');
     });
   });
 

@@ -14,6 +14,13 @@ export type PublicAuthConfig = {
     googleAuthAvailable: boolean;
 };
 
+const DEFAULT_DEV_USER_PROFILE: DevUserProfile = {
+    email: 'dev@example.com',
+    name: 'Dev User',
+    googleId: 'dev-google-id',
+    picture: null,
+};
+
 const getEnv = (key: string): string => {
     return process.env[key]?.trim() ?? '';
 };
@@ -37,9 +44,9 @@ export const isGoogleAuthAvailable = (): boolean => {
 
 export const getDevUserProfile = (): DevUserProfile => {
     return {
-        email: getRequiredEnv('AUTH_DEV_USER_EMAIL'),
-        name: getRequiredEnv('AUTH_DEV_USER_NAME'),
-        googleId: getRequiredEnv('AUTH_DEV_USER_GOOGLE_ID'),
+        email: getEnv('AUTH_DEV_USER_EMAIL') || DEFAULT_DEV_USER_PROFILE.email,
+        name: getEnv('AUTH_DEV_USER_NAME') || DEFAULT_DEV_USER_PROFILE.name,
+        googleId: getEnv('AUTH_DEV_USER_GOOGLE_ID') || DEFAULT_DEV_USER_PROFILE.googleId,
         picture: getEnv('AUTH_DEV_USER_PICTURE') || null,
     };
 };

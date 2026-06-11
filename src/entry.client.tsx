@@ -61,8 +61,11 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       // ネットワークエラー → オフラインとして扱う
     }
 
-    // 未ログインまたはオフライン → 匿名DBで動作
-    setCurrentUserId(null);
+    // オンラインで未ログインと確認できた場合だけ匿名DBに戻す。
+    // オフライン起動では localDb が記憶している前回ユーザーDBを使う。
+    if (navigator.onLine) {
+      setCurrentUserId(null);
+    }
     await initialSync();
   });
 }

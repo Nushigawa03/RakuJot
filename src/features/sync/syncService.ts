@@ -22,7 +22,9 @@ import {
   setLastSyncAt,
   setCurrentUserId,
   getCurrentUserId,
+  forgetStoredUserId,
   deleteUserDb,
+  replaceMemoId,
   migrateAnonymousToUser,
   clearAnonymousData,
   type LocalMemo,
@@ -87,6 +89,7 @@ export const setLoggedOut = async (): Promise<void> => {
 
   // 匿名DBに切り替え
   setCurrentUserId(null);
+  forgetStoredUserId();
   setState('unauthenticated');
 };
 
@@ -204,35 +207,29 @@ export const performSync = async (): Promise<void> => {
     }
 
     const result = await resp.json();
+    if (Array.isArray(result.errors) && result.errors.length > 0) {
+      throw new Error(`Sync partially failed: ${result.errors.map((e: any) => `${e.type}:${e.id}`).join(', ')}`);
+    }
 
     // 3. サーバーの全データでローカルを上書き（pending保護あり）
     if (result.serverData) {
       const { memos, tags, tagExpressions, trashedMemos } = result.serverData;
 
-      // idMapping を使ってローカルのtempIDメモを事前に削除
-      // これにより bulkReplaceMemos でpending保護されるのは新規作成のみ
       const idMapping: Array<{ localId: string; serverId: string }> = result.idMapping || [];
-      if (idMapping.length > 0) {
-        const { deleteMemo: localDeleteById } = await import('./localDb');
-        for (const mapping of idMapping) {
-          await localDeleteById(mapping.localId);
-        }
-      }
+      const serverMemos: LocalMemo[] = (memos || []).map((m: any): LocalMemo => ({
+        id: m.id,
+        title: m.title,
+        date: m.date,
+        tags: Array.isArray(m.tags) ? m.tags.map((t: any) => typeof t === 'string' ? t : t.id) : [],
+        body: m.body,
+        embedding: m.embedding,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+        _syncStatus: 'synced',
+      }));
 
       await Promise.all([
-        bulkReplaceMemos(
-          (memos || []).map((m: any): LocalMemo => ({
-            id: m.id,
-            title: m.title,
-            date: m.date,
-            tags: Array.isArray(m.tags) ? m.tags.map((t: any) => typeof t === 'string' ? t : t.id) : [],
-            body: m.body,
-            embedding: m.embedding,
-            createdAt: m.createdAt,
-            updatedAt: m.updatedAt,
-            _syncStatus: 'synced',
-          }))
-        ),
+        bulkReplaceMemos(serverMemos),
         bulkReplaceTags(
           (tags || []).map((t: any): LocalTag => ({
             id: t.id,
@@ -269,6 +266,14 @@ export const performSync = async (): Promise<void> => {
           }))
         ),
       ]);
+
+      const serverMemoMap = new Map(serverMemos.map((m) => [m.id, m]));
+      for (const mapping of idMapping) {
+        const serverMemo = serverMemoMap.get(mapping.serverId);
+        if (serverMemo) {
+          await replaceMemoId(mapping.localId, serverMemo);
+        }
+      }
 
       // 4. 最終同期日時を更新
       await setLastSyncAt(result.syncedAt);

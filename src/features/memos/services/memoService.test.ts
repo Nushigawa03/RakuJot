@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoService } from './memoService';
+import { performSync } from '../../sync/syncService';
 
 // fetch をモック
 const mockFetch = vi.fn();
@@ -36,7 +37,7 @@ vi.mock('../utils/tagUtils', () => ({
 }));
 
 // navigator.onLine をモック (テスト時はオンラインとみなす)
-Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
+Object.defineProperty(navigator, 'onLine', { value: true, writable: true, configurable: true });
 
 describe('MemoService', () => {
     let memoService: MemoService;
@@ -44,6 +45,7 @@ describe('MemoService', () => {
     beforeEach(() => {
         memoService = new MemoService();
         vi.clearAllMocks();
+        Object.defineProperty(navigator, 'onLine', { value: true, writable: true, configurable: true });
     });
 
     describe('getMemos', () => {
@@ -88,32 +90,18 @@ describe('MemoService', () => {
 
     describe('createMemo', () => {
         it('新しいメモを作成する', async () => {
-            const newMemo = { id: '3', title: '新しいメモ', body: '本文', tags: [] };
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(newMemo),
-            });
-
             const result = await memoService.createMemo({
                 title: '新しいメモ',
                 body: '本文',
                 tags: ['タグ1'],
             });
 
-            expect(mockFetch).toHaveBeenCalledWith('/api/memos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: '新しいメモ', body: '本文', tags: ['タグ1'] }),
-            });
+            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos', expect.anything());
+            expect(performSync).toHaveBeenCalled();
             expect(result.ok).toBe(true);
         });
 
         it('サーバー失敗時でもローカル保存は成功する（オフラインファースト）', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                json: () => Promise.resolve({ error: '保存に失敗しました' }),
-            });
-
             const result = await memoService.createMemo({
                 title: 'メモ',
                 body: '本文',
@@ -127,50 +115,28 @@ describe('MemoService', () => {
 
     describe('updateMemo', () => {
         it('メモを更新する', async () => {
-            const updatedMemo = { id: '1', title: '更新後', body: '更新本文', tags: [] };
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(updatedMemo),
-            });
-
             const result = await memoService.updateMemo('1', {
                 title: '更新後',
                 body: '更新本文',
                 tags: [],
             });
 
-            expect(mockFetch).toHaveBeenCalledWith('/api/memos', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: '1', title: '更新後', body: '更新本文', tags: [] }),
-            });
+            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos', expect.anything());
+            expect(performSync).toHaveBeenCalled();
             expect(result.ok).toBe(true);
         });
     });
 
     describe('deleteMemo', () => {
         it('メモを削除する', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({}),
-            });
-
             const result = await memoService.deleteMemo('1');
 
-            expect(mockFetch).toHaveBeenCalledWith('/api/memos', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: '1' }),
-            });
+            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos', expect.anything());
+            expect(performSync).toHaveBeenCalled();
             expect(result.ok).toBe(true);
         });
 
         it('サーバー失敗時でもローカル削除は成功する（オフラインファースト）', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                json: () => Promise.resolve({ error: '削除に失敗しました' }),
-            });
-
             const result = await memoService.deleteMemo('1');
 
             // オフラインファースト: ローカルDBでは常にpending-deleteにマーク成功

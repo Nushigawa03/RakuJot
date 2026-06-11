@@ -48,13 +48,11 @@ const serializeMemo = (memo: any) => {
 
 export const getMemo = async (id: string, userId: string) => {
   try {
-    const memo = await prisma.memo.findUnique({ where: { id, userId }, include: { tags: true } });
+    const memo = await prisma.memo.findFirst({ where: { id, userId }, include: { tags: true } });
     return serializeMemo(memo);
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "メモの取得に失敗しました。" };
-  } finally {
-    await prisma.$disconnect();
   }
 };
 
@@ -190,8 +188,6 @@ export const deleteMemo = async (id: string, userId: string) => {
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "メモの削除に失敗しました。" };
-  } finally {
-    await prisma.$disconnect();
   }
 };
 
@@ -205,8 +201,6 @@ export const getTrashedMemos = async (userId: string) => {
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "ゴミ箱のメモ取得に失敗しました。" };
-  } finally {
-    await prisma.$disconnect();
   }
 };
 
@@ -254,8 +248,6 @@ export const restoreMemo = async (originalId: string, userId: string) => {
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "メモの復元に失敗しました。" };
-  } finally {
-    await prisma.$disconnect();
   }
 };
 
@@ -268,8 +260,6 @@ export const permanentlyDeleteMemo = async (id: string, userId: string) => {
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "メモの完全削除に失敗しました。" };
-  } finally {
-    await prisma.$disconnect();
   }
 };
 
@@ -291,8 +281,6 @@ export const purgeOldTrashedMemos = async (days: number = 30, userId: string) =>
   } catch (error) {
     console.error("データベースエラー:", error);
     return { error: "古いメモの削除に失敗しました。" };
-  } finally {
-    await prisma.$disconnect();
   }
 };
 

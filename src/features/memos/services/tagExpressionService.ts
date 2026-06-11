@@ -110,27 +110,7 @@ class TagExpressionService {
     await localPutTagExpression(localTe);
 
     if (navigator.onLine) {
-      try {
-        const resp = await fetch('/api/tagExpressions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        if (resp.ok) {
-          const result = await resp.json();
-          if (result.tagExpression?.id) {
-            await localDeleteTagExpression(localTe.id);
-            await localPutTagExpression({
-              ...localTe,
-              id: result.tagExpression.id,
-              _syncStatus: 'synced',
-            });
-          }
-          return result;
-        }
-      } catch {
-        // オフライン
-      }
+      performSync().catch(console.error);
     }
 
     return { success: true, tagExpression: localTe };
@@ -153,23 +133,7 @@ class TagExpressionService {
     }
 
     if (navigator.onLine) {
-      try {
-        const resp = await fetch(`/api/tagExpressions/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, ...data }),
-        });
-        if (resp.ok) {
-          const result = await resp.json();
-          // ローカルを synced に
-          if (existing) {
-            await localPutTagExpression({ ...existing, ...data, _syncStatus: 'synced' } as LocalTagExpression);
-          }
-          return result;
-        }
-      } catch {
-        // オフライン
-      }
+      performSync().catch(console.error);
     }
 
     return { success: true };
@@ -186,19 +150,7 @@ class TagExpressionService {
     }
 
     if (navigator.onLine) {
-      try {
-        const resp = await fetch('/api/tagExpressions', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-        if (resp.ok) {
-          await localDeleteTagExpression(id);
-          return resp.json();
-        }
-      } catch {
-        // オフライン
-      }
+      performSync().catch(console.error);
     }
 
     return { success: true };

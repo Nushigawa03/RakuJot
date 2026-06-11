@@ -4,6 +4,7 @@ import { useTagSuggestions } from '../../../hooks/useTagSuggestions';
 import { TagSuggestionInput } from '~/components/TagSuggestionInput';
 import './ExpressionEditor.css';
 import tagExpressionService from '../../../services/tagExpressionService';
+import { tagService } from '../../../services/tagService';
 import { generateExpressionName } from '../../../utils/tagExpressionUtils';
 import { formatLogicalText } from '../../../utils/logicalTextFormatter';
 
@@ -46,10 +47,9 @@ async function resolveNewTagPlaceholders(
   const mapping: Record<string, string> = {};
   for (const ph of placeholderIds) {
     const name = newTagNames[ph] || ph;
-    const res = await fetch('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
-    if (!res.ok) throw new Error(`タグ「${name}」の作成に失敗しました`);
-    const j = await res.json();
-    mapping[ph] = j.tag.id;
+    const res = await tagService.createTag(name);
+    if (!res.ok || !res.tag) throw new Error(`タグ「${name}」の作成に失敗しました`);
+    mapping[ph] = res.tag.id;
   }
   return terms.map(t => ({
     include: t.include.map(id => mapping[id] || id),

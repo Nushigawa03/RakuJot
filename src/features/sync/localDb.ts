@@ -98,9 +98,32 @@ interface RakuJotDB extends DBSchema {
 const DB_PREFIX = 'rakujot';
 const ANONYMOUS_USER_ID = 'anonymous';
 const DB_VERSION = 1;
+const LAST_USER_ID_KEY = 'rakujot:last-user-id';
 
 // ─── ユーザー管理 ────────────────────────────────────
-let currentUserId: string = ANONYMOUS_USER_ID;
+const readStoredUserId = (): string | null => {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    return localStorage.getItem(LAST_USER_ID_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const writeStoredUserId = (userId: string | null): void => {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    if (userId) {
+      localStorage.setItem(LAST_USER_ID_KEY, userId);
+    } else {
+      localStorage.removeItem(LAST_USER_ID_KEY);
+    }
+  } catch {
+    // localStorage may be unavailable in private / test contexts.
+  }
+};
+
+let currentUserId: string = readStoredUserId() || ANONYMOUS_USER_ID;
 
 // ユーザーID毎にDBインスタンスをキャッシュ
 const dbInstances = new Map<string, IDBPDatabase<RakuJotDB>>();
@@ -114,12 +137,19 @@ export const setCurrentUserId = (userId: string | null): void => {
   if (currentUserId !== newId) {
     currentUserId = newId;
   }
+  if (userId) {
+    writeStoredUserId(userId);
+  }
 };
 
 /**
  * 現在のユーザーIDを取得
  */
 export const getCurrentUserId = (): string => currentUserId;
+
+export const forgetStoredUserId = (): void => {
+  writeStoredUserId(null);
+};
 
 /**
  * ユーザーIDからDB名を取得
@@ -172,6 +202,7 @@ export const getDb = async (): Promise<IDBPDatabase<RakuJotDB>> => {
 export const _resetDbInstance = () => {
   dbInstances.clear();
   currentUserId = ANONYMOUS_USER_ID;
+  writeStoredUserId(null);
 };
 
 // ─── Memo CRUD ───────────────────────────────────────
@@ -195,6 +226,43 @@ export const putMemo = async (memo: LocalMemo): Promise<void> => {
 export const deleteMemo = async (id: string): Promise<void> => {
   const db = await getDb();
   await db.delete('memos', id);
+};
+
+export const replaceMemoId = async (
+  localId: string,
+  serverMemo: LocalMemo
+): Promise<void> => {
+  const db = await getDb();
+  const tx = db.transaction('memos', 'readwrite');
+  const localMemo = await tx.store.get(localId);
+  const existingServerMemo = await tx.store.get(serverMemo.id);
+
+  await tx.store.delete(localId);
+
+  if (!localMemo) {
+    await tx.store.put(existingServerMemo || serverMemo);
+    await tx.done;
+    return;
+  }
+
+  const localTime = new Date(localMemo.updatedAt).getTime();
+  const serverTime = new Date(serverMemo.updatedAt).getTime();
+  const localIsNewer = Number.isFinite(localTime) && Number.isFinite(serverTime)
+    ? localTime > serverTime
+    : localMemo.updatedAt > serverMemo.updatedAt;
+
+  if (localIsNewer) {
+    await tx.store.put({
+      ...localMemo,
+      id: serverMemo.id,
+      createdAt: serverMemo.createdAt || localMemo.createdAt,
+      _syncStatus: 'pending-update',
+    });
+  } else {
+    await tx.store.put(existingServerMemo || serverMemo);
+  }
+
+  await tx.done;
 };
 
 export const markMemoDeleted = async (id: string): Promise<void> => {
@@ -232,6 +300,18 @@ export const putTag = async (tag: LocalTag): Promise<void> => {
 export const deleteTag = async (id: string): Promise<void> => {
   const db = await getDb();
   await db.delete('tags', id);
+};
+
+export const markTagDeleted = async (id: string): Promise<void> => {
+  const db = await getDb();
+  const tag = await db.get('tags', id);
+  if (!tag) return;
+
+  if (tag._syncStatus === 'pending-create') {
+    await db.delete('tags', id);
+  } else {
+    await db.put('tags', { ...tag, _syncStatus: 'pending-delete' });
+  }
 };
 
 export const getPendingTags = async (): Promise<LocalTag[]> => {
@@ -355,7 +435,9 @@ export const bulkReplaceTags = async (tags: LocalTag[]): Promise<void> => {
 
   for (const pending of pendingTags) {
     const existsInServer = tags.some((t) => t.id === pending.id);
-    if (!existsInServer) {
+    const sameNameExistsInServer = pending._syncStatus === 'pending-create'
+      && tags.some((t) => t.name === pending.name);
+    if (!existsInServer && !sameNameExistsInServer) {
       await tx.store.put(pending);
     }
   }
