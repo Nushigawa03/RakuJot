@@ -401,6 +401,15 @@ export const bulkReplaceMemos = async (memos: LocalMemo[]): Promise<void> => {
   // pendingメモを復元
   for (const pending of pendingMemos) {
     const serverVersion = serverMemoMap.get(pending.id);
+    if (pending._syncStatus === 'pending-delete') {
+      // 削除がサーバーに反映済みなら、サーバーデータには含まれない。
+      // その場合に復元すると削除したメモが同期後に復活してしまう。
+      if (serverVersion) {
+        await tx.store.put(pending);
+      }
+      continue;
+    }
+
     if (!serverVersion) {
       // サーバーにない = まだ同期されていない新規メモ → 復元
       await tx.store.put(pending);

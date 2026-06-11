@@ -203,6 +203,45 @@ describe('localDb', () => {
       expect(replaced?.body).toBe('local newer');
       expect(replaced?._syncStatus).toBe('pending-update');
     });
+
+    it('同期後にサーバーから消えた pending-delete メモを復元しない', async () => {
+      await putMemo({
+        id: 'memo-deleted',
+        title: '削除したメモ',
+        tags: [],
+        createdAt: '2026-03-25T00:00:00Z',
+        updatedAt: '2026-03-25T00:00:00Z',
+        _syncStatus: 'pending-delete',
+      });
+
+      await bulkReplaceMemos([]);
+
+      expect(await getMemo('memo-deleted')).toBeUndefined();
+      expect(await getAllMemos()).toHaveLength(0);
+      expect(await getPendingMemos()).toHaveLength(0);
+    });
+
+    it('サーバーにまだ残っている pending-delete メモは非表示のまま再同期対象に残す', async () => {
+      const pendingDelete: LocalMemo = {
+        id: 'memo-delete-retry',
+        title: '削除リトライ',
+        tags: [],
+        createdAt: '2026-03-25T00:00:00Z',
+        updatedAt: '2026-03-25T00:00:00Z',
+        _syncStatus: 'pending-delete',
+      };
+
+      await putMemo(pendingDelete);
+      await bulkReplaceMemos([{
+        ...pendingDelete,
+        _syncStatus: 'synced',
+      }]);
+
+      expect(await getAllMemos()).toHaveLength(0);
+      const retryMemo = await getMemo('memo-delete-retry');
+      expect(retryMemo?._syncStatus).toBe('pending-delete');
+      expect(await getPendingMemos()).toHaveLength(1);
+    });
   });
 
   describe('clearAllLocalData', () => {
