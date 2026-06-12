@@ -1,7 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "~/db.server";
-import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
 import { ensureTags } from "./tag.server";
 
 type PrismaErrorShape = {
@@ -121,23 +120,6 @@ export const createMemo = async (data: any, userId: string) => {
       },
       include: { tags: true },
     });
-
-    // Compute and store embedding separately
-    const embedding = await computeMemoEmbedding({
-      title: newMemo.title,
-      date: newMemo.date || "",
-      body: newMemo.body || "",
-    });
-
-    if (embedding) {
-      await prisma.memo.update({
-        where: { id: newMemo.id },
-        data: {
-          // @ts-ignore - embedding field exists in schema but not yet in generated types
-          embedding: embedding,
-        },
-      });
-    }
 
     // Convert Date fields to ISO strings for JSON serialization
     return serializeMemo(newMemo);
@@ -316,21 +298,6 @@ export const updateMemo = async (id: string, data: any, userId: string) => {
       updateData.tags = {
         set: tagsToConnect,
       };
-    }
-
-    // If title, date, or body are being updated, recalculate embedding
-    if (updateData.title || updateData.date !== undefined || updateData.body) {
-      const existing = await prisma.memo.findFirst({ where: { id, userId } });
-      if (existing) {
-        const embedding = await computeMemoEmbedding({
-          title: updateData.title || existing.title,
-          date: updateData.date !== undefined ? updateData.date : existing.date,
-          body: updateData.body || existing.body,
-        });
-        if (embedding) {
-          updateData.embedding = embedding;
-        }
-      }
     }
 
     // Apply update in a transaction for atomicity

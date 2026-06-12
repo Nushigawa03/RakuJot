@@ -3,6 +3,7 @@ import { SearchTag } from '../types/searchTag';
 import { TagExpression } from '../types/tagExpressions';
 import tagExpressionService from '../services/tagExpressionService';
 import { useTagExpression } from './useTagExpression';
+import { computeBrowserEmbedding } from '../../App/services/browserEmbeddingService';
 
 export interface UseSearchFiltersResult {
     filterQuery: string;
@@ -65,21 +66,13 @@ export const useSearchFilters = (
         if (targetText && targetText.length > 1) { // Min length check
             const generateQueryEmbedding = async () => {
                 try {
-                    const response = await fetch('/api/embeddings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ texts: [targetText] }),
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.embeddings && data.embeddings[0]) {
-                            setQueryEmbedding(data.embeddings[0]);
-                        } else {
-                            setQueryEmbedding(undefined);
-                        }
-                    } else {
-                        setQueryEmbedding(undefined);
+                    const browserEmbedding = await computeBrowserEmbedding(targetText, 'query');
+                    if (browserEmbedding) {
+                        setQueryEmbedding(browserEmbedding);
+                        return;
                     }
+
+                    setQueryEmbedding(undefined);
                 } catch (err) {
                     console.error('[useSearchFilters] Failed to compute query embedding:', err);
                     setQueryEmbedding(undefined);

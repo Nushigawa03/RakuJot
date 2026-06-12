@@ -17,7 +17,6 @@
       "routes/api.auth.google": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.auth.logout": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.parseSearch": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
-      "routes/api.embeddings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/api.settings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/app.edit.$id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "routes/app.settings": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -98,15 +97,6 @@
         "parentId": "root",
         "file": "src/routes/api.parseSearch.ts",
         "path": "api/parseSearch",
-        "config": {
-          "runtime": "nodejs"
-        }
-      },
-      "routes/api.embeddings": {
-        "id": "routes/api.embeddings",
-        "parentId": "root",
-        "file": "src/routes/api.embeddings.ts",
-        "path": "api/embeddings",
         "config": {
           "runtime": "nodejs"
         }
@@ -302,12 +292,6 @@
         "file": "routes/api.parseSearch.ts",
         "path": "api/parseSearch"
       },
-      "routes/api.embeddings": {
-        "id": "routes/api.embeddings",
-        "parentId": "root",
-        "file": "routes/api.embeddings.ts",
-        "path": "api/embeddings"
-      },
       "routes/api.settings": {
         "id": "routes/api.settings",
         "parentId": "root",
@@ -448,11 +432,6 @@
             "id": "routes/api.parseSearch",
             "file": "routes/api.parseSearch.ts",
             "path": "api/parseSearch"
-          },
-          {
-            "id": "routes/api.embeddings",
-            "file": "routes/api.embeddings.ts",
-            "path": "api/embeddings"
           },
           {
             "id": "routes/api.settings",

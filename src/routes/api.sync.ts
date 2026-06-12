@@ -11,7 +11,6 @@ import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.serve
 import { getRefreshSessionCookieHeader } from "~/features/auth/utils/session.server";
 import { prisma } from "~/db.server";
 import { ensureTags } from "~/features/memos/models/tag.server";
-import { computeMemoEmbedding } from "~/features/App/services/embeddingService";
 
 interface SyncRequest {
   lastSyncAt: string | null;
@@ -104,13 +103,6 @@ export const action: ActionFunction = async ({ request }) => {
           });
           // ローカルID → サーバーIDのマッピングを記録
           idMapping.push({ localId: memo.id, serverId: newMemo.id });
-          // Compute embedding in background (non-blocking)
-          computeMemoEmbedding({ title: newMemo.title, date: newMemo.date || "", body: newMemo.body || "" })
-            .then(embedding => {
-              if (embedding) {
-                prisma.memo.update({ where: { id: newMemo.id }, data: { embedding } }).catch(() => { });
-              }
-            }).catch(() => { });
         } else if (memo._syncStatus === 'pending-update') {
           const existing = await prisma.memo.findFirst({ where: { id: memo.id, userId } });
           if (existing) {
@@ -129,13 +121,6 @@ export const action: ActionFunction = async ({ request }) => {
                   tags: { set: ensuredTags.map(t => ({ id: t.id })) },
                 },
               });
-              // Recompute embedding
-              computeMemoEmbedding({ title: memo.title, date: memo.date || "", body: memo.body || "" })
-                .then(embedding => {
-                  if (embedding) {
-                    prisma.memo.update({ where: { id: memo.id }, data: { embedding } }).catch(() => { });
-                  }
-                }).catch(() => { });
             }
           }
         } else if (memo._syncStatus === 'pending-delete') {

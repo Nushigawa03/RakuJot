@@ -31,11 +31,8 @@ const MODEL_TERTIARY = 'gemma-2-27b-it';
 
 const FALLBACK_CHAIN = [MODEL_PRIMARY, MODEL_SECONDARY, MODEL_TERTIARY];
 
-// Default models used when caller doesn't specify `model` in params.
-// Note: These defaults are used if no specific model is passed.
-// However, the fallback logic below overrides the model if the primary fails.
+// Default model used when caller doesn't specify `model` in params.
 const DEFAULT_GENERATE_MODEL = process.env.DEFAULT_GENERATE_MODEL || MODEL_PRIMARY;
-const DEFAULT_EMBED_MODEL = process.env.DEFAULT_EMBED_MODEL || 'text-embedding-004';
 
 /**
  * 429 Quota Exceeded error handling wrapper.
@@ -97,16 +94,4 @@ export async function generateContent(params: any) {
     // Use the existing client method which accepts the model in the params
     return client.models.generateContent(final as any);
   }, requestedModel);
-}
-
-export async function embedContent(params: any) {
-  const { apiKey, ...rest } = params || {};
-  const client = getClient(apiKey);
-  // For embeddings, usually we stick to one model because dimensions must match.
-  // Swapping embedding models on the fly is dangerous if the vector DB expects a specific dimension/latent space.
-  // The user request specifically mentioned the generation models "Gemini ... -> Gemma ...".
-  // I will NOT apply fallback to embeddings unless explicitly asked, as it breaks vector search compatibility.
-  // But I will keep the code clean.
-  const final = { ...rest, model: rest?.model || DEFAULT_EMBED_MODEL };
-  return client.models.embedContent(final as any);
 }

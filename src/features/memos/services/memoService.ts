@@ -4,6 +4,7 @@ import { normalizeTagName } from '../utils/normalizeTagName';
 import { refreshTags } from '../utils/tagUtils';
 import { SETTINGS_KEY } from '../../settings/settings';
 import { getTodayDateForPicker } from '../../../utils/dateUtils';
+import { computeBrowserEmbedding } from '../../App/services/browserEmbeddingService';
 import {
   getAllMemos as localGetAllMemos,
   hasAnyMemoRecords as localHasAnyMemoRecords,
@@ -32,8 +33,36 @@ const generateId = (): string =>
     return v.toString(16);
   });
 
+const buildMemoEmbeddingText = (memo: { title: string; date?: string; body?: string }): string =>
+  [memo.title, memo.date || '', memo.body || '']
+    .filter((part) => part && part.trim())
+    .join(' ');
+
 export class MemoService {
   private basePath = '/api';
+
+  private needsLocalEmbeddingRefresh(memo: LocalMemo): boolean {
+    return !Array.isArray(memo.embedding) || memo.embedding.length !== 256;
+  }
+
+  private refreshLocalEmbedding(memo: LocalMemo): void {
+    computeBrowserEmbedding(buildMemoEmbeddingText(memo), 'document')
+      .then(async (embedding) => {
+        if (!embedding) return;
+
+        const { getMemo: localGetMemo } = await import('../../sync/localDb');
+        const latest = await localGetMemo(memo.id);
+        if (!latest) return;
+
+        await localPutMemo({
+          ...latest,
+          embedding,
+        });
+      })
+      .catch((error) => {
+        console.warn('[memoService] local embedding refresh failed:', error);
+      });
+  }
 
   /**
    * タグ名の配列をタグIDの配列に変換する。
@@ -129,6 +158,7 @@ export class MemoService {
 
     // ローカルDBに保存
     await localPutMemo(localMemo);
+    this.refreshLocalEmbedding(localMemo);
 
     // オンラインならバックグラウンドで同期（Sync APIが ensureTags やID発行を一元的に処理）
     if (navigator.onLine) {
@@ -290,6 +320,11 @@ export class MemoService {
       const localMemos = await localGetAllMemos();
 
       if (localMemos.length > 0) {
+        localMemos
+          .filter((memo) => this.needsLocalEmbeddingRefresh(memo))
+          .slice(0, 3)
+          .forEach((memo) => this.refreshLocalEmbedding(memo));
+
         return localMemos.map((m) => ({
           id: m.id,
           title: m.title,
@@ -332,6 +367,11 @@ export class MemoService {
           });
         }
 
+        memos
+          .filter((memo: LocalMemo) => this.needsLocalEmbeddingRefresh(memo))
+          .slice(0, 3)
+          .forEach((memo: LocalMemo) => this.refreshLocalEmbedding(memo));
+
         return memos;
       }
 
@@ -366,6 +406,7 @@ export class MemoService {
       _syncStatus: existing?._syncStatus === 'pending-create' ? 'pending-create' : 'pending-update',
     };
     await localPutMemo(updatedMemo);
+    this.refreshLocalEmbedding(updatedMemo);
 
     // オンラインならバックグラウンドで同期
     if (navigator.onLine) {

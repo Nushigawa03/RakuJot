@@ -31,7 +31,7 @@
      - 例: `memo.server.ts`, `tag.server.ts`, `tagExpression.server.ts`
      - API Route はデータ操作時は**必ず Models 層経由**で行う。
    - **Services 層** (`src/features/*/services/*.ts`): **外部API連携・複雑なビジネスロジック**を担当。
-     - 例: `aiMemoProcessor.server.ts` (Google AI API), `embeddingService.ts` (AI Embeddings API)
+     - 例: `aiMemoProcessor.server.ts` (Google AI API)
      - API Route は外部API処理時は Services 層を呼び出す。
    - **Utils** (`utils/`): ドメイン横断の純粋関数・ヘルパー。
    - **状態管理**: Zustand などは `stores/` に配置。

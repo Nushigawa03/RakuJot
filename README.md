@@ -10,6 +10,21 @@ Run the dev server:
 npm run dev
 ```
 
+### On-device embeddings in the PWA
+
+The app can generate search embeddings in the browser with `sirasagi62/ruri-v3-30m-ONNX`.
+This model is a small Japanese embedding model based on Ruri v3, uses Apache-2.0 licensing, and outputs 256-dimensional vectors.
+
+The browser embedding code uses `@huggingface/transformers` from the app bundle. The ONNX model files are fetched at runtime from Hugging Face and cached by the browser/PWA storage for later use. Queries are prefixed with `検索クエリ: ` and memo documents with `検索文書: ` to match Ruri v3 retrieval usage.
+
+Optional override:
+
+```env
+VITE_BROWSER_EMBED_MODEL=sirasagi62/ruri-v3-30m-ONNX
+```
+
+Do not mix embeddings from different models for semantic search; regenerate stored memo embeddings after switching providers. The client refreshes local memo embeddings gradually when memos are loaded.
+
 ## Deployment
 
 First, build your app for production:
