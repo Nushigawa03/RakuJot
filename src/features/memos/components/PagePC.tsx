@@ -13,6 +13,7 @@ const Page: React.FC = () => {
     filterQuery,
     setFilterQuery,
     dateQuery,
+    semanticDateQuery,
     textQuery,
     setTextQuery,
     queryEmbedding,
@@ -55,6 +56,7 @@ const Page: React.FC = () => {
           <MemoList
             filterQuery={filterQuery}
             dateQuery={dateQuery}
+            semanticDateQuery={semanticDateQuery}
             textQuery={textQuery}
             tagQuery={tagQuery}
             queryEmbedding={queryEmbedding}

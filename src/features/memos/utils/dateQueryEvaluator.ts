@@ -1,5 +1,6 @@
 import { Memo } from '../types/memo';
 import { evaluateSemanticDateSimilarity } from './semanticDateUtils';
+import { parseFuzzyDate } from './dateUtils';
 
 /**
  * Configuration for date query evaluation.
@@ -26,6 +27,8 @@ export function evaluateDateQuery(
   config?: DateQueryEvalConfig
 ): boolean {
   const memoDate = memo.date?.trim();
+  const memoDateStart = memoDate ? parseFuzzyDate(memoDate, false) : null;
+  const memoDateEnd = memoDate ? parseFuzzyDate(memoDate, true) : null;
   // If the user provided a plain/normal date string (e.g. "2024-03-01", "2024/03/01", "2024年3月1日",
   // or short forms like "2024-03"), we should NOT run semantic matching — treat this as an explicit date query.
   const isPlainDateQuery = (q: string) => {
@@ -54,10 +57,29 @@ export function evaluateDateQuery(
   if (rangeMatch) {
     const start = rangeMatch[1].trim();
     const end = rangeMatch[2].trim();
-    if (memoDate && memoDate >= start && memoDate <= end) {
+    if (memoDateStart && memoDateEnd && memoDateEnd >= start && memoDateStart <= end) {
+      console.log('[evaluateDateQuery] parsed memo date matched range', {
+        memoId: (memo as any).id ?? 'unknown',
+        memoDate,
+        memoDateStart,
+        memoDateEnd,
+        start,
+        end,
+      });
       return true;
     }
-    // Fall back to semantic if exact date doesn't match (unless the user supplied a plain date string)
+    if (memoDateStart || memoDateEnd) {
+      console.log('[evaluateDateQuery] parsed memo date outside range', {
+        memoId: (memo as any).id ?? 'unknown',
+        memoDate,
+        memoDateStart,
+        memoDateEnd,
+        start,
+        end,
+      });
+      return false;
+    }
+    // Fall back to semantic only when the memo date is not parseable as a concrete range.
     if (
       config?.useSemanticFallback !== false &&
       config?.queryEmbedding &&
@@ -73,10 +95,12 @@ export function evaluateDateQuery(
   const gteMatch = dateQuery.match(/^date>=(.+)$/);
   if (gteMatch) {
     const start = gteMatch[1].trim();
-    if (memoDate && memoDate >= start) {
+    if (memoDateEnd && memoDateEnd >= start) {
       return true;
     }
-    // Fall back to semantic if exact date doesn't match (unless the user supplied a plain date string)
+    if (memoDateStart || memoDateEnd) {
+      return false;
+    }
     if (
       config?.useSemanticFallback !== false &&
       config?.queryEmbedding &&
@@ -92,10 +116,12 @@ export function evaluateDateQuery(
   const lteMatch = dateQuery.match(/^date<=(.+)$/);
   if (lteMatch) {
     const end = lteMatch[1].trim();
-    if (memoDate && memoDate <= end) {
+    if (memoDateStart && memoDateStart <= end) {
       return true;
     }
-    // Fall back to semantic if exact date doesn't match (unless the user supplied a plain date string)
+    if (memoDateStart || memoDateEnd) {
+      return false;
+    }
     if (
       config?.useSemanticFallback !== false &&
       config?.queryEmbedding &&

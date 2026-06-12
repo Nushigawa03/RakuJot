@@ -19,6 +19,7 @@ const PageMobile: React.FC = () => {
   const {
     filterQuery,
     dateQuery,
+    semanticDateQuery,
     setDateQuery,
     textQuery,
     setTextQuery,
@@ -64,6 +65,7 @@ const PageMobile: React.FC = () => {
         onBackToInput={handleBackToInput}
         onSettings={handleSettings}
         dateQuery={dateQuery}
+        semanticDateQuery={semanticDateQuery}
         setDateQuery={setDateQuery}
         expressions={expressions}
         activeExpression={activeExpression}

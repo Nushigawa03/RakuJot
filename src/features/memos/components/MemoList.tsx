@@ -76,9 +76,20 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
       }
     };
     window.addEventListener('syncComplete', handleSyncComplete);
+    const handleMemoEmbeddingUpdated = (event: any) => {
+      const updatedMemo = event.detail;
+      if (!updatedMemo?.id) return;
+
+      setMemos((prevMemos) => prevMemos.map((memo) => (
+        memo.id === updatedMemo.id ? { ...memo, embedding: updatedMemo.embedding } : memo
+      )));
+    };
+
+    window.addEventListener('memoEmbeddingUpdated', handleMemoEmbeddingUpdated);
     return () => {
       window.removeEventListener('memoSaved', handleMemoSaved);
       window.removeEventListener('syncComplete', handleSyncComplete);
+      window.removeEventListener('memoEmbeddingUpdated', handleMemoEmbeddingUpdated);
     };
   }, []);
 
@@ -88,7 +99,7 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   // 2. その後でフィルタリングとあいまい検索（スコア順）を適用する
   // Javascriptのsortは安定ソートのため、スコアが同点のメモ（すべてスコア0のメモ等）は
   // ここで適用した「ベースのソート順」を維持したまま一覧に残る
-  const sortedMemos = useMemoSearch(baseSortedMemos, filterQuery, dateQuery, textQuery, tagQuery);
+  const sortedMemos = useMemoSearch(baseSortedMemos, filterQuery, dateQuery, textQuery, tagQuery, queryEmbedding);
 
   return (
     <div className="memo-list">

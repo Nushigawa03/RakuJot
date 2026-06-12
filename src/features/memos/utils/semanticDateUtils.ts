@@ -1,5 +1,5 @@
 import { Memo } from '../types/memo';
-import { computeCosineSimilarity, filterBySimilarity } from './similarityUtils';
+import { computeCosineSimilarity } from './similarityUtils';
 
 /**
  * Configuration for semantic date evaluation.
@@ -29,13 +29,22 @@ export function evaluateSemanticDateSimilarity(
   const hasQueryEmbedding = Array.isArray(queryEmbedding) && queryEmbedding.length > 0;
 
   if (!hasMemoEmbedding) {
-    console.debug(`[evaluateSemanticDateSimilarity] memo id=${(memo as any).id ?? 'unknown'} has no embedding - skipping semantic check`);
-    return true; // Pass through if no embedding stored (non-blocking)
+    console.log(`[evaluateSemanticDateSimilarity] memo id=${(memo as any).id ?? 'unknown'} has no embedding - semantic date miss`);
+    return false;
   }
 
   if (!hasQueryEmbedding) {
-    console.debug("[evaluateSemanticDateSimilarity] no query embedding provided - skipping semantic check");
-    return true;
+    console.log("[evaluateSemanticDateSimilarity] no query embedding provided - semantic date miss");
+    return false;
+  }
+
+  if (memoEmbedding.length !== queryEmbedding.length) {
+    console.log("[evaluateSemanticDateSimilarity] embedding dimension mismatch", {
+      memoId: (memo as any).id ?? 'unknown',
+      memoLength: memoEmbedding.length,
+      queryLength: queryEmbedding.length,
+    });
+    return false;
   }
 
   try {
@@ -44,14 +53,14 @@ export function evaluateSemanticDateSimilarity(
     try {
       const id = (memo as any).id ?? 'unknown';
       const title = (memo as any).title ? String((memo as any).title).slice(0, 80) : '';
-      console.debug(`[evaluateSemanticDateSimilarity] memo id=${id} title="${title}" similarity=${similarity.toFixed(4)} threshold=${similarityThreshold}`);
+      console.log(`[evaluateSemanticDateSimilarity] memo id=${id} title="${title}" similarity=${similarity.toFixed(4)} threshold=${similarityThreshold}`);
     } catch (logErr) {
-      console.debug('[evaluateSemanticDateSimilarity] similarity:', similarity, 'threshold:', similarityThreshold);
+      console.log('[evaluateSemanticDateSimilarity] similarity:', similarity, 'threshold:', similarityThreshold);
     }
 
     return similarity >= similarityThreshold;
   } catch (err) {
     console.error("[evaluateSemanticDateSimilarity] error computing similarity:", err);
-    return true; // Pass through on error (non-blocking)
+    return false;
   }
 }

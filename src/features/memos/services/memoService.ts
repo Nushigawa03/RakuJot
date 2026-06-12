@@ -33,10 +33,8 @@ const generateId = (): string =>
     return v.toString(16);
   });
 
-const buildMemoEmbeddingText = (memo: { title: string; date?: string; body?: string }): string =>
-  [memo.title, memo.date || '', memo.body || '']
-    .filter((part) => part && part.trim())
-    .join(' ');
+const buildMemoDateEmbeddingText = (memo: { title: string; date?: string; body?: string }): string =>
+  (memo.date || '').trim() || [memo.title, memo.body || ''].filter((part) => part && part.trim()).join(' ');
 
 export class MemoService {
   private basePath = '/api';
@@ -46,7 +44,17 @@ export class MemoService {
   }
 
   private refreshLocalEmbedding(memo: LocalMemo): void {
-    computeBrowserEmbedding(buildMemoEmbeddingText(memo), 'document')
+    const embeddingText = buildMemoDateEmbeddingText(memo);
+    if (!embeddingText) return;
+
+    console.log('[memoService] refreshing local date embedding', {
+      id: memo.id,
+      title: memo.title,
+      date: memo.date,
+      text: embeddingText.slice(0, 80),
+    });
+
+    computeBrowserEmbedding(embeddingText, 'document')
       .then(async (embedding) => {
         if (!embedding) return;
 
@@ -54,10 +62,18 @@ export class MemoService {
         const latest = await localGetMemo(memo.id);
         if (!latest) return;
 
-        await localPutMemo({
+        const updatedMemo = {
           ...latest,
           embedding,
+        };
+
+        await localPutMemo(updatedMemo);
+        console.log('[memoService] local date embedding stored', {
+          id: memo.id,
+          vectorLength: embedding.length,
+          date: latest.date,
         });
+        window.dispatchEvent(new CustomEvent('memoEmbeddingUpdated', { detail: updatedMemo }));
       })
       .catch((error) => {
         console.warn('[memoService] local embedding refresh failed:', error);

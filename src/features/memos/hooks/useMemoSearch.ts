@@ -9,7 +9,14 @@ import tagExpressionService from '../services/tagExpressionService';
 import { extractTagIds } from '../utils/tagUtils';
 import { sortMemosByFuzzyScore } from '../utils/searchScoringUtils';
 
-export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: string, textQuery?: string, tagQuery?: SearchTag[]): Memo[] => {
+export const useMemoSearch = (
+  memos: Memo[],
+  filterQuery: string,
+  dateQuery?: string,
+  textQuery?: string,
+  tagQuery?: SearchTag[],
+  queryEmbedding?: number[]
+): Memo[] => {
   const [expressions, setExpressions] = useState<TagExpression[]>([]);
 
   useEffect(() => {
@@ -67,10 +74,17 @@ export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: st
   // 4. Date Filter (AND)
   if (activeDateQueries.length > 0) {
     const config: DateQueryEvalConfig = {
-      useSemanticFallback: false,
+      queryEmbedding,
+      semanticThreshold: 0.55,
+      useSemanticFallback: true,
     };
     for (const dq of activeDateQueries) {
       if (!dq) continue;
+      console.log('[useMemoSearch] applying date query', {
+        dateQuery: dq,
+        hasQueryEmbedding: Array.isArray(queryEmbedding) && queryEmbedding.length > 0,
+        queryEmbeddingLength: queryEmbedding?.length ?? 0,
+      });
       result = result.filter((memo) => evaluateDateQuery(memo, dq, config));
     }
   }

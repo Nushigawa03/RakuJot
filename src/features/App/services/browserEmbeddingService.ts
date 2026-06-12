@@ -55,12 +55,16 @@ const readFirstVector = (output: Awaited<ReturnType<FeatureExtractionPipeline>>)
 
 const getExtractor = async (): Promise<FeatureExtractionPipeline> => {
   if (!extractorPromise) {
+    console.log(`[browserEmbeddingService] loading model=${MODEL_ID}`);
     extractorPromise = import("@huggingface/transformers").then(({ pipeline }) => (
       pipeline("feature-extraction", MODEL_ID, {
         device: "webgpu" in navigator ? "webgpu" : "wasm",
         dtype: "q8",
       }) as Promise<FeatureExtractionPipeline>
-    ));
+    )).then((extractor) => {
+      console.log(`[browserEmbeddingService] model ready model=${MODEL_ID}`);
+      return extractor;
+    });
   }
 
   return extractorPromise;
@@ -70,19 +74,34 @@ export async function computeBrowserEmbedding(
   text: string,
   kind: EmbedKind = "semantic"
 ): Promise<number[] | null> {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") {
+    console.log("[browserEmbeddingService] skipped: window is undefined");
+    return null;
+  }
 
   const prefixedText = prefixText(text, kind);
-  if (!prefixedText) return null;
+  if (!prefixedText) {
+    console.log("[browserEmbeddingService] skipped: empty input", { kind });
+    return null;
+  }
 
   try {
     const extractor = await getExtractor();
+    const startedAt = performance.now();
     const output = await extractor(prefixedText, {
       pooling: "mean",
       normalize: true,
     });
 
     const vector = readFirstVector(output);
+    console.log("[browserEmbeddingService] embedding result", {
+      model: MODEL_ID,
+      kind,
+      inputLength: text.trim().length,
+      vectorLength: vector?.length ?? 0,
+      elapsedMs: Math.round(performance.now() - startedAt),
+      preview: text.trim().slice(0, 80),
+    });
     return vector ? normalizeVector(vector) : null;
   } catch (error) {
     console.warn("[browserEmbeddingService] failed to compute embedding:", error);

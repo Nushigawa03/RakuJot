@@ -11,6 +11,7 @@ interface MemoListBackgroundProps {
     onBackToInput: () => void;
     onSettings: () => void;
     dateQuery: string;
+    semanticDateQuery: string;
     setDateQuery: (query: string) => void;
     expressions: TagExpression[];
     activeExpression: string;
@@ -28,6 +29,7 @@ const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
     onBackToInput,
     onSettings,
     dateQuery,
+    semanticDateQuery,
     setDateQuery,
     expressions,
     activeExpression,
@@ -65,6 +67,7 @@ const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
                 <MemoList
                     filterQuery={filterQuery}
                     dateQuery={dateQuery}
+                    semanticDateQuery={semanticDateQuery}
                     queryEmbedding={queryEmbedding}
                     textQuery={textQuery}
                     tagQuery={tagQuery}

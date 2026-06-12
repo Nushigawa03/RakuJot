@@ -1,7 +1,20 @@
 // 日付パースやフィルタ適用のユーティリティ
 export function parseFuzzyDate(input: string, preferEnd: boolean): string | null {
   if (!input) return null;
-  const s = input.trim();
+  const s = input
+    .trim()
+    .replace(/^(今年|去年|一昨年|来年)の(春|夏|秋|冬)$/, '$1$2')
+    .replace(/^(今年|去年|一昨年|来年)(春|夏|秋|冬)$/, (_match, yearWord, seasonWord) => {
+      const now = new Date();
+      const cy = now.getFullYear();
+      const year =
+        yearWord === '一昨年' ? cy - 2 :
+          yearWord === '去年' ? cy - 1 :
+            yearWord === '来年' ? cy + 1 :
+              cy;
+      return `${year}年${seasonWord}`;
+    })
+    .replace(/(?:くらい|ぐらい|ごろ|頃|あたり|らへん|前後)$/, '');
   if (!s) return null;
   const now = new Date();
   const cy = now.getFullYear();

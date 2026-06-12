@@ -10,6 +10,7 @@ export interface UseSearchFiltersResult {
     setFilterQuery: (query: string) => void;
     dateQuery: string;
     setDateQuery: (query: string) => void;
+    semanticDateQuery: string;
     textQuery: string;
     setTextQuery: (query: string) => void;
     queryEmbedding: number[] | undefined;
@@ -26,6 +27,7 @@ export const useSearchFilters = (
 ): UseSearchFiltersResult => {
     const [filterQuery, setFilterQuery] = useState<string>('');
     const [dateQuery, setDateQuery] = useState<string>('');
+    const [semanticDateQuery, setSemanticDateQuery] = useState<string>('');
     const [textQuery, setTextQuery] = useState<string>('');
     const [queryEmbedding, setQueryEmbedding] = useState<number[] | undefined>(undefined);
     const [tagQuery, setTagQuery] = useState<SearchTag[]>([]);
@@ -57,21 +59,29 @@ export const useSearchFilters = (
         return () => window.removeEventListener('syncComplete', onSyncComplete);
     }, []);
 
-    // Generate embedding when textQuery changes (for Semantic Search)
-    // Note: Previously used dateQuery, but usually semantic search is for text content.
-    // If textQuery is present, use it. If not, maybe use dateQuery if it has text intent?
-    // Current design separates them. We use textQuery for embedding ideally.
+    // Generate embedding for semantic date matching. This targets the original fuzzy date words,
+    // not the normalized date:YYYY-MM-DD..YYYY-MM-DD filter string.
     useEffect(() => {
-        const targetText = textQuery || '';
+        const targetText = semanticDateQuery || '';
         if (targetText && targetText.length > 1) { // Min length check
             const generateQueryEmbedding = async () => {
                 try {
+                    console.log('[useSearchFilters] generating semantic date embedding', {
+                        semanticDateQuery: targetText,
+                    });
                     const browserEmbedding = await computeBrowserEmbedding(targetText, 'query');
                     if (browserEmbedding) {
+                        console.log('[useSearchFilters] semantic date embedding ready', {
+                            vectorLength: browserEmbedding.length,
+                            semanticDateQuery: targetText,
+                        });
                         setQueryEmbedding(browserEmbedding);
                         return;
                     }
 
+                    console.log('[useSearchFilters] semantic date embedding unavailable', {
+                        semanticDateQuery: targetText,
+                    });
                     setQueryEmbedding(undefined);
                 } catch (err) {
                     console.error('[useSearchFilters] Failed to compute query embedding:', err);
@@ -80,9 +90,13 @@ export const useSearchFilters = (
             };
             generateQueryEmbedding();
         } else {
+            console.log('[useSearchFilters] semantic date embedding skipped', {
+                reason: 'empty semanticDateQuery',
+                semanticDateQuery,
+            });
             setQueryEmbedding(undefined);
         }
-    }, [textQuery]);
+    }, [semanticDateQuery]);
 
     // Callback wrapper to handle optional prop
     const handleInputOffsetChange = (offset: number) => {
@@ -101,6 +115,7 @@ export const useSearchFilters = (
                 if (detail) {
                     if (detail.type === 'clear') {
                         setDateQuery('');
+                        setSemanticDateQuery('');
                         setTextQuery('');
                         setTagQuery([]);
                         handleInputOffsetChange(0);
@@ -110,10 +125,20 @@ export const useSearchFilters = (
                     // Unified 'smart' search event
                     if (detail.type === 'smart') {
                         let hasUpdates = false;
+                        console.log('[useSearchFilters] applying smart search detail', {
+                            dateQuery: detail.dateQuery,
+                            semanticDateQuery: detail.semanticDateQuery,
+                            textQuery: detail.textQuery,
+                            tagCount: Array.isArray(detail.tagQuery) ? detail.tagQuery.length : undefined,
+                        });
 
                         // Update queries
                         if (detail.dateQuery !== undefined) {
                             setDateQuery(detail.dateQuery || '');
+                            hasUpdates = true;
+                        }
+                        if (detail.semanticDateQuery !== undefined) {
+                            setSemanticDateQuery(detail.semanticDateQuery || '');
                             hasUpdates = true;
                         }
                         if (detail.textQuery !== undefined) {
@@ -150,9 +175,11 @@ export const useSearchFilters = (
                         // Ideally everything uses 'smart' type now.
                         if (detail.query.startsWith('date:') || detail.query.includes('date>=')) {
                             setDateQuery(detail.query);
+                            setSemanticDateQuery(detail.query);
                         } else {
                             setTextQuery(detail.query);
                             setDateQuery('');
+                            setSemanticDateQuery('');
                         }
                         handleInputOffsetChange(1);
                     }
@@ -175,6 +202,7 @@ export const useSearchFilters = (
         setFilterQuery,
         dateQuery,
         setDateQuery,
+        semanticDateQuery,
         textQuery,
         setTextQuery,
         queryEmbedding,

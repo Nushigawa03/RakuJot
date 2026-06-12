@@ -102,6 +102,14 @@ function normalizeResidualQuery(value: string): string {
     return normalized;
 }
 
+function buildSemanticDateQuery(parts: Array<string | null | undefined>): string {
+    const cleaned = parts
+        .map(part => (part || '').trim())
+        .filter(Boolean);
+
+    return cleaned.join(' から ');
+}
+
 // ========================================
 // Hook
 // ========================================
@@ -279,6 +287,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
         // クエリの決定:
         let residualQuery = query;
         let finalDateQuery = '';
+        let finalSemanticDateQuery = '';
         let finalTextQuery = '';
         let tagQuery = [...tagSearch.filterTags];
 
@@ -348,6 +357,11 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
         );
         if (start || end) {
             finalDateQuery = dateQueryBuilt;
+            finalSemanticDateQuery = buildSemanticDateQuery([
+                selectedStartDate,
+                selectedEndDate,
+                parsedPreview?.query === query ? parsedPreview.query : '',
+            ]);
         }
 
         // 統合イベント発行
@@ -356,6 +370,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
             const eventDetail = {
                 type: 'smart',
                 dateQuery: finalDateQuery,
+                semanticDateQuery: finalSemanticDateQuery,
                 textQuery: finalTextQuery,
                 tagQuery: tagQuery
             };
