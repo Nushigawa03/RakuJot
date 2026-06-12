@@ -3,6 +3,7 @@ import { tagService } from './tagService';
 import { normalizeTagName } from '../utils/normalizeTagName';
 import { refreshTags } from '../utils/tagUtils';
 import { SETTINGS_KEY } from '../../settings/settings';
+import { getTodayDateForPicker } from '../../../utils/dateUtils';
 import {
   getAllMemos as localGetAllMemos,
   hasAnyMemoRecords as localHasAnyMemoRecords,
@@ -118,7 +119,7 @@ export class MemoService {
     const localMemo: LocalMemo = {
       id: tempId,
       title: payload.title,
-      date: payload.date || '',
+      date: payload.date || getTodayDateForPicker(),
       tags: tagIds,
       body: payload.body,
       createdAt: now,
@@ -169,7 +170,7 @@ export class MemoService {
         title: ai?.title || fallbackTitle,
         body: content.trim(),
         tags: finalTags,
-        date: ai?.date || '',
+        date: ai?.date || getTodayDateForPicker(),
       };
 
       const res = await this.createMemo(payload);
@@ -215,7 +216,7 @@ export class MemoService {
       title: ai?.title || fallbackTitle,
       body: content.trim(),
       tags: finalTags,
-      date: ai?.date || '',
+      date: ai?.date || getTodayDateForPicker(),
     };
 
     return payload;
