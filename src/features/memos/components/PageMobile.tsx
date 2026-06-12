@@ -1,7 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import MemoListBackground from "./PageMobile/MemoListBackground";
 import InputOverlay from "./PageMobile/InputOverlay";
+import { SidebarSettingsModal } from "./Sidebar/SidebarSettingsModal";
 import { useDragOverlay } from "../hooks/useDragOverlay";
 import { useKeyboardManager } from "../hooks/useKeyboardManager";
 import { useSearchFilters } from "../hooks/useSearchFilters";
@@ -10,6 +11,7 @@ import "./PageMobile.css";
 const PageMobile: React.FC = () => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isTagSettingsOpen, setIsTagSettingsOpen] = useState(false);
 
   // Custom hooks for state management
   const { inputOffset, setInputOffset, isDragging, dragHandlers } = useDragOverlay(containerRef);
@@ -32,6 +34,11 @@ const PageMobile: React.FC = () => {
   const handleBackToInput = () => {
     setInputOffset(0);
     setDateQuery('');
+    setTextQuery('');
+    setTagQuery([]);
+    try {
+      window.dispatchEvent(new CustomEvent('searchExecuted', { detail: { type: 'clear' } }));
+    } catch { }
   };
 
   const handleSettings = () => {
@@ -40,6 +47,10 @@ const PageMobile: React.FC = () => {
     } catch (e) {
       console.debug('NavigationBarMobile.settings.navigate.failed', e);
     }
+  };
+
+  const handleOpenTagSettings = () => {
+    setIsTagSettingsOpen(true);
   };
 
   const handleRemoveTag = (tagToRemove: any) => {
@@ -63,6 +74,7 @@ const PageMobile: React.FC = () => {
         setTextQuery={setTextQuery}
         tagQuery={tagQuery}
         removeTag={handleRemoveTag}
+        onOpenTagSettings={handleOpenTagSettings}
       />
 
       {/* Foreground: FullScreenMemoInput (draggable overlay) */}
@@ -71,6 +83,11 @@ const PageMobile: React.FC = () => {
         isDragging={isDragging}
         onMouseDown={dragHandlers.onMouseDown}
         onTouchStart={dragHandlers.onTouchStart}
+      />
+
+      <SidebarSettingsModal
+        isOpen={isTagSettingsOpen}
+        onClose={() => setIsTagSettingsOpen(false)}
       />
     </div>
   );

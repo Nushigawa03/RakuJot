@@ -19,6 +19,10 @@ describe('useSmartSearch', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        Object.defineProperty(navigator, 'onLine', {
+            configurable: true,
+            value: true,
+        });
     });
 
     it('initializes with default values', () => {
@@ -40,15 +44,15 @@ describe('useSmartSearch', () => {
 
         // Update search query
         act(() => {
-            result.current.handleSearchChange('Last month Work');
+            result.current.handleSearchChange('Last month Project');
         });
 
-        expect(result.current.searchQuery).toBe('Last month Work');
+        expect(result.current.searchQuery).toBe('Last month Project');
         expect(result.current.parsedPreview).toBeNull(); // Should be null immediately
 
         // Wait for debounce and async call
         await waitFor(() => {
-            expect(searchService.parseSearchQuery).toHaveBeenCalledWith('Last month Work');
+            expect(searchService.parseSearchQuery).toHaveBeenCalledWith('Last month Project');
         });
 
         // Verify preview logic (start/end/tag should be populated)
@@ -58,6 +62,7 @@ describe('useSmartSearch', () => {
                 start: '2024-01-01',
                 end: '2024-01-31',
                 tag: 'Work',
+                query: 'Last month Project',
             });
         });
     });
@@ -116,8 +121,8 @@ describe('useSmartSearch', () => {
             await result.current.handleSearch();
         });
 
-        // verify parse was called
-        expect(searchService.parseSearchQuery).toHaveBeenCalledWith('Work');
+        // Exact tag matches are resolved on the client without API parsing.
+        expect(searchService.parseSearchQuery).not.toHaveBeenCalled();
 
         // verify single SMART event was dispatched with consolidated data
         expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
@@ -132,17 +137,11 @@ describe('useSmartSearch', () => {
         }));
     });
 
-    it('handles Date + Tag search (e.g. "Last year Work")', async () => {
-        (searchService.parseSearchQuery as any).mockResolvedValue({
-            start: '2023-01-01',
-            end: '2023-12-31',
-            tag: 'Work',
-        });
-
+    it('handles Date + Tag search (e.g. "2024年3月 Work")', async () => {
         const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
         const { result } = renderHook(() => useSmartSearch(mockTags));
 
-        act(() => result.current.setSearchQuery('Last year Work'));
+        act(() => result.current.setSearchQuery('2024年3月 Work'));
 
         await act(async () => {
             await result.current.handleSearch();
@@ -153,9 +152,54 @@ describe('useSmartSearch', () => {
             detail: expect.objectContaining({
                 type: 'smart',
                 // query should utilize buildDateQuery result
-                dateQuery: expect.stringContaining('date:'),
-                textQuery: expect.stringContaining('Last year'),
+                dateQuery: 'date:2024-03-01..2024-03-31',
+                textQuery: '',
                 // tag should be present
+                tagQuery: expect.arrayContaining([expect.objectContaining({ name: 'Work' })])
+            })
+        }));
+    });
+
+    it('does not leave connector words as text query after extracting date and tag', async () => {
+        const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+        const { result } = renderHook(() => useSmartSearch(mockTags));
+
+        act(() => result.current.setSearchQuery('2024年3月とかのWork'));
+
+        await act(async () => {
+            await result.current.handleSearch();
+        });
+
+        expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+            detail: expect.objectContaining({
+                type: 'smart',
+                dateQuery: 'date:2024-03-01..2024-03-31',
+                textQuery: '',
+                tagQuery: expect.arrayContaining([expect.objectContaining({ name: 'Work' })])
+            })
+        }));
+    });
+
+    it('overrides an existing selected date when the search bar contains a date', async () => {
+        const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+        const { result } = renderHook(() => useSmartSearch(mockTags));
+
+        act(() => {
+            result.current.setSelectedStartDate('2023-01-01');
+            result.current.setSelectedEndDate('2023-12-31');
+            result.current.setSearchQuery('2024年3月 Work');
+        });
+
+        await act(async () => {
+            await result.current.handleSearch();
+        });
+
+        expect(result.current.selectedStartDate).toBe('2024-03-01');
+        expect(result.current.selectedEndDate).toBe('2024-03-31');
+        expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+            detail: expect.objectContaining({
+                type: 'smart',
+                dateQuery: 'date:2024-03-01..2024-03-31',
                 tagQuery: expect.arrayContaining([expect.objectContaining({ name: 'Work' })])
             })
         }));

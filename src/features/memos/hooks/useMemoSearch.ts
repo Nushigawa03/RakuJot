@@ -76,7 +76,15 @@ export const useMemoSearch = (memos: Memo[], filterQuery: string, dateQuery?: st
   }
 
   // 5. Text/Body/Fuzzy Search & Scoring (After filtering by Tags and Dates)
-  result = sortMemosByFuzzyScore(result, effectiveTextQuery);
+  // If structured filters are already active, text query should refine ranking,
+  // not wipe out otherwise valid date/tag matches because of a fuzzy residual word.
+  const hasStructuredFilters =
+    isExpression ||
+    activeDateQueries.some(Boolean) ||
+    (tagQuery && tagQuery.length > 0);
+  result = sortMemosByFuzzyScore(result, effectiveTextQuery, {
+    keepZeroScoreMemos: Boolean(hasStructuredFilters),
+  });
 
   // Highlighting Logic
   const positiveFilterTagIds: string[] = (tagQuery || [])

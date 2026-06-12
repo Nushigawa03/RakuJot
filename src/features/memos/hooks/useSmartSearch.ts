@@ -24,6 +24,7 @@ export interface ParsedPreview {
     start: string | null;
     end: string | null;
     tag: string | null;
+    query: string;
 }
 
 export interface UseSmartSearchReturn {
@@ -57,6 +58,50 @@ export interface UseSmartSearchReturn {
     handleClearSearch: () => void;
 }
 
+const IGNORABLE_RESIDUAL_WORDS = [
+    'の',
+    'とか',
+    'など',
+    'らへん',
+    'あたり',
+    'くらい',
+    'ぐらい',
+    '頃',
+    'ごろ',
+    '関連',
+    '関係',
+    'について',
+    'に関する',
+    'のため',
+    'のための',
+    'の記録',
+];
+
+function normalizeResidualQuery(value: string): string {
+    let normalized = value
+        .replace(/[　\s・]+/g, ' ')
+        .trim();
+
+    const edgeWords = IGNORABLE_RESIDUAL_WORDS
+        .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|');
+
+    for (let i = 0; i < 3; i++) {
+        normalized = normalized
+            .replace(new RegExp(`^(?:${edgeWords})+`, 'g'), '')
+            .replace(new RegExp(`(?:${edgeWords})+$`, 'g'), '')
+            .replace(/[　\s・]+/g, ' ')
+            .trim();
+    }
+
+    const tokens = normalized.split(/\s+/).filter(Boolean);
+    if (tokens.length > 0 && tokens.every(token => IGNORABLE_RESIDUAL_WORDS.includes(token))) {
+        return '';
+    }
+
+    return normalized;
+}
+
 // ========================================
 // Hook
 // ========================================
@@ -73,6 +118,21 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
 
     // Debounce用タイマー
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        const onSearchExecuted = (ev: Event) => {
+            const detail = (ev as CustomEvent).detail;
+            if (detail?.type !== 'clear') return;
+            tagSearch.setSearchQuery('');
+            tagSearch.setFilterTags([]);
+            setSelectedStartDate(null);
+            setSelectedEndDate(null);
+            setParsedPreview(null);
+        };
+
+        window.addEventListener('searchExecuted', onSearchExecuted as EventListener);
+        return () => window.removeEventListener('searchExecuted', onSearchExecuted as EventListener);
+    }, [tagSearch]);
 
     // 検索条件があるかどうか
     const hasSearchConditions =
@@ -98,11 +158,6 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
 
         // 300ms後にクライアント側パースを実行
         debounceTimer.current = setTimeout(async () => {
-            // 日付が既に設定されている場合はスキップ
-            if (selectedStartDate || selectedEndDate) {
-                return;
-            }
-
             // 1. まずクライアント側ヒューリスティックで即座にパース
             const tagNames = availableTags.map(t => t.name);
             const clientResult = clientParseSearch(query, tagNames);
@@ -112,6 +167,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                     start: clientResult.start,
                     end: clientResult.end,
                     tag: clientResult.tag,
+                    query,
                 });
                 return;
             }
@@ -124,7 +180,8 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                     setParsedPreview({
                         start: result.start ?? null,
                         end: result.end ?? null,
-                        tag: result.tag ?? null
+                        tag: result.tag ?? null,
+                        query,
                     });
                 } catch (err) {
                     console.warn('[useSmartSearch] parse failed:', err);
@@ -150,11 +207,12 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
         let effectiveTag: string | null = null;
 
         // パースプレビューがない場合でも、検索実行時にパースを試みる（即エンター対応）
-        // 日付が未指定の場合のみパースを行う
-        if (!selectedStartDate && !selectedEndDate && query) {
+        // 検索バーに日付が含まれていれば、詳細検索の日付より検索バーの入力を優先する
+        if (query) {
             // まずクライアント側で即座にパース
             const tagNames = availableTags.map(t => t.name);
-            let result = parsedPreview;
+            let result: ParsedPreview | null =
+                parsedPreview && parsedPreview.query === query ? parsedPreview : null;
             if (!result) {
                 const clientResult = clientParseSearch(query, tagNames);
                 if (clientResult.start || clientResult.end || clientResult.tag) {
@@ -162,6 +220,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                         start: clientResult.start,
                         end: clientResult.end,
                         tag: clientResult.tag,
+                        query,
                     };
                 }
             }
@@ -174,7 +233,8 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                     result = {
                         start: apiResult.start ?? null,
                         end: apiResult.end ?? null,
-                        tag: apiResult.tag ?? null
+                        tag: apiResult.tag ?? null,
+                        query,
                     };
                 } catch (err) {
                     console.warn('[handleSearch] parse failed:', err);
@@ -184,23 +244,18 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
             }
 
             if (result) {
-                if (result.start) effectiveStart = result.start;
-                if (result.end) effectiveEnd = result.end;
+                if (result.start || result.end) {
+                    effectiveStart = result.start;
+                    effectiveEnd = result.end;
+                }
                 if (result.tag) effectiveTag = result.tag;
 
                 // UIにも反映（次回レンダリング用）
-                if (result.start) setSelectedStartDate(result.start);
-                if (result.end) setSelectedEndDate(result.end);
+                if (result.start || result.end) {
+                    setSelectedStartDate(result.start);
+                    setSelectedEndDate(result.end);
+                }
             }
-        } else if (parsedPreview) {
-            // 既にプレビューがある場合（debounce完了後）
-            if (parsedPreview.start) effectiveStart = parsedPreview.start;
-            if (parsedPreview.end) effectiveEnd = parsedPreview.end;
-            if (parsedPreview.tag) effectiveTag = parsedPreview.tag;
-
-            // UI反映
-            if (parsedPreview.start) setSelectedStartDate(parsedPreview.start);
-            if (parsedPreview.end) setSelectedEndDate(parsedPreview.end);
         }
 
         // クライアントサイド・フォールバック
@@ -232,8 +287,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
             // タグマッチング
             const foundExact = availableTags.find(t => t.name === effectiveTag);
             const foundCi = availableTags.find(t => t.name.toLowerCase() === effectiveTag!.toLowerCase());
-            const foundIncludes = availableTags.find(t => t.name.toLowerCase().includes(effectiveTag!.toLowerCase()));
-            const match = foundExact || foundCi || foundIncludes;
+            const match = foundExact || foundCi;
 
             if (match) {
                 // タグが見つかった場合はタグ追加 (イベント発行は抑制)
@@ -263,10 +317,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                 ''
             );
             // 単独で残った「の」や「に関する」などの助詞・接続表現を前後から除去
-            residualQuery = residualQuery
-                .replace(/^[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*/g, '')
-                .replace(/[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*$/g, '')
-                .trim();
+            residualQuery = normalizeResidualQuery(residualQuery);
         }
 
         // クエリがタグや日付で消費されていない部分（残りのクエリ）がある場合
@@ -288,7 +339,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
             }
         }
 
-        finalTextQuery = residualQuery;
+        finalTextQuery = normalizeResidualQuery(residualQuery);
 
         // 2. 日付クエリ構築
         const { start, end, query: dateQueryBuilt } = buildDateQuery(

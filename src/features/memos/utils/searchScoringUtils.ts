@@ -1,12 +1,49 @@
 import { Memo } from '../types/memo';
-import { computeCosineSimilarity } from './similarityUtils';
+
+function tagToSearchText(tag: unknown): string {
+    if (typeof tag === 'string') return tag;
+    if (tag && typeof tag === 'object') {
+        const value = tag as { id?: unknown; name?: unknown };
+        if (typeof value.name === 'string') return value.name;
+        if (typeof value.id === 'string') return value.id;
+    }
+    return '';
+}
+
+const IGNORABLE_TEXT_QUERY_WORDS = new Set([
+    'の',
+    'とか',
+    'など',
+    'について',
+    'に関する',
+    'くらい',
+    'ぐらい',
+    '頃',
+    'ごろ',
+]);
+
+function getSearchKeywords(query: string): string[] {
+    return query
+        .split(/\s+/)
+        .map(token => token.trim())
+        .filter(token => token && !IGNORABLE_TEXT_QUERY_WORDS.has(token));
+}
+
+export interface FuzzySearchOptions {
+    /**
+     * When true, text search only reorders results and never removes
+     * otherwise valid structured matches such as date/tag results.
+     */
+    keepZeroScoreMemos?: boolean;
+    minScore?: number;
+}
 
 /**
  * 拡張されたクエリ評価（タグ + 本文/タイトル）
  */
 export function evaluateTextQuery(memo: Memo, filterQuery: string, searchBody: boolean = false): boolean {
-    const queryParts = filterQuery.split(' ').filter(part => part.trim() !== '');
-    const memoTags = memo.tags || [];
+    const queryParts = getSearchKeywords(filterQuery);
+    const memoTags = (memo.tags || []).map(tagToSearchText).filter(Boolean);
 
     if (queryParts.length === 0) return true;
 
@@ -137,82 +174,75 @@ function calculateFuzzyMatchScore(query: string, text: string): number {
  */
 export function sortMemosByFuzzyScore(
     memos: Memo[],
-    effectiveTextQuery: string
+    effectiveTextQuery: string,
+    options: FuzzySearchOptions = {}
 ): Memo[] {
     if (!effectiveTextQuery.trim()) {
         return memos;
     }
 
     const query = effectiveTextQuery.toLowerCase().trim();
-    const keywords = query.split(/\s+/).filter(Boolean);
+    const keywords = getSearchKeywords(query);
 
-    console.groupCollapsed(`[FuzzySearch] Evaluating ${memos.length} memos for query: "${effectiveTextQuery}"`);
+    if (keywords.length === 0) {
+        return memos;
+    }
 
-    const scoredMemos = memos.map((memo) => {
+    const scoredMemos = memos.map((memo, index) => {
         let score = 0;
 
         const title = (memo.title || '').toLowerCase();
         const body = (memo.body || '').toLowerCase();
-        const tags = (memo.tags || []).map(t => t.toLowerCase());
-
-        // Lexical check (AND/OR logic evaluated strictly) gives a base bonus
-        const lexicalMatch = evaluateTextQuery(memo, effectiveTextQuery, true);
-        if (lexicalMatch) {
-            score += 10.0;
-        }
+        const tags = (memo.tags || []).map(tagToSearchText).filter(Boolean).map(t => t.toLowerCase());
 
         // Custom Fuzzy Scoring via keywords
         keywords.forEach(kw => {
-            // Title match (Typo-Tolerant)
+            const normKw = normalizeString(kw);
+
             const titleFuzzy = calculateFuzzyMatchScore(kw, memo.title || '');
             if (titleFuzzy > 0) {
-                score += (5.0 * titleFuzzy);
-                if (title === kw.toLowerCase()) score += 5.0; // Exact match bonus
+                score += 4.0 * titleFuzzy;
+                if (normalizeString(title) === normKw) score += 2.0;
             }
 
-            // Tag match (Typo-Tolerant)
             let maxTagFuzzy = 0;
             tags.forEach(t => {
                 const fuzzy = calculateFuzzyMatchScore(kw, t);
                 if (fuzzy > maxTagFuzzy) maxTagFuzzy = fuzzy;
-                if (t === kw.toLowerCase()) score += 2.0; // Exact match bonus
+                if (normalizeString(t) === normKw) score += 1.0;
             });
-            score += (3.0 * maxTagFuzzy);
+            score += 2.0 * maxTagFuzzy;
 
-            // Body match (Typo-Tolerant)
             const bodyFuzzy = calculateFuzzyMatchScore(kw, memo.body || '');
             if (bodyFuzzy > 0) {
-                const normKw = normalizeString(kw);
                 const safeKw = normKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const normBody = normalizeString(memo.body || '');
                 const count = (normBody.match(new RegExp(safeKw, 'g')) || []).length;
-                score += (1.0 * Math.min(count, 5)); // exact occurrence bonus
-
-                if (count === 0 && bodyFuzzy > 0) {
-                    // Just typo matches exist, not exact
-                    score += (2.0 * bodyFuzzy);
-                }
+                score += 0.35 * Math.min(count, 3);
+                score += 0.9 * bodyFuzzy;
             }
         });
 
-        // Debug output
-        if (score > 0) {
-            console.log(`Memo: "${memo.title || 'No Title'}" (ID: ${memo.id})`, {
-                lexicalMatch,
-                fuzzyScore: score.toFixed(3)
-            });
-        }
+        const coverage = keywords.length > 0
+            ? keywords.filter(kw => {
+                return calculateFuzzyMatchScore(kw, memo.title || '') > 0 ||
+                    calculateFuzzyMatchScore(kw, memo.body || '') > 0 ||
+                    tags.some(t => calculateFuzzyMatchScore(kw, t) > 0);
+            }).length / keywords.length
+            : 1;
 
-        return { memo, searchScore: score };
+        score *= coverage;
+
+        return { memo, searchScore: score, index };
     });
 
-    console.log(`[FuzzySearch] Sorting descending by score.`);
-    console.groupEnd();
+    scoredMemos.sort((a, b) => {
+        if (b.searchScore !== a.searchScore) return b.searchScore - a.searchScore;
+        return a.index - b.index;
+    });
 
-    // スコア降順でソート、スコア0のメモは除外（検索に無関係なメモを排除）
-    scoredMemos.sort((a, b) => b.searchScore - a.searchScore);
-
+    const minScore = options.minScore ?? 0.6;
     return scoredMemos
-        .filter(item => item.searchScore > 0)
+        .filter(item => options.keepZeroScoreMemos || item.searchScore >= minScore)
         .map(item => item.memo);
 }

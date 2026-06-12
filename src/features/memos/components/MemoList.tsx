@@ -90,14 +90,6 @@ const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedd
   // ここで適用した「ベースのソート順」を維持したまま一覧に残る
   const sortedMemos = useMemoSearch(baseSortedMemos, filterQuery, dateQuery, textQuery, tagQuery);
 
-  // デバッグ用ログ
-  console.log("Raw memos:", memos.length);
-  console.log("Filter query:", filterQuery);
-  console.log("Date query:", dateQuery);
-  console.log("Text query:", textQuery);
-  console.log("Tag query:", tagQuery);
-  console.log("Processed memos:", sortedMemos.length);
-
   return (
     <div className="memo-list">
       <div className="memo-list-header">

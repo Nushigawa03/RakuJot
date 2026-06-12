@@ -14,6 +14,7 @@ const Page: React.FC = () => {
     setFilterQuery,
     dateQuery,
     textQuery,
+    setTextQuery,
     queryEmbedding,
     tagQuery
   } = useSearchFilters();
@@ -44,7 +45,7 @@ const Page: React.FC = () => {
   return (
     <div className="page-container">
       <header>
-        <NavigationBar activeTextQuery={textQuery} />
+        <NavigationBar activeTextQuery={textQuery} onClearTextQuery={() => setTextQuery('')} />
       </header>
       <div className="main-content">
         <aside className="sidebar">

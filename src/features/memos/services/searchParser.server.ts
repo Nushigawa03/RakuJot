@@ -76,67 +76,74 @@ function heuristicParse(text: string): Omit<ParsedSearchResult, 'source'> {
                 result.start = `${y}-01-01`;
                 result.end = `${y}-12-31`;
             }
-            // 相対日付キーワード（順序重要: 先々月を先月より先に評価）
-            else if (/一昨年/.test(s)) {
-                const y = cy - 2;
-                result.start = `${y}-01-01`;
-                result.end = `${y}-12-31`;
-            } else if (/先々月/.test(s)) {
-                const dt = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-                const y = dt.getFullYear();
-                const m = dt.getMonth() + 1;
-                result.start = `${y}-${pad2(m)}-01`;
-                result.end = `${y}-${pad2(m)}-${pad2(lastDayOf(y, m - 1))}`;
-            } else if (/先月/.test(s)) {
-                const dt = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                const y = dt.getFullYear();
-                const m = dt.getMonth() + 1;
-                result.start = `${y}-${pad2(m)}-01`;
-                result.end = `${y}-${pad2(m)}-${pad2(lastDayOf(y, m - 1))}`;
-            } else if (/来月/.test(s)) {
-                const dt = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                const y = dt.getFullYear();
-                const m = dt.getMonth() + 1;
-                result.start = `${y}-${pad2(m)}-01`;
-                result.end = `${y}-${pad2(m)}-${pad2(lastDayOf(y, m - 1))}`;
-            } else if (/去年/.test(s)) {
-                const y = cy - 1;
-                result.start = `${y}-01-01`;
-                result.end = `${y}-12-31`;
-            } else if (/来年/.test(s)) {
-                const y = cy + 1;
-                result.start = `${y}-01-01`;
-                result.end = `${y}-12-31`;
-            } else if (/今年/.test(s)) {
-                result.start = `${cy}-01-01`;
-                result.end = `${cy}-12-31`;
-            } else if (/今日/.test(s)) {
-                const d = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
-                result.start = d;
-                result.end = d;
-            } else if (/昨日/.test(s)) {
-                const dt = new Date(now);
-                dt.setDate(dt.getDate() - 1);
-                const d = `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
-                result.start = d;
-                result.end = d;
-            } else if (/明日/.test(s)) {
-                const dt = new Date(now);
-                dt.setDate(dt.getDate() + 1);
-                const d = `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
-                result.start = d;
-                result.end = d;
-            }
-            // 季節表現
             else {
-                const seasonMatch = s.match(/(?:(\d{4})年)?\s*(春|夏|秋|冬)/);
-                if (seasonMatch) {
-                    const y = seasonMatch[1] ? parseInt(seasonMatch[1], 10) : cy;
-                    const season = seasonMatch[2];
-                    if (season === '春') { result.start = `${y}-03-01`; result.end = `${y}-05-31`; }
-                    else if (season === '夏') { result.start = `${y}-06-01`; result.end = `${y}-08-31`; }
-                    else if (season === '秋') { result.start = `${y}-09-01`; result.end = `${y}-11-30`; }
-                    else if (season === '冬') { result.start = `${y}-12-01`; result.end = `${y + 1}-02-${pad2(lastDayOf(y + 1, 1))}`; }
+                const isoMatch = s.match(/(\d{4}-\d{2}-\d{2})/);
+                if (isoMatch) {
+                    result.start = isoMatch[1];
+                    result.end = isoMatch[1];
+                }
+                // 相対日付キーワード（順序重要: 先々月を先月より先に評価）
+                else if (/一昨年/.test(s)) {
+                    const y = cy - 2;
+                    result.start = `${y}-01-01`;
+                    result.end = `${y}-12-31`;
+                } else if (/先々月/.test(s)) {
+                    const dt = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+                    const y = dt.getFullYear();
+                    const m = dt.getMonth() + 1;
+                    result.start = `${y}-${pad2(m)}-01`;
+                    result.end = `${y}-${pad2(m)}-${pad2(lastDayOf(y, m - 1))}`;
+                } else if (/先月/.test(s)) {
+                    const dt = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    const y = dt.getFullYear();
+                    const m = dt.getMonth() + 1;
+                    result.start = `${y}-${pad2(m)}-01`;
+                    result.end = `${y}-${pad2(m)}-${pad2(lastDayOf(y, m - 1))}`;
+                } else if (/来月/.test(s)) {
+                    const dt = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    const y = dt.getFullYear();
+                    const m = dt.getMonth() + 1;
+                    result.start = `${y}-${pad2(m)}-01`;
+                    result.end = `${y}-${pad2(m)}-${pad2(lastDayOf(y, m - 1))}`;
+                } else if (/去年/.test(s)) {
+                    const y = cy - 1;
+                    result.start = `${y}-01-01`;
+                    result.end = `${y}-12-31`;
+                } else if (/来年/.test(s)) {
+                    const y = cy + 1;
+                    result.start = `${y}-01-01`;
+                    result.end = `${y}-12-31`;
+                } else if (/今年/.test(s)) {
+                    result.start = `${cy}-01-01`;
+                    result.end = `${cy}-12-31`;
+                } else if (/今日/.test(s)) {
+                    const d = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+                    result.start = d;
+                    result.end = d;
+                } else if (/昨日/.test(s)) {
+                    const dt = new Date(now);
+                    dt.setDate(dt.getDate() - 1);
+                    const d = `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+                    result.start = d;
+                    result.end = d;
+                } else if (/明日/.test(s)) {
+                    const dt = new Date(now);
+                    dt.setDate(dt.getDate() + 1);
+                    const d = `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+                    result.start = d;
+                    result.end = d;
+                }
+                // 季節表現
+                else {
+                    const seasonMatch = s.match(/(?:(\d{4})年)?\s*(春|夏|秋|冬)/);
+                    if (seasonMatch) {
+                        const y = seasonMatch[1] ? parseInt(seasonMatch[1], 10) : cy;
+                        const season = seasonMatch[2];
+                        if (season === '春') { result.start = `${y}-03-01`; result.end = `${y}-05-31`; }
+                        else if (season === '夏') { result.start = `${y}-06-01`; result.end = `${y}-08-31`; }
+                        else if (season === '秋') { result.start = `${y}-09-01`; result.end = `${y}-11-30`; }
+                        else if (season === '冬') { result.start = `${y}-12-01`; result.end = `${y + 1}-02-${pad2(lastDayOf(y + 1, 1))}`; }
+                    }
                 }
             }
         }
@@ -209,7 +216,7 @@ export async function parseSearchQuery(text: string): Promise<ParsedSearchResult
 
     // 1. まずヒューリスティック解析を試行（高速・確実）
     const heuristicResult = heuristicParse(text);
-    if (heuristicResult.start || heuristicResult.end || heuristicResult.tag) {
+    if (heuristicResult.start || heuristicResult.end) {
         return { source: "heuristic", ...heuristicResult };
     }
 

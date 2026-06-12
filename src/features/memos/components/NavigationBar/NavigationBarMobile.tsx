@@ -12,6 +12,8 @@ import { useSettings } from '~/features/settings/hooks/useSettings';
 type Props = {
   onBack: () => void;
   onSettings?: () => void;
+  activeTextQuery?: string;
+  onClearTextQuery?: () => void;
 };
 
 type AuthUser = {
@@ -21,7 +23,7 @@ type AuthUser = {
   picture: string | null;
 };
 
-const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
+const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings, activeTextQuery, onClearTextQuery }) => {
   const {
     isOrSearch,
     isDetailSearch,
@@ -68,6 +70,19 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
       console.error('タグの取得エラー:', error);
     });
   }, []);
+
+  useEffect(() => {
+    if (activeTextQuery && !searchQuery) {
+      setSearchQuery(activeTextQuery);
+    }
+  }, [activeTextQuery]);
+
+  const handleInputChange = (value: string) => {
+    if (activeTextQuery && value !== activeTextQuery) {
+      onClearTextQuery?.();
+    }
+    handleSearchChange(value);
+  };
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -214,7 +229,7 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings }) => {
                 type="search"
                 placeholder="さがす..."
                 value={searchQuery}
-                onChange={e => handleSearchChange(e.target.value)}
+                onChange={e => handleInputChange(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onKeyDown={handleKeyDown}
                 onClick={stop}

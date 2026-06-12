@@ -24,6 +24,50 @@ function lastDayOf(year: number, monthZeroBased: number): number {
   return new Date(year, monthZeroBased + 1, 0).getDate();
 }
 
+const IGNORABLE_RESIDUAL_WORDS = [
+  'の',
+  'とか',
+  'など',
+  'らへん',
+  'あたり',
+  'くらい',
+  'ぐらい',
+  '頃',
+  'ごろ',
+  '関連',
+  '関係',
+  'について',
+  'に関する',
+  'のため',
+  'のための',
+  'の記録',
+];
+
+function normalizeResidualQuery(value: string): string {
+  let normalized = value
+    .replace(/[　\s・]+/g, ' ')
+    .trim();
+
+  const edgeWords = IGNORABLE_RESIDUAL_WORDS
+    .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+
+  for (let i = 0; i < 3; i++) {
+    normalized = normalized
+      .replace(new RegExp(`^(?:${edgeWords})+`, 'g'), '')
+      .replace(new RegExp(`(?:${edgeWords})+$`, 'g'), '')
+      .replace(/[　\s・]+/g, ' ')
+      .trim();
+  }
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length > 0 && tokens.every(token => IGNORABLE_RESIDUAL_WORDS.includes(token))) {
+    return '';
+  }
+
+  return normalized;
+}
+
 /**
  * 日本語の日付キーワードとタグをクライアント側でパースする。
  * 「先々月」を「先月」より先に評価し、和暦年月日もサポート。
@@ -153,10 +197,7 @@ export function clientParseSearch(text: string, availableTagNames: string[]): Cl
     ''
   );
   // 助詞等の除去
-  cleaned = cleaned
-    .replace(/^[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*/g, '')
-    .replace(/[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*$/g, '')
-    .trim();
+  cleaned = normalizeResidualQuery(cleaned);
 
   if (cleaned) {
     // 利用可能なタグ名と照合（case-insensitive）
@@ -173,9 +214,10 @@ export function clientParseSearch(text: string, availableTagNames: string[]): Cl
         break;
       }
     }
-    // タグマッチしなかった場合、部分一致も試みる
+    // タグマッチしなかった場合、十分に長い語だけ部分一致も試みる
     if (!result.tag) {
       for (const part of parts) {
+        if (part.length < 3) continue;
         const found = availableTagNames.find(
           t => t.toLowerCase().includes(part.toLowerCase())
         );
@@ -189,10 +231,7 @@ export function clientParseSearch(text: string, availableTagNames: string[]): Cl
   }
 
   // 助詞の再除去
-  cleaned = cleaned
-    .replace(/^[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*/g, '')
-    .replace(/[\s・]*(の|のための|のため|の記録|に関する|について)+[\s・]*$/g, '')
-    .trim();
+  cleaned = normalizeResidualQuery(cleaned);
 
   result.residualQuery = cleaned;
 

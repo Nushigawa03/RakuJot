@@ -81,6 +81,14 @@ export function parseFuzzyDate(input: string, preferEnd: boolean): string | null
     dt.setDate(dt.getDate() + 1);
     return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
   }
+  const isoDate = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoDate) {
+    return `${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`;
+  }
+  const slashDate = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (slashDate) {
+    return `${slashDate[1]}-${pad2(parseInt(slashDate[2], 10))}-${pad2(parseInt(slashDate[3], 10))}`;
+  }
   try {
     const dt = new Date(s);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);

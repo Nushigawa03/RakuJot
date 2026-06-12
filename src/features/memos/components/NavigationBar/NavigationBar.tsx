@@ -13,9 +13,10 @@ import { useSettings } from '~/features/settings/hooks/useSettings';
 
 interface NavigationBarProps {
   activeTextQuery?: string;
+  onClearTextQuery?: () => void;
 }
 
-const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
+const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery, onClearTextQuery }) => {
   const {
     isOrSearch,
     isDetailSearch,
@@ -65,6 +66,19 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
       console.error('タグの取得エラー:', error);
     });
   }, []);
+
+  useEffect(() => {
+    if (activeTextQuery && !searchQuery) {
+      setSearchQuery(activeTextQuery);
+    }
+  }, [activeTextQuery]);
+
+  const handleInputChange = (value: string) => {
+    if (activeTextQuery && value !== activeTextQuery) {
+      onClearTextQuery?.();
+    }
+    handleSearchChange(value);
+  };
 
   // サジェストからタグを選択
   const selectSuggestion = (tag: Tag) => {
@@ -225,18 +239,6 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
         >
           <div className="top-bar">
             <div className="search-bar-container">
-              {/* Active Text Query Chip */}
-              {activeTextQuery && !searchQuery && (
-                <div className="tag-chip inline text-query-chip" style={{ backgroundColor: '#e0e0e0', color: '#333' }}>
-                  <span className="tag-name">"{activeTextQuery}"</span>
-                  <button
-                    className="remove-button"
-                    onClick={() => handleClearSearch()}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
               {filterTags.map((tag, index) => (
                 <TagChipInline
                   key={`${tag.id}-${tag.isExclude}`}
@@ -250,7 +252,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ activeTextQuery }) => {
                   placeholder="さがす..."
                   className="search-bar"
                   value={searchQuery}
-                  onChange={e => handleSearchChange(e.target.value)}
+                  onChange={e => handleInputChange(e.target.value)}
                   onFocus={() => setIsFocused(true)}
                   onKeyDown={handleKeyDown}
                 />

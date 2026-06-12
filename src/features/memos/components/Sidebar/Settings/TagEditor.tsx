@@ -119,9 +119,12 @@ const TagEditor: React.FC = () => {
   return (
     <div className="tag-editor">
       <div className="tag-editor-header">
-        <h3>タグ管理</h3>
+        <div>
+          <h3>タグ</h3>
+          <p>名前と説明を整理します。</p>
+        </div>
         <button className="create-tag-button" onClick={startCreate}>
-          新規タグ作成
+          + 新規
         </button>
       </div>
 
@@ -174,7 +177,7 @@ const TagEditor: React.FC = () => {
       )}
 
       <div className="tag-list">
-        <h4>既存のタグ ({tags.length}個)</h4>
+        <h4>一覧 <span>{tags.length}個</span></h4>
         {tags.length === 0 ? (
           <p className="empty-state">タグがありません</p>
         ) : (

@@ -21,6 +21,7 @@ interface MemoListBackgroundProps {
     setTextQuery: (query: string) => void;
     tagQuery: SearchTag[];
     removeTag: (tag: SearchTag) => void;
+    onOpenTagSettings: () => void;
 }
 
 const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
@@ -37,6 +38,7 @@ const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
     setTextQuery,
     tagQuery,
     removeTag,
+    onOpenTagSettings,
 }) => {
     return (
         <div className="page-mobile__background">
@@ -44,6 +46,8 @@ const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
                 <NavigationBarMobile
                     onBack={onBackToInput}
                     onSettings={onSettings}
+                    activeTextQuery={textQuery}
+                    onClearTextQuery={() => setTextQuery('')}
                 />
             </header>
 
@@ -54,10 +58,9 @@ const MemoListBackground: React.FC<MemoListBackgroundProps> = ({
                     expressions={expressions}
                     activeExpression={activeExpression}
                     handleExpressionClick={handleExpressionClick}
-                    textQuery={textQuery}
-                    setTextQuery={setTextQuery}
                     tagQuery={tagQuery}
                     removeTag={removeTag}
+                    onOpenTagSettings={onOpenTagSettings}
                 />
                 <MemoList
                     filterQuery={filterQuery}

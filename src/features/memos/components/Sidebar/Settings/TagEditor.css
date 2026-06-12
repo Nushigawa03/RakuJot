@@ -1,252 +1,300 @@
 .tag-editor {
-  padding: 1rem;
+  padding: 22px;
+  color: var(--color-text-primary);
 }
 
 .tag-editor-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
 .tag-editor-header h3 {
   margin: 0;
-  color: #333;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.tag-editor-header p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
 }
 
 .create-tag-button {
-  background-color: var(--color-info);
+  flex: 0 0 auto;
+  background: var(--color-info);
   color: var(--color-info-contrast);
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  padding: 9px 14px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background-color 0.2s;
+  font-weight: 600;
+  line-height: 1;
+  min-height: 36px;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
 .create-tag-button:hover {
   background-color: var(--color-info-hover);
 }
 
+.create-tag-button:active {
+  transform: translateY(1px);
+}
+
 .error-message {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  border: 1px solid #f5c6cb;
+  background-color: var(--color-danger-100);
+  color: var(--color-danger-700);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  border: 1px solid var(--color-danger-500);
+  font-size: 0.9rem;
 }
 
 .tag-form {
-  background-color: #f8f9fa;
-  padding: 1.5rem;
+  background-color: var(--color-surface-elevated);
+  padding: 18px;
   border-radius: 8px;
-  margin-bottom: 2rem;
-  border: 1px solid #e9ecef;
+  margin-bottom: 20px;
+  border: 1px solid var(--color-border-primary);
 }
 
-.tag-form h4 {
-  margin: 0 0 1rem 0;
-  color: #495057;
+.tag-form h4,
+.tag-list h4 {
+  margin: 0 0 14px;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.tag-list h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tag-list h4 span {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 14px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 7px;
   font-weight: 600;
-  color: #495057;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e9ecef;
-  border-radius: 4px;
+  padding: 11px 12px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
   font-size: 1rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
   border-color: var(--color-info);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.12);
 }
 
 .form-group input:disabled,
 .form-group textarea:disabled {
-  background-color: #f8f9fa;
+  background-color: var(--color-bg-secondary);
   cursor: not-allowed;
 }
 
 .form-buttons {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.save-button,
+.cancel-button,
+.edit-button,
+.delete-button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 8px 13px;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .save-button {
   background-color: var(--color-success);
   color: var(--color-success-contrast);
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
 }
 
 .save-button:hover:not(:disabled) {
   background-color: var(--color-success-hover);
 }
 
-.save-button:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
 .cancel-button {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-primary);
 }
 
-.cancel-button:hover:not(:disabled) {
-  background-color: #545b62;
-}
-
-.tag-list h4 {
-  margin: 0 0 1rem 0;
-  color: #495057;
-}
-
-.empty-state {
-  text-align: center;
-  color: #6c757d;
-  font-style: italic;
-  padding: 2rem;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+.cancel-button:hover:not(:disabled),
+.edit-button:hover:not(:disabled) {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .tag-items {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
 }
 
 .tag-item {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background-color: white;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  transition: box-shadow 0.2s;
+  gap: 14px;
+  min-height: 116px;
+  padding: 14px;
+  background-color: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
 }
 
-.tag-item:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.tag-info {
+  min-width: 0;
 }
 
 .tag-info h5 {
-  margin: 0 0 0.25rem 0;
-  color: #333;
-  font-size: 1.1rem;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .mock-badge {
-  background-color: #ffc107;
-  color: #212529;
-  padding: 0.2rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: normal;
+  background-color: var(--color-warning-100, #fff3cd);
+  color: var(--color-warning-700, #7a5400);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .tag-info p {
-  margin: 0;
-  color: #6c757d;
-  font-size: 0.9rem;
+  margin: 8px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .tag-actions {
   display: flex;
-  gap: 0.5rem;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .edit-button {
-  background-color: #ffc107;
-  color: #212529;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background-color 0.2s;
-}
-
-.edit-button:hover:not(:disabled) {
-  background-color: #e0a800;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-primary);
 }
 
 .delete-button {
-  background-color: var(--color-danger);
-  color: var(--color-danger-contrast);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background-color 0.2s;
+  background-color: transparent;
+  color: var(--color-danger-700);
+  border-color: var(--color-danger-500);
 }
 
 .delete-button:hover:not(:disabled) {
-  background-color: #c82333;
+  background-color: var(--color-danger-100);
 }
 
+.save-button:disabled,
 .edit-button:disabled,
-.delete-button:disabled {
-  opacity: 0.6;
+.delete-button:disabled,
+.cancel-button:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
+.empty-state {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: 36px 16px;
+  background-color: var(--color-surface-elevated);
+  border: 1px dashed var(--color-border-primary);
+  border-radius: 8px;
+}
+
 @media (max-width: 768px) {
+  .tag-editor {
+    padding: 14px;
+  }
+
   .tag-editor-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
+    align-items: center;
+    margin-bottom: 14px;
   }
-  
+
+  .tag-editor-header p {
+    display: none;
+  }
+
+  .create-tag-button {
+    min-height: 34px;
+    padding: 8px 12px;
+  }
+
+  .tag-form {
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .tag-items {
+    grid-template-columns: 1fr;
+  }
+
   .tag-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
+    min-height: 0;
+    padding: 13px;
   }
-  
+
   .tag-actions {
     justify-content: stretch;
   }
-  
+
   .edit-button,
   .delete-button {
     flex: 1;
+  }
+
+  .form-buttons {
+    flex-direction: column;
   }
 }
