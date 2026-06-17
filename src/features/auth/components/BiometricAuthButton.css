@@ -1,0 +1,91 @@
+.passkey-button {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  transition:
+    transform 160ms var(--ease-out, ease),
+    border-color 160ms var(--ease-out, ease),
+    background-color 160ms var(--ease-out, ease),
+    box-shadow 160ms var(--ease-out, ease);
+}
+
+.passkey-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.passkey-button:focus-visible {
+  outline: 2px solid var(--color-border-focus, #8b5cf6);
+  outline-offset: 2px;
+}
+
+.passkey-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.passkey-button--login {
+  background: rgba(255, 255, 255, 0.96);
+  color: #111827;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.24);
+}
+
+.passkey-button--login:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgba(255, 255, 255, 0.82);
+}
+
+.passkey-button--register {
+  background: var(--color-primary, #6366f1);
+  color: white;
+  border-color: transparent;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.12));
+}
+
+.passkey-button--register:hover:not(:disabled) {
+  background: var(--color-primary-600, #4f46e5);
+}
+
+.passkey-register {
+  width: 100%;
+}
+
+.passkey-register__status,
+.passkey-unavailable {
+  margin-top: var(--spacing-2, 8px);
+  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.4;
+}
+
+.passkey-unavailable {
+  padding: var(--spacing-3, 12px);
+  border: 1px solid var(--color-border-subtle, #e5e7eb);
+  border-radius: 8px;
+  background: var(--color-bg-primary, #ffffff);
+}
+
+.passkey-button-skeleton {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  animation: passkey-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes passkey-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}

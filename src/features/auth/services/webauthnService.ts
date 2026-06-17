@@ -4,19 +4,23 @@
  */
 
 import {
+  browserSupportsWebAuthn,
+  platformAuthenticatorIsAvailable,
   startRegistration,
   startAuthentication,
 } from "@simplewebauthn/browser";
+
+type WebAuthnStatus = {
+  supported: boolean;
+  registered: boolean;
+  credentialCount: number;
+};
 
 /**
  * ブラウザが WebAuthn をサポートしているか
  */
 export const isWebAuthnSupported = (): boolean => {
-  return (
-    typeof window !== "undefined" &&
-    !!window.PublicKeyCredential &&
-    typeof window.PublicKeyCredential === "function"
-  );
+  return typeof window !== "undefined" && browserSupportsWebAuthn();
 };
 
 /**
@@ -25,10 +29,29 @@ export const isWebAuthnSupported = (): boolean => {
 export const isPlatformAuthenticatorAvailable = async (): Promise<boolean> => {
   if (!isWebAuthnSupported()) return false;
   try {
-    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    return await platformAuthenticatorIsAvailable();
   } catch {
     return false;
   }
+};
+
+export const getWebAuthnStatus = async (): Promise<WebAuthnStatus> => {
+  if (!isWebAuthnSupported()) {
+    return { supported: false, registered: false, credentialCount: 0 };
+  }
+
+  const resp = await fetch("/api/auth/webauthn/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ phase: "status" }),
+  });
+
+  if (!resp.ok) {
+    return { supported: true, registered: false, credentialCount: 0 };
+  }
+
+  return await resp.json();
 };
 
 /**
@@ -40,6 +63,7 @@ export const registerCredential = async (): Promise<{ success: boolean; error?: 
     const challengeResp = await fetch("/api/auth/webauthn/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ phase: "challenge" }),
     });
 
@@ -57,6 +81,7 @@ export const registerCredential = async (): Promise<{ success: boolean; error?: 
     const verifyResp = await fetch("/api/auth/webauthn/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         phase: "verify",
         attestationResponse,
@@ -89,6 +114,7 @@ export const authenticateWithBiometric = async (
     const challengeResp = await fetch("/api/auth/webauthn/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ phase: "challenge", email }),
     });
 
@@ -107,6 +133,7 @@ export const authenticateWithBiometric = async (
     const verifyResp = await fetch("/api/auth/webauthn/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         phase: "verify",
         assertionResponse,

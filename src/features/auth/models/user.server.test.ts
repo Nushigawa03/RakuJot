@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// vi.mock はホイスティングされるため、vi.hoisted() でモックを定義
 const mockPrisma = vi.hoisted(() => ({
     user: {
+        findFirst: vi.fn(),
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+    },
+    account: {
         findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
@@ -13,16 +18,25 @@ vi.mock('~/db.server', () => ({
     prisma: mockPrisma,
 }));
 
-// モック後にインポート
 import {
     findUserByEmail,
-    findUserByGoogleId,
+    findUserByAccount,
     createUser,
     findOrCreateUserByEmail,
     getUserSettings,
+    syncDevUser,
     syncGoogleUser,
     updateUserSettings,
 } from './user.server';
+
+const coreUserSelect = {
+    id: true,
+    email: true,
+    name: true,
+    picture: true,
+    createdAt: true,
+    updatedAt: true,
+};
 
 describe('user.server', () => {
     beforeEach(() => {
@@ -32,27 +46,19 @@ describe('user.server', () => {
     describe('findUserByEmail', () => {
         it('メールアドレスでユーザーを検索する', async () => {
             const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' };
-            mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
+            mockPrisma.user.findFirst.mockResolvedValueOnce(mockUser);
 
             const user = await findUserByEmail('test@example.com');
 
-            expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+            expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
                 where: { email: 'test@example.com' },
-                select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    picture: true,
-                    googleId: true,
-                    createdAt: true,
-                    updatedAt: true,
-                },
+                select: coreUserSelect,
             });
             expect(user).toEqual(mockUser);
         });
 
         it('ユーザーが見つからない場合は null を返す', async () => {
-            mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+            mockPrisma.user.findFirst.mockResolvedValueOnce(null);
 
             const user = await findUserByEmail('notfound@example.com');
 
@@ -60,7 +66,7 @@ describe('user.server', () => {
         });
 
         it('エラー時は null を返す', async () => {
-            mockPrisma.user.findUnique.mockRejectedValueOnce(new Error('DB Error'));
+            mockPrisma.user.findFirst.mockRejectedValueOnce(new Error('DB Error'));
 
             const user = await findUserByEmail('test@example.com');
 
@@ -68,23 +74,24 @@ describe('user.server', () => {
         });
     });
 
-    describe('findUserByGoogleId', () => {
-        it('Google IDでユーザーを検索する', async () => {
-            const mockUser = { id: '1', googleId: 'google-123', email: 'test@example.com' };
-            mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
+    describe('findUserByAccount', () => {
+        it('外部アカウントでユーザーを検索する', async () => {
+            const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' };
+            mockPrisma.account.findUnique.mockResolvedValueOnce({ user: mockUser });
 
-            const user = await findUserByGoogleId('google-123');
+            const user = await findUserByAccount('google', 'google-123');
 
-            expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-                where: { googleId: 'google-123' },
+            expect(mockPrisma.account.findUnique).toHaveBeenCalledWith({
+                where: {
+                    provider_providerAccountId: {
+                        provider: 'google',
+                        providerAccountId: 'google-123',
+                    },
+                },
                 select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    picture: true,
-                    googleId: true,
-                    createdAt: true,
-                    updatedAt: true,
+                    user: {
+                        select: coreUserSelect,
+                    },
                 },
             });
             expect(user).toEqual(mockUser);
@@ -97,72 +104,58 @@ describe('user.server', () => {
                 id: '1',
                 email: 'new@example.com',
                 name: 'New User',
-                googleId: 'google-456',
             };
             mockPrisma.user.create.mockResolvedValueOnce(newUser);
 
             const user = await createUser({
                 email: 'new@example.com',
                 name: 'New User',
-                googleId: 'google-456',
             });
 
             expect(mockPrisma.user.create).toHaveBeenCalledWith({
                 data: {
                     email: 'new@example.com',
                     name: 'New User',
-                    googleId: 'google-456',
                     picture: undefined,
                 },
-                select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    picture: true,
-                    googleId: true,
-                    createdAt: true,
-                    updatedAt: true,
-                },
+                select: coreUserSelect,
             });
             expect(user).toEqual(newUser);
         });
 
         it('エラー時は例外をスローする', async () => {
-            mockPrisma.user.create.mockRejectedValueOnce(new Error('Duplicate email'));
+            mockPrisma.user.create.mockRejectedValueOnce(new Error('DB Error'));
 
             await expect(createUser({
                 email: 'test@example.com',
-                googleId: 'google-789',
-            })).rejects.toThrow('Duplicate email');
+            })).rejects.toThrow('DB Error');
         });
     });
 
     describe('findOrCreateUserByEmail', () => {
         it('既存ユーザーが見つかる場合はそれを返す', async () => {
             const existingUser = { id: '1', email: 'existing@example.com' };
-            mockPrisma.user.findUnique.mockResolvedValueOnce(existingUser);
+            mockPrisma.user.findFirst.mockResolvedValueOnce(existingUser);
 
             const user = await findOrCreateUserByEmail({
                 email: 'existing@example.com',
-                googleId: 'google-123',
             });
 
-            expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+            expect(mockPrisma.user.findFirst).toHaveBeenCalled();
             expect(mockPrisma.user.create).not.toHaveBeenCalled();
             expect(user).toEqual(existingUser);
         });
 
         it('ユーザーが見つからない場合は新規作成する', async () => {
-            const newUser = { id: '2', email: 'new@example.com', googleId: 'google-456' };
-            mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+            const newUser = { id: '2', email: 'new@example.com' };
+            mockPrisma.user.findFirst.mockResolvedValueOnce(null);
             mockPrisma.user.create.mockResolvedValueOnce(newUser);
 
             const user = await findOrCreateUserByEmail({
                 email: 'new@example.com',
-                googleId: 'google-456',
             });
 
-            expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+            expect(mockPrisma.user.findFirst).toHaveBeenCalled();
             expect(mockPrisma.user.create).toHaveBeenCalled();
             expect(user).toEqual(newUser);
         });
@@ -223,15 +216,14 @@ describe('user.server', () => {
     });
 
     describe('syncGoogleUser', () => {
-        it('Google IDが既存ならプロフィールを更新する', async () => {
-            mockPrisma.user.findUnique.mockResolvedValueOnce({
-                id: '1',
-                googleId: 'google-123',
-                email: 'test@example.com',
+        it('Google アカウントが既存ならプロフィールを更新する', async () => {
+            mockPrisma.account.findUnique.mockResolvedValueOnce({
+                id: 'account-1',
+                userId: 'user-1',
             });
+            mockPrisma.account.update.mockResolvedValueOnce({});
             mockPrisma.user.update.mockResolvedValueOnce({
-                id: '1',
-                googleId: 'google-123',
+                id: 'user-1',
                 email: 'updated@example.com',
                 name: 'Updated User',
                 picture: 'https://example.com/avatar.png',
@@ -244,13 +236,102 @@ describe('user.server', () => {
                 picture: 'https://example.com/avatar.png',
             });
 
+            expect(mockPrisma.account.findUnique).toHaveBeenCalledWith({
+                where: {
+                    provider_providerAccountId: {
+                        provider: 'google',
+                        providerAccountId: 'google-123',
+                    },
+                },
+                select: { id: true, userId: true },
+            });
+            expect(mockPrisma.account.update).toHaveBeenCalledWith({
+                where: { id: 'account-1' },
+                data: {
+                    email: 'updated@example.com',
+                    emailVerified: true,
+                    name: 'Updated User',
+                    picture: 'https://example.com/avatar.png',
+                },
+            });
             expect(user).toEqual({
-                id: '1',
-                googleId: 'google-123',
+                id: 'user-1',
                 email: 'updated@example.com',
                 name: 'Updated User',
                 picture: 'https://example.com/avatar.png',
             });
+        });
+
+        it('Google アカウントがなければユーザーとアカウントを作成する', async () => {
+            mockPrisma.account.findUnique.mockResolvedValueOnce(null);
+            mockPrisma.user.create.mockResolvedValueOnce({
+                id: 'user-2',
+                email: 'new@example.com',
+                name: 'New User',
+            });
+
+            const user = await syncGoogleUser({
+                email: 'new@example.com',
+                name: 'New User',
+                googleId: 'google-456',
+            });
+
+            expect(mockPrisma.user.create).toHaveBeenCalledWith({
+                data: {
+                    email: 'new@example.com',
+                    name: 'New User',
+                    picture: null,
+                    accounts: {
+                        create: {
+                            provider: 'google',
+                            providerAccountId: 'google-456',
+                            email: 'new@example.com',
+                            emailVerified: true,
+                            name: 'New User',
+                            picture: null,
+                        },
+                    },
+                },
+                select: coreUserSelect,
+            });
+            expect(user).toEqual({
+                id: 'user-2',
+                email: 'new@example.com',
+                name: 'New User',
+            });
+        });
+    });
+
+    describe('syncDevUser', () => {
+        it('dev アカウントがない既存ユーザーには dev アカウントを追加する', async () => {
+            const existingUser = {
+                id: 'user-1',
+                email: 'dev@example.com',
+                name: 'Dev User',
+            };
+            mockPrisma.account.findUnique.mockResolvedValueOnce(null);
+            mockPrisma.user.findFirst.mockResolvedValueOnce(existingUser);
+            mockPrisma.account.create.mockResolvedValueOnce({});
+            mockPrisma.user.update.mockResolvedValueOnce(existingUser);
+
+            const user = await syncDevUser({
+                email: 'dev@example.com',
+                name: 'Dev User',
+                accountId: 'dev-google-id',
+            });
+
+            expect(mockPrisma.account.create).toHaveBeenCalledWith({
+                data: {
+                    userId: 'user-1',
+                    provider: 'dev',
+                    providerAccountId: 'dev-google-id',
+                    email: 'dev@example.com',
+                    emailVerified: true,
+                    name: 'Dev User',
+                    picture: null,
+                },
+            });
+            expect(user).toEqual(existingUser);
         });
     });
 });

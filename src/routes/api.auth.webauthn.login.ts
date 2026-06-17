@@ -16,12 +16,30 @@ import {
   getSessionCookieHeader,
 } from "~/features/auth/utils/session.server";
 import { prisma } from "~/db.server";
+import { getWebAuthnRequestConfig } from "~/features/auth/config/webauthn.server";
 
-const RP_ID = typeof process !== "undefined" ? (process.env.WEBAUTHN_RP_ID || "localhost") : "localhost";
-const ORIGIN = typeof process !== "undefined" ? (process.env.WEBAUTHN_ORIGIN || "http://localhost:3000") : "http://localhost:3000";
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 // チャレンジの一時保存
-const challengeStore = new Map<string, { challenge: string; userId?: string }>();
+const challengeStore = new Map<string, {
+  challenge: string;
+  userId?: string;
+  origin: string;
+  rpID: string;
+  expiresAt: number;
+}>();
+
+const getStoredChallenge = (sessionKey: string) => {
+  const stored = challengeStore.get(sessionKey);
+  if (!stored) return null;
+
+  if (stored.expiresAt < Date.now()) {
+    challengeStore.delete(sessionKey);
+    return null;
+  }
+
+  return stored;
+};
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
@@ -33,15 +51,19 @@ export const action: ActionFunction = async ({ request }) => {
     const { phase } = body;
 
     if (phase === "challenge") {
+      const { rpID, origin } = getWebAuthnRequestConfig(request);
       // email が指定されている場合、そのユーザーのクレデンシャルのみ
       const { email } = body;
 
-      let allowCredentials: any[] = [];
+      let allowCredentials: any[] | undefined;
       let userId: string | undefined;
 
       if (email) {
-        const user = await prisma.user.findUnique({
-          where: { email },
+        const user = await prisma.user.findFirst({
+          where: {
+            email,
+            webauthnCredentials: { some: {} },
+          },
           include: { webauthnCredentials: true },
         });
 
@@ -60,14 +82,20 @@ export const action: ActionFunction = async ({ request }) => {
       }
 
       const options = await generateAuthenticationOptions({
-        rpID: RP_ID,
-        userVerification: "preferred",
+        rpID,
+        userVerification: "required",
         allowCredentials,
       });
 
       // チャレンジをセッションIDで保存
       const sessionKey = `auth_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-      challengeStore.set(sessionKey, { challenge: options.challenge, userId });
+      challengeStore.set(sessionKey, {
+        challenge: options.challenge,
+        userId,
+        origin,
+        rpID,
+        expiresAt: Date.now() + CHALLENGE_TTL_MS,
+      });
 
       return Response.json({ ...options, sessionKey });
     }
@@ -75,7 +103,7 @@ export const action: ActionFunction = async ({ request }) => {
     if (phase === "verify") {
       const { assertionResponse, sessionKey } = body;
 
-      const stored = challengeStore.get(sessionKey);
+      const stored = getStoredChallenge(sessionKey);
       if (!stored) {
         return Response.json(
           { error: "チャレンジが見つかりません" },
@@ -108,14 +136,15 @@ export const action: ActionFunction = async ({ request }) => {
       const verification = await verifyAuthenticationResponse({
         response: assertionResponse,
         expectedChallenge: stored.challenge,
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID,
+        expectedOrigin: stored.origin,
+        expectedRPID: stored.rpID,
         credential: {
           id: credential.credentialId,
           publicKey: new Uint8Array(credential.publicKey),
           counter: Number(credential.counter),
           transports: credential.transports as any[],
         },
+        requireUserVerification: true,
       });
 
       if (!verification.verified) {

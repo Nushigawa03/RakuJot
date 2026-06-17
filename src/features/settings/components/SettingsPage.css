@@ -176,6 +176,24 @@ input:checked+.rakujot-toggle-slider:before {
     width: 100%;
 }
 
+.setting-item-action {
+    width: 100%;
+}
+
+.settings-feedback {
+    margin: var(--spacing-2) 0 0;
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.settings-feedback--success {
+    color: var(--color-success, #16a34a);
+}
+
+.settings-feedback--error {
+    color: var(--color-danger, #dc2626);
+}
+
 .rakujot-api-key-input {
     width: 100%;
     padding: var(--spacing-2) var(--spacing-3);

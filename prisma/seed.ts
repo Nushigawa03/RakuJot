@@ -12,7 +12,7 @@ const prisma = new PrismaClient({ adapter });
 const DEV_USER = {
     email: "dev@example.com",
     name: "Dev User",
-    googleId: "dev-google-id",
+    accountId: "dev-google-id",
 };
 
 // サンプルタグデータ
@@ -98,13 +98,32 @@ async function main() {
     console.log("🌱 Seeding database...");
 
     // 1. 開発者ユーザーを作成または取得
-    let user = await prisma.user.findUnique({
-        where: { email: DEV_USER.email },
+    const account = await prisma.account.findUnique({
+        where: {
+            provider_providerAccountId: {
+                provider: "dev",
+                providerAccountId: DEV_USER.accountId,
+            },
+        },
+        include: { user: true },
     });
+    let user = account?.user ?? null;
 
     if (!user) {
         user = await prisma.user.create({
-            data: DEV_USER,
+            data: {
+                email: DEV_USER.email,
+                name: DEV_USER.name,
+                accounts: {
+                    create: {
+                        provider: "dev",
+                        providerAccountId: DEV_USER.accountId,
+                        email: DEV_USER.email,
+                        emailVerified: true,
+                        name: DEV_USER.name,
+                    },
+                },
+            },
         });
         console.log(`✅ Created dev user: ${user.email}`);
     } else {

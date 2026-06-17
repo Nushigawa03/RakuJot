@@ -12,7 +12,7 @@ type LoaderData = ReturnType<typeof getPublicAuthConfig>;
 export const meta: MetaFunction = () => {
     return [
         { title: 'ログイン | RakuJot' },
-        { name: 'description', content: 'Googleアカウントで安全にRakuJotへログインします。' },
+        { name: 'description', content: 'GoogleアカウントまたはパスキーでRakuJotへログインします。' },
     ];
 };
 
@@ -84,15 +84,15 @@ export default function LoginRoute() {
                         トップへ戻る
                     </Link>
                     <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-                        Googleアカウントで安全にログイン
+                        RakuJot にログイン
                     </h1>
                     <p className="mt-6 text-lg leading-8 text-slate-300">
-                        RakuJot は ID とパスワードを独自に保持しません。Google 認証だけを使い、ログイン後は署名付きセッションでアクセスを保護します。
+                        RakuJot は ID とパスワードを独自に保持しません。初回は Google で入り、設定からパスキーを追加すると次回から Windows Hello やスマホの認証で入れます。
                     </p>
                     <ul className="mt-8 space-y-4 text-sm text-slate-300">
                         <li>• パスワード入力フォームなし</li>
                         <li>• Google ID トークンをサーバー側で検証</li>
-                        <li>• セッション Cookie は署名付き</li>
+                        <li>• 登録済みパスキーで再ログイン</li>
                     </ul>
                 </section>
 
@@ -138,18 +138,18 @@ export default function LoginRoute() {
                         </>
                     )}
 
-                    {/* 生体認証ログイン */}
-                    {!isDevMode && googleAuthAvailable && (
+                    {/* パスキーログイン */}
+                    {!isDevMode && (
                         <div className="mt-4">
                             <div className="flex items-center gap-2 text-xs text-slate-400">
                                 <hr className="flex-1 border-white/10" />
-                                <span>または</span>
+                                <span>{googleAuthAvailable ? 'または' : '登録済みの場合'}</span>
                                 <hr className="flex-1 border-white/10" />
                             </div>
                             <div className="mt-3 flex justify-center">
-                            <BiometricLoginButton
+                                <BiometricLoginButton
                                     onSuccess={async (user?: any) => {
-                                        // 生体認証ログイン成功：匿名データを移行して同期
+                                        // パスキーログイン成功：匿名データを移行して同期
                                         if (user?.id) {
                                             await setLoggedIn(user.id);
                                             performSync().catch(console.error);

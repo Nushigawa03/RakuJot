@@ -1,4 +1,4 @@
-import { findUserByEmail, createUser } from "~/features/auth/models/user.server";
+import { syncDevUser } from "~/features/auth/models/user.server";
 import { getDevUserProfile } from "~/features/auth/config/authEnvironment.server";
 
 /**
@@ -8,20 +8,12 @@ import { getDevUserProfile } from "~/features/auth/config/authEnvironment.server
 export const getDevUserId = async (): Promise<string> => {
     const devUser = getDevUserProfile();
 
-    // Try to find existing dev user (via Models layer)
-    const user = await findUserByEmail(devUser.email);
-
-    if (user) {
-        return user.id;
-    }
-
-    // Create dev user if not exists (via Models layer)
-    const newUser = await createUser({
+    const user = await syncDevUser({
         email: devUser.email,
         name: devUser.name,
-        googleId: devUser.googleId,
+        accountId: devUser.accountId,
         picture: devUser.picture ?? undefined,
     });
 
-    return newUser.id;
+    return user.id;
 };

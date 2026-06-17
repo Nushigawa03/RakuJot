@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useSettings } from '../hooks/useSettings';
+import { BiometricRegisterButton } from '~/features/auth/components/BiometricAuthButton';
 import './SettingsPage.css';
 
 const SettingsPage: React.FC = () => {
     const navigate = useNavigate();
     const { settings, updateSetting, isLoaded } = useSettings();
     const [showApiKey, setShowApiKey] = useState(false);
+    const [passkeyMessage, setPasskeyMessage] = useState('');
+    const [passkeyError, setPasskeyError] = useState('');
 
     if (!isLoaded) {
         return null; // or a loading spinner
@@ -29,6 +32,43 @@ const SettingsPage: React.FC = () => {
             </header>
 
             <main className="settings-content">
+                <section className="settings-section animate-slideInUp">
+                    <h2 className="settings-section-title">ログイン</h2>
+
+                    <div className="setting-item setting-input-item hover-lift">
+                        <div className="setting-item-info">
+                            <div className="setting-item-label">
+                                パスキー
+                            </div>
+                            <p className="setting-item-description">
+                                Windows Hello、PIN、スマホの生体認証などをログインに使います。
+                            </p>
+                        </div>
+                        <div className="setting-item-action">
+                            <BiometricRegisterButton
+                                onSuccess={() => {
+                                    setPasskeyError('');
+                                    setPasskeyMessage('パスキーを登録しました。');
+                                }}
+                                onError={(error) => {
+                                    setPasskeyMessage('');
+                                    setPasskeyError(error);
+                                }}
+                            />
+                            {passkeyMessage && (
+                                <p className="settings-feedback settings-feedback--success">
+                                    {passkeyMessage}
+                                </p>
+                            )}
+                            {passkeyError && (
+                                <p className="settings-feedback settings-feedback--error">
+                                    {passkeyError}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+
                 <section className="settings-section animate-slideInUp">
                     <h2 className="settings-section-title">AI機能</h2>
 

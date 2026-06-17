@@ -14,19 +14,39 @@ datasource db {
 
 model User {
   id              String          @id @default(cuid())
-  email           String          @unique
+  email           String?
   name            String?
-  picture         String?         // Google profile picture URL
-  googleId        String          @unique
+  picture         String?         // Preferred profile picture URL
   settings        Json?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   
+  accounts        Account[]
   memos           Memo[]
   tags            Tag[]
   tagExpressions  TagExpression[]
   trashedMemos    TrashedMemo[]
   webauthnCredentials WebAuthnCredential[]
+
+  @@index([email])
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  email             String?
+  emailVerified     Boolean  @default(false)
+  name              String?
+  picture           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([email])
 }
 
 model WebAuthnCredential {
