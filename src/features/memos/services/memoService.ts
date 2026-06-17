@@ -4,7 +4,6 @@ import { normalizeTagName } from '../utils/normalizeTagName';
 import { refreshTags } from '../utils/tagUtils';
 import { SETTINGS_KEY } from '../../settings/settings';
 import { getTodayDateForPicker } from '../../../utils/dateUtils';
-import { computeBrowserEmbedding } from '../../App/services/browserEmbeddingService';
 import {
   getAllMemos as localGetAllMemos,
   hasAnyMemoRecords as localHasAnyMemoRecords,
@@ -44,6 +43,8 @@ export class MemoService {
   }
 
   private refreshLocalEmbedding(memo: LocalMemo): void {
+    if (import.meta.env.SSR || typeof window === 'undefined') return;
+
     const embeddingText = buildMemoDateEmbeddingText(memo);
     if (!embeddingText) return;
 
@@ -54,7 +55,8 @@ export class MemoService {
       text: embeddingText.slice(0, 80),
     });
 
-    computeBrowserEmbedding(embeddingText, 'document')
+    import('../../App/services/browserEmbeddingService')
+      .then(({ computeBrowserEmbedding }) => computeBrowserEmbedding(embeddingText, 'document'))
       .then(async (embedding) => {
         if (!embedding) return;
 

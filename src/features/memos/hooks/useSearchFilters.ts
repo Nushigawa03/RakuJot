@@ -3,7 +3,6 @@ import { SearchTag } from '../types/searchTag';
 import { TagExpression } from '../types/tagExpressions';
 import tagExpressionService from '../services/tagExpressionService';
 import { useTagExpression } from './useTagExpression';
-import { computeBrowserEmbedding } from '../../App/services/browserEmbeddingService';
 
 export interface UseSearchFiltersResult {
     filterQuery: string;
@@ -66,9 +65,12 @@ export const useSearchFilters = (
         if (targetText && targetText.length > 1) { // Min length check
             const generateQueryEmbedding = async () => {
                 try {
+                    if (import.meta.env.SSR) return;
+
                     console.log('[useSearchFilters] generating semantic date embedding', {
                         semanticDateQuery: targetText,
                     });
+                    const { computeBrowserEmbedding } = await import('../../App/services/browserEmbeddingService');
                     const browserEmbedding = await computeBrowserEmbedding(targetText, 'query');
                     if (browserEmbedding) {
                         console.log('[useSearchFilters] semantic date embedding ready', {
