@@ -53,9 +53,20 @@ export function evaluateSemanticDateSimilarity(
     try {
       const id = (memo as any).id ?? 'unknown';
       const title = (memo as any).title ? String((memo as any).title).slice(0, 80) : '';
-      console.log(`[evaluateSemanticDateSimilarity] memo id=${id} title="${title}" similarity=${similarity.toFixed(4)} threshold=${similarityThreshold}`);
+      console.log('[semanticDateEmbedding] USED memo embedding for semantic date match', {
+        memoId: id,
+        title,
+        similarity: Number(similarity.toFixed(4)),
+        threshold: similarityThreshold,
+        matched: similarity >= similarityThreshold,
+        vectorLength: memoEmbedding.length,
+      });
     } catch (logErr) {
-      console.log('[evaluateSemanticDateSimilarity] similarity:', similarity, 'threshold:', similarityThreshold);
+      console.log('[semanticDateEmbedding] USED memo embedding for semantic date match', {
+        similarity,
+        threshold: similarityThreshold,
+        matched: similarity >= similarityThreshold,
+      });
     }
 
     return similarity >= similarityThreshold;

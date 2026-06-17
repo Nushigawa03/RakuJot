@@ -6,8 +6,11 @@ type FeatureExtractionPipeline = (input: string | string[], options?: Record<str
   tolist?: () => number[] | number[][];
 }>;
 
-const DEFAULT_MODEL_ID = "sirasagi62/ruri-v3-30m-ONNX";
-const MODEL_ID = (import.meta.env.VITE_BROWSER_EMBED_MODEL || DEFAULT_MODEL_ID).trim();
+const MODEL_ID = (import.meta.env.VITE_BROWSER_EMBED_MODEL_ID || "").trim();
+const MODEL_REMOTE_HOST = (import.meta.env.VITE_BROWSER_EMBED_MODEL_HOST || "").trim();
+const MODEL_REMOTE_PATH_TEMPLATE = (
+  import.meta.env.VITE_BROWSER_EMBED_MODEL_PATH_TEMPLATE || "{model}/"
+).trim();
 
 let extractorPromise: Promise<FeatureExtractionPipeline> | null = null;
 
@@ -55,14 +58,30 @@ const readFirstVector = (output: Awaited<ReturnType<FeatureExtractionPipeline>>)
 
 const getExtractor = async (): Promise<FeatureExtractionPipeline> => {
   if (!extractorPromise) {
-    console.log(`[browserEmbeddingService] loading model=${MODEL_ID}`);
-    extractorPromise = import("@huggingface/transformers").then(({ pipeline }) => (
-      pipeline("feature-extraction", MODEL_ID, {
+    if (!MODEL_ID || !MODEL_REMOTE_HOST) {
+      throw new Error(
+        "Browser embedding model is not configured. Set VITE_BROWSER_EMBED_MODEL_ID and VITE_BROWSER_EMBED_MODEL_HOST."
+      );
+    }
+
+    console.log("[browserEmbeddingService] loading embedding model", {
+      model: MODEL_ID,
+      remoteHost: MODEL_REMOTE_HOST,
+      remotePathTemplate: MODEL_REMOTE_PATH_TEMPLATE,
+    });
+    extractorPromise = import("@huggingface/transformers").then(({ env, pipeline }) => {
+      env.remoteHost = MODEL_REMOTE_HOST;
+      env.remotePathTemplate = MODEL_REMOTE_PATH_TEMPLATE;
+
+      return pipeline("feature-extraction", MODEL_ID, {
         device: "webgpu" in navigator ? "webgpu" : "wasm",
         dtype: "q8",
-      }) as Promise<FeatureExtractionPipeline>
-    )).then((extractor) => {
-      console.log(`[browserEmbeddingService] model ready model=${MODEL_ID}`);
+      }) as Promise<FeatureExtractionPipeline>;
+    }).then((extractor) => {
+      console.log("[browserEmbeddingService] embedding model ready", {
+        model: MODEL_ID,
+        remoteHost: MODEL_REMOTE_HOST,
+      });
       return extractor;
     });
   }

@@ -12,16 +12,19 @@ npm run dev
 
 ### On-device embeddings in the PWA
 
-The app can generate search embeddings in the browser with `sirasagi62/ruri-v3-30m-ONNX`.
-This model is a small Japanese embedding model based on Ruri v3, uses Apache-2.0 licensing, and outputs 256-dimensional vectors.
+The app can generate search embeddings in the browser with the ONNX model files mirrored to Vercel Blob.
+The current browser embedding model is a small Japanese embedding model based on Ruri v3, uses Apache-2.0 licensing, and outputs 256-dimensional vectors.
 
-The browser embedding code uses `@huggingface/transformers` from the app bundle. The ONNX model files are fetched at runtime from Hugging Face and cached by the browser/PWA storage for later use. Queries are prefixed with `検索クエリ: ` and memo documents with `検索文書: ` to match Ruri v3 retrieval usage.
+The browser embedding code uses `@huggingface/transformers` from the app bundle. The ONNX model files are fetched at runtime from the configured Blob public URL and cached by the browser/PWA storage for later use. Queries are prefixed with `検索クエリ: ` and memo documents with `検索文書: ` to match Ruri v3 retrieval usage.
 
-Optional override:
+Required browser environment variables:
 
 ```env
-VITE_BROWSER_EMBED_MODEL=sirasagi62/ruri-v3-30m-ONNX
+VITE_BROWSER_EMBED_MODEL_HOST=https://<blob-public-host>/
+VITE_BROWSER_EMBED_MODEL_ID=models/ruri-v3-30m-ONNX
 ```
+
+`VITE_BROWSER_EMBED_MODEL_PATH_TEMPLATE` defaults to `{model}/`.
 
 Do not mix embeddings from different models for semantic search; regenerate stored memo embeddings after switching providers. The client refreshes local memo embeddings gradually when memos are loaded.
 

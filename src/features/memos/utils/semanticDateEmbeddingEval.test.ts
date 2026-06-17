@@ -9,7 +9,9 @@ type FeatureExtractionPipeline = (input: string | string[], options?: Record<str
 }>;
 
 const RUN_EVAL = process.env.RUN_EMBEDDING_EVAL === 'true';
-const MODEL_ID = process.env.VITE_BROWSER_EMBED_MODEL || 'sirasagi62/ruri-v3-30m-ONNX';
+const MODEL_ID = process.env.VITE_BROWSER_EMBED_MODEL_ID || '';
+const MODEL_REMOTE_HOST = process.env.VITE_BROWSER_EMBED_MODEL_HOST || '';
+const MODEL_REMOTE_PATH_TEMPLATE = process.env.VITE_BROWSER_EMBED_MODEL_PATH_TEMPLATE || '{model}/';
 
 const prefixText = (text: string, kind: 'query' | 'document'): string => {
   const trimmed = text.trim();
@@ -58,7 +60,16 @@ describeEmbeddingEval('semantic date embedding evaluation', () => {
   it(
     'separates date-like document values from arbitrary date-field text',
     async () => {
-      const { pipeline } = await import('@huggingface/transformers');
+      if (!MODEL_ID || !MODEL_REMOTE_HOST) {
+        throw new Error(
+          'Set VITE_BROWSER_EMBED_MODEL_ID and VITE_BROWSER_EMBED_MODEL_HOST before running embedding eval.'
+        );
+      }
+
+      const { env, pipeline } = await import('@huggingface/transformers');
+      env.remoteHost = MODEL_REMOTE_HOST;
+      env.remotePathTemplate = MODEL_REMOTE_PATH_TEMPLATE;
+
       const extractor = await pipeline('feature-extraction', MODEL_ID, {
         device: 'cpu',
         dtype: 'q8',

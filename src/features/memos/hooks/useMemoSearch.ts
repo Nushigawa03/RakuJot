@@ -84,12 +84,23 @@ export const useMemoSearch = (
     };
     for (const dq of activeDateQueries) {
       if (!dq) continue;
+      const memosWithEmbedding = result.filter((memo) =>
+        Array.isArray((memo as any).embedding) && (memo as any).embedding.length > 0
+      ).length;
       console.log('[useMemoSearch] applying date query', {
         dateQuery: dq,
         hasQueryEmbedding: Array.isArray(queryEmbedding) && queryEmbedding.length > 0,
         queryEmbeddingLength: queryEmbedding?.length ?? 0,
+        semanticEmbeddingAvailable: Array.isArray(queryEmbedding) && queryEmbedding.length > 0 && memosWithEmbedding > 0,
+        memosBeforeDateFilter: result.length,
+        memosWithEmbedding,
       });
       result = result.filter((memo) => evaluateDateQuery(memo, dq, config));
+      console.log('[useMemoSearch] date query applied', {
+        dateQuery: dq,
+        memosAfterDateFilter: result.length,
+        semanticEmbeddingWasAvailable: Array.isArray(queryEmbedding) && queryEmbedding.length > 0 && memosWithEmbedding > 0,
+      });
     }
   }
 
