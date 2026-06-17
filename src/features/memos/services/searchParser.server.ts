@@ -2,7 +2,7 @@
  * searchParser.server.ts
  * 
  * 検索クエリの解析処理を担当するサーバー側ロジック。
- * GenAI呼び出しとヒューリスティック解析のフォールバックを提供。
+ * ヒューリスティック解析を提供し、明示的に許可された場合のみGenAIを使う。
  */
 
 import { generateContent } from "~/features/App/services/genaiClient";
@@ -16,6 +16,10 @@ export interface ParsedSearchResult {
     start: string | null;
     end: string | null;
     tag: string | null;
+}
+
+export interface ParseSearchOptions {
+    allowAi?: boolean;
 }
 
 // ========================================
@@ -209,9 +213,9 @@ async function aiParse(text: string): Promise<Omit<ParsedSearchResult, 'source'>
 
 /**
  * 検索クエリを解析し、日付範囲とタグ候補を抽出する。
- * まずヒューリスティック解析を試み、結果が得られない場合のみGenAIにフォールバック。
+ * 通常の検索入力ではAIを使わない。allowAi=true が明示された場合だけGenAIにフォールバックする。
  */
-export async function parseSearchQuery(text: string): Promise<ParsedSearchResult> {
+export async function parseSearchQuery(text: string, options: ParseSearchOptions = {}): Promise<ParsedSearchResult> {
     console.debug('[searchParser] parsing:', text);
 
     // 1. まずヒューリスティック解析を試行（高速・確実）
@@ -220,9 +224,9 @@ export async function parseSearchQuery(text: string): Promise<ParsedSearchResult
         return { source: "heuristic", ...heuristicResult };
     }
 
-    // 2. ヒューリスティックで解決できない場合のみAI解析（曖昧なクエリ用）
+    // 2. 明示的に許可された場合のみAI解析（曖昧なクエリ用）
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
-    if (apiKey) {
+    if (options.allowAi === true && apiKey) {
         const aiResult = await aiParse(text);
         if (aiResult) {
             return { source: "genai", ...aiResult };

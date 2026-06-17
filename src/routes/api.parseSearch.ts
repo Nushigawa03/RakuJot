@@ -13,6 +13,6 @@ export const action: ActionFunction = async ({ request }) => {
     return Response.json({ error: "text required" }, { status: 400 });
   }
 
-  const result = await parseSearchQuery(text);
+  const result = await parseSearchQuery(text, { allowAi: body?.allowAi === true });
   return Response.json(result);
 };

@@ -67,6 +67,7 @@ export function evaluateTextQuery(memo: Memo, filterQuery: string, searchBody: b
             if (searchBody) {
                 if (memo.title?.toLowerCase().includes(part.toLowerCase())) return true;
                 if (memo.body?.toLowerCase().includes(part.toLowerCase())) return true;
+                if (memo.date?.toLowerCase().includes(part.toLowerCase())) return true;
             }
             return false;
         });
@@ -103,6 +104,7 @@ export function evaluateTextQuery(memo: Memo, filterQuery: string, searchBody: b
             if (searchBody) {
                 if (memo.title?.toLowerCase().includes(part.toLowerCase())) return true;
                 if (memo.body?.toLowerCase().includes(part.toLowerCase())) return true;
+                if (memo.date?.toLowerCase().includes(part.toLowerCase())) return true;
             }
             return false;
         });
@@ -193,6 +195,7 @@ export function sortMemosByFuzzyScore(
 
         const title = (memo.title || '').toLowerCase();
         const body = (memo.body || '').toLowerCase();
+        const date = (memo.date || '').toLowerCase();
         const tags = (memo.tags || []).map(tagToSearchText).filter(Boolean).map(t => t.toLowerCase());
 
         // Custom Fuzzy Scoring via keywords
@@ -221,12 +224,19 @@ export function sortMemosByFuzzyScore(
                 score += 0.35 * Math.min(count, 3);
                 score += 0.9 * bodyFuzzy;
             }
+
+            const dateFuzzy = calculateFuzzyMatchScore(kw, memo.date || '');
+            if (dateFuzzy > 0) {
+                score += 1.4 * dateFuzzy;
+                if (normalizeString(date) === normKw) score += 1.0;
+            }
         });
 
         const coverage = keywords.length > 0
             ? keywords.filter(kw => {
                 return calculateFuzzyMatchScore(kw, memo.title || '') > 0 ||
                     calculateFuzzyMatchScore(kw, memo.body || '') > 0 ||
+                    calculateFuzzyMatchScore(kw, memo.date || '') > 0 ||
                     tags.some(t => calculateFuzzyMatchScore(kw, t) > 0);
             }).length / keywords.length
             : 1;

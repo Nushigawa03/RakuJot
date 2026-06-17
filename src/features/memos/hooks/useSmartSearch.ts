@@ -3,7 +3,7 @@
  * 
  * 統合検索フック - タグ検索 + AI解析を組み合わせた検索機能を提供
  * useTagSearchを拡張し、以下を追加:
- * - AI解析のdebounce呼び出し
+ * - ローカル解析のdebounce呼び出し
  * - 解析結果のプレビュー状態
  * - クリア機能の統合
  */
@@ -12,7 +12,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTagSearch } from './useTagSearch';
 import { SearchTag } from '../types/searchTag';
 import { Tag } from '../types/tags';
-import { searchService } from '../services/searchService';
 import { buildDateQuery } from '../utils/dateUtils';
 import { clientParseSearch } from '../utils/clientSearchParser';
 
@@ -120,7 +119,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
 
     // 追加の状態
     const [parsedPreview, setParsedPreview] = useState<ParsedPreview | null>(null);
-    const [isParsing, setIsParsing] = useState(false);
+    const isParsing = false;
     const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
     const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
 
@@ -165,8 +164,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
         }
 
         // 300ms後にクライアント側パースを実行
-        debounceTimer.current = setTimeout(async () => {
-            // 1. まずクライアント側ヒューリスティックで即座にパース
+        debounceTimer.current = setTimeout(() => {
             const tagNames = availableTags.map(t => t.name);
             const clientResult = clientParseSearch(query, tagNames);
 
@@ -180,24 +178,7 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                 return;
             }
 
-            // 2. クライアント側で解決できない場合のみサーバーAPIを呼ぶ
-            if (navigator.onLine) {
-                setIsParsing(true);
-                try {
-                    const result = await searchService.parseSearchQuery(query);
-                    setParsedPreview({
-                        start: result.start ?? null,
-                        end: result.end ?? null,
-                        tag: result.tag ?? null,
-                        query,
-                    });
-                } catch (err) {
-                    console.warn('[useSmartSearch] parse failed:', err);
-                    setParsedPreview(null);
-                } finally {
-                    setIsParsing(false);
-                }
-            }
+            setParsedPreview(null);
         }, 300);
 
         return () => {
@@ -214,10 +195,9 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
         let effectiveEnd: string | null = selectedEndDate;
         let effectiveTag: string | null = null;
 
-        // パースプレビューがない場合でも、検索実行時にパースを試みる（即エンター対応）
+        // パースプレビューがない場合でも、検索実行時にローカルパースを試みる（即エンター対応）
         // 検索バーに日付が含まれていれば、詳細検索の日付より検索バーの入力を優先する
         if (query) {
-            // まずクライアント側で即座にパース
             const tagNames = availableTags.map(t => t.name);
             let result: ParsedPreview | null =
                 parsedPreview && parsedPreview.query === query ? parsedPreview : null;
@@ -230,24 +210,6 @@ export function useSmartSearch(availableTags: Tag[]): UseSmartSearchReturn {
                         tag: clientResult.tag,
                         query,
                     };
-                }
-            }
-
-            // クライアント側で解決できない場合のみサーバーAPIを呼ぶ
-            if (!result && navigator.onLine) {
-                setIsParsing(true);
-                try {
-                    const apiResult = await searchService.parseSearchQuery(query);
-                    result = {
-                        start: apiResult.start ?? null,
-                        end: apiResult.end ?? null,
-                        tag: apiResult.tag ?? null,
-                        query,
-                    };
-                } catch (err) {
-                    console.warn('[handleSearch] parse failed:', err);
-                } finally {
-                    setIsParsing(false);
                 }
             }
 

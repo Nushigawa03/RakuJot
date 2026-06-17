@@ -33,8 +33,8 @@ const generateId = (): string =>
     return v.toString(16);
   });
 
-const buildMemoDateEmbeddingText = (memo: { title: string; date?: string; body?: string }): string =>
-  (memo.date || '').trim() || [memo.title, memo.body || ''].filter((part) => part && part.trim()).join(' ');
+const buildMemoDateEmbeddingText = (memo: { date?: string }): string =>
+  (memo.date || '').trim();
 
 export class MemoService {
   private basePath = '/api';

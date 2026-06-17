@@ -1,15 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSmartSearch } from './useSmartSearch';
-import { searchService } from '../services/searchService';
 import { Tag } from '../types/tags';
-
-// Mock searchService
-vi.mock('../services/searchService', () => ({
-    searchService: {
-        parseSearchQuery: vi.fn(),
-    },
-}));
 
 describe('useSmartSearch', () => {
     const mockTags: Tag[] = [
@@ -32,37 +24,24 @@ describe('useSmartSearch', () => {
         expect(result.current.parsedPreview).toBeNull();
     });
 
-    it('updates search query and debounces parsing', async () => {
-        // Setup mock response
-        (searchService.parseSearchQuery as any).mockResolvedValue({
-            start: '2024-01-01',
-            end: '2024-01-31',
-            tag: 'Work',
-        });
-
+    it('updates search query and debounces local parsing', async () => {
         const { result } = renderHook(() => useSmartSearch(mockTags));
 
         // Update search query
         act(() => {
-            result.current.handleSearchChange('Last month Project');
+            result.current.handleSearchChange('2024年3月 Work');
         });
 
-        expect(result.current.searchQuery).toBe('Last month Project');
+        expect(result.current.searchQuery).toBe('2024年3月 Work');
         expect(result.current.parsedPreview).toBeNull(); // Should be null immediately
 
-        // Wait for debounce and async call
-        await waitFor(() => {
-            expect(searchService.parseSearchQuery).toHaveBeenCalledWith('Last month Project');
-        });
-
         // Verify preview logic (start/end/tag should be populated)
-        // Note: state updates in hook might be async, waitFor handles it
         await waitFor(() => {
             expect(result.current.parsedPreview).toEqual({
-                start: '2024-01-01',
-                end: '2024-01-31',
+                start: '2024-03-01',
+                end: '2024-03-31',
                 tag: 'Work',
-                query: 'Last month Project',
+                query: '2024年3月 Work',
             });
         });
     });
@@ -101,13 +80,6 @@ describe('useSmartSearch', () => {
     });
 
     it('performs instant search with parsing when Enter is pressed immediately', async () => {
-        // Setup mock response
-        (searchService.parseSearchQuery as any).mockResolvedValue({
-            start: null,
-            end: null,
-            tag: 'Work', // AI returns 'Work' tag
-        });
-
         const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
         const { result } = renderHook(() => useSmartSearch(mockTags));
 
@@ -120,9 +92,6 @@ describe('useSmartSearch', () => {
         await act(async () => {
             await result.current.handleSearch();
         });
-
-        // Exact tag matches are resolved on the client without API parsing.
-        expect(searchService.parseSearchQuery).not.toHaveBeenCalled();
 
         // verify single SMART event was dispatched with consolidated data
         expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
@@ -206,12 +175,6 @@ describe('useSmartSearch', () => {
     });
 
     it('handles Tag + Text search (e.g. "Work Meeting")', async () => {
-        (searchService.parseSearchQuery as any).mockResolvedValue({
-            start: null,
-            end: null,
-            tag: 'Work',
-        });
-
         const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
         const { result } = renderHook(() => useSmartSearch(mockTags));
 
@@ -234,10 +197,7 @@ describe('useSmartSearch', () => {
         }));
     });
 
-    it('falls back to client-side tag matching when API parsing returns no result', async () => {
-        // Mock API returning empty result (simulating failure or no parse)
-        (searchService.parseSearchQuery as any).mockResolvedValue({});
-
+    it('handles exact tag matches locally', async () => {
         const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
         const { result } = renderHook(() => useSmartSearch(mockTags));
 

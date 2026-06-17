@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { sortMemosByFuzzyScore } from './searchScoringUtils';
 import type { Memo } from '../types/memo';
 
-const memo = (id: string, title: string, body = ''): Memo => ({
+const memo = (id: string, title: string, body = '', date = ''): Memo => ({
     id,
     title,
     body,
+    date,
     tags: [],
     createdAt: '2024-01-01T00:00:00.000Z',
 });
@@ -44,6 +45,17 @@ describe('searchScoringUtils', () => {
         ];
 
         const result = sortMemosByFuzzyScore(memos, '会議');
+
+        expect(result.map(m => m.id)).toEqual(['2']);
+    });
+
+    it('keeps arbitrary date-field text searchable as normal text', () => {
+        const memos = [
+            memo('1', '買い物', '卵と牛乳'),
+            memo('2', '変な日付メモ', '', 'ほげほげ'),
+        ];
+
+        const result = sortMemosByFuzzyScore(memos, 'ほげほげ');
 
         expect(result.map(m => m.id)).toEqual(['2']);
     });

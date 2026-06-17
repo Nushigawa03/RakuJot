@@ -2,7 +2,11 @@ import { Memo } from '../types/memo';
 import { SearchTag } from '../types/searchTag';
 import { TagExpressionTerm } from '../types/tagExpressions';
 import { evaluateExpression } from '../utils/tagExpressionUtils';
-import { evaluateDateQuery, type DateQueryEvalConfig } from '../utils/dateQueryEvaluator';
+import {
+  DEFAULT_SEMANTIC_DATE_THRESHOLD,
+  evaluateDateQuery,
+  type DateQueryEvalConfig,
+} from '../utils/dateQueryEvaluator';
 import { useEffect, useState } from 'react';
 import type { TagExpression } from '../types/tagExpressions';
 import tagExpressionService from '../services/tagExpressionService';
@@ -75,7 +79,7 @@ export const useMemoSearch = (
   if (activeDateQueries.length > 0) {
     const config: DateQueryEvalConfig = {
       queryEmbedding,
-      semanticThreshold: 0.55,
+      semanticThreshold: DEFAULT_SEMANTIC_DATE_THRESHOLD,
       useSemanticFallback: true,
     };
     for (const dq of activeDateQueries) {
