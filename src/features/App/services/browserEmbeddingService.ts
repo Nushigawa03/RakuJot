@@ -11,6 +11,8 @@ const MODEL_REMOTE_HOST = (import.meta.env.VITE_BROWSER_EMBED_MODEL_HOST || "").
 const MODEL_REMOTE_PATH_TEMPLATE = (
   import.meta.env.VITE_BROWSER_EMBED_MODEL_PATH_TEMPLATE || "{model}/"
 ).trim();
+const MODEL_DTYPE = (import.meta.env.VITE_BROWSER_EMBED_MODEL_DTYPE || "q8").trim();
+const MODEL_ONNX_FILE = (import.meta.env.VITE_BROWSER_EMBED_MODEL_ONNX_FILE || "").trim();
 
 let extractorPromise: Promise<FeatureExtractionPipeline> | null = null;
 
@@ -56,6 +58,15 @@ const readFirstVector = (output: Awaited<ReturnType<FeatureExtractionPipeline>>)
   return null;
 };
 
+const remapModelFileUrl = (input: string | URL): string | URL => {
+  if (!MODEL_ONNX_FILE) return input;
+
+  const url = typeof input === "string" ? input : input.toString();
+  if (!url.endsWith("/onnx/model_quantized.onnx")) return input;
+
+  return url.replace(/\/onnx\/model_quantized\.onnx$/, `/onnx/${MODEL_ONNX_FILE}`);
+};
+
 const getExtractor = async (): Promise<FeatureExtractionPipeline> => {
   if (!extractorPromise) {
     if (!MODEL_ID || !MODEL_REMOTE_HOST) {
@@ -68,19 +79,27 @@ const getExtractor = async (): Promise<FeatureExtractionPipeline> => {
       model: MODEL_ID,
       remoteHost: MODEL_REMOTE_HOST,
       remotePathTemplate: MODEL_REMOTE_PATH_TEMPLATE,
+      dtype: MODEL_DTYPE,
+      onnxFile: MODEL_ONNX_FILE || "model_quantized.onnx",
     });
     extractorPromise = import("@huggingface/transformers").then(({ env, pipeline }) => {
       env.remoteHost = MODEL_REMOTE_HOST;
       env.remotePathTemplate = MODEL_REMOTE_PATH_TEMPLATE;
+      if (MODEL_ONNX_FILE) {
+        const fetchModelFile = env.fetch;
+        env.fetch = (input, init) => fetchModelFile(remapModelFileUrl(input), init);
+      }
 
       return pipeline("feature-extraction", MODEL_ID, {
         device: "webgpu" in navigator ? "webgpu" : "wasm",
-        dtype: "q8",
+        dtype: MODEL_DTYPE,
       }) as Promise<FeatureExtractionPipeline>;
     }).then((extractor) => {
       console.log("[browserEmbeddingService] embedding model ready", {
         model: MODEL_ID,
         remoteHost: MODEL_REMOTE_HOST,
+        dtype: MODEL_DTYPE,
+        onnxFile: MODEL_ONNX_FILE || "model_quantized.onnx",
       });
       return extractor;
     });

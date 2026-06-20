@@ -25,6 +25,13 @@ VITE_BROWSER_EMBED_MODEL_ID=models/ruri-v3-30m-ONNX
 ```
 
 `VITE_BROWSER_EMBED_MODEL_PATH_TEMPLATE` defaults to `{model}/`.
+`VITE_BROWSER_EMBED_MODEL_DTYPE` defaults to `q8`, which loads `onnx/model_quantized.onnx`.
+If the Blob copy uses `onnx/model.onnx`, set `VITE_BROWSER_EMBED_MODEL_DTYPE=fp32`.
+If the Blob copy had to be renamed, keep `VITE_BROWSER_EMBED_MODEL_DTYPE=q8` and set `VITE_BROWSER_EMBED_MODEL_ONNX_FILE`, for example:
+
+```env
+VITE_BROWSER_EMBED_MODEL_ONNX_FILE=M_quantize.onnx
+```
 
 Do not mix embeddings from different models for semantic search; regenerate stored memo embeddings after switching providers. The client refreshes local memo embeddings gradually when memos are loaded.
 

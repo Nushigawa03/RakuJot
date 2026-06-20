@@ -12,6 +12,17 @@ const RUN_EVAL = process.env.RUN_EMBEDDING_EVAL === 'true';
 const MODEL_ID = process.env.VITE_BROWSER_EMBED_MODEL_ID || '';
 const MODEL_REMOTE_HOST = process.env.VITE_BROWSER_EMBED_MODEL_HOST || '';
 const MODEL_REMOTE_PATH_TEMPLATE = process.env.VITE_BROWSER_EMBED_MODEL_PATH_TEMPLATE || '{model}/';
+const MODEL_DTYPE = process.env.VITE_BROWSER_EMBED_MODEL_DTYPE || 'q8';
+const MODEL_ONNX_FILE = process.env.VITE_BROWSER_EMBED_MODEL_ONNX_FILE || '';
+
+const remapModelFileUrl = (input: string | URL): string | URL => {
+  if (!MODEL_ONNX_FILE) return input;
+
+  const url = typeof input === 'string' ? input : input.toString();
+  if (!url.endsWith('/onnx/model_quantized.onnx')) return input;
+
+  return url.replace(/\/onnx\/model_quantized\.onnx$/, `/onnx/${MODEL_ONNX_FILE}`);
+};
 
 const prefixText = (text: string, kind: 'query' | 'document'): string => {
   const trimmed = text.trim();
@@ -69,10 +80,14 @@ describeEmbeddingEval('semantic date embedding evaluation', () => {
       const { env, pipeline } = await import('@huggingface/transformers');
       env.remoteHost = MODEL_REMOTE_HOST;
       env.remotePathTemplate = MODEL_REMOTE_PATH_TEMPLATE;
+      if (MODEL_ONNX_FILE) {
+        const fetchModelFile = env.fetch;
+        env.fetch = (input, init) => fetchModelFile(remapModelFileUrl(input), init);
+      }
 
       const extractor = await pipeline('feature-extraction', MODEL_ID, {
         device: 'cpu',
-        dtype: 'q8',
+        dtype: MODEL_DTYPE as any,
       }) as FeatureExtractionPipeline;
 
       const query = '2026-01-01 から 2026-12-31';
