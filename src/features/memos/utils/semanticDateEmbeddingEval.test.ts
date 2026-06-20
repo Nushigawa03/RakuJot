@@ -24,6 +24,39 @@ const remapModelFileUrl = (input: string | URL): string | URL => {
   return url.replace(/\/onnx\/model_quantized\.onnx$/, `/onnx/${MODEL_ONNX_FILE}`);
 };
 
+const toUrlString = (input: string | URL): string =>
+  typeof input === 'string' ? input : input.toString();
+
+const isHuggingFaceUrl = (url: string): boolean => {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'huggingface.co' || host === 'hf.co' || host.endsWith('.huggingface.co');
+  } catch {
+    return false;
+  }
+};
+
+const shouldLogModelFetch = (url: string): boolean =>
+  url.includes(`/${MODEL_ID}/`) ||
+  url.includes('/config.json') ||
+  url.includes('/tokenizer') ||
+  url.includes('/onnx/');
+
+const inspectTransformersCache = async (url: string): Promise<boolean | 'unavailable'> => {
+  if (typeof caches === 'undefined') return 'unavailable';
+
+  try {
+    const cache = await caches.open('transformers-cache');
+    return Boolean(await cache.match(url));
+  } catch (error) {
+    console.warn('[semanticDateEmbeddingEval] unable to inspect transformers-cache', {
+      url,
+      error,
+    });
+    return 'unavailable';
+  }
+};
+
 const prefixText = (text: string, kind: 'query' | 'document'): string => {
   const trimmed = text.trim();
   return kind === 'query' ? `検索クエリ: ${trimmed}` : `検索文書: ${trimmed}`;
@@ -80,10 +113,48 @@ describeEmbeddingEval('semantic date embedding evaluation', () => {
       const { env, pipeline } = await import('@huggingface/transformers');
       env.remoteHost = MODEL_REMOTE_HOST;
       env.remotePathTemplate = MODEL_REMOTE_PATH_TEMPLATE;
-      if (MODEL_ONNX_FILE) {
-        const fetchModelFile = env.fetch;
-        env.fetch = (input, init) => fetchModelFile(remapModelFileUrl(input), init);
-      }
+
+      const fetchModelFile = env.fetch;
+      env.fetch = async (input, init) => {
+        const requestedUrl = toUrlString(input);
+        const remappedInput = remapModelFileUrl(input);
+        const finalUrl = toUrlString(remappedInput);
+        const remapped = requestedUrl !== finalUrl;
+        const logModelFetch = shouldLogModelFetch(finalUrl);
+        const cacheHitBeforeFetch = logModelFetch
+          ? await inspectTransformersCache(finalUrl)
+          : undefined;
+
+        if (remapped) {
+          console.log('[semanticDateEmbeddingEval] ONNX fetch remapped by VITE_BROWSER_EMBED_MODEL_ONNX_FILE', {
+            requestedUrl,
+            finalUrl,
+            configuredOnnxFile: MODEL_ONNX_FILE,
+            cacheHitBeforeFetch,
+          });
+        }
+
+        if (isHuggingFaceUrl(finalUrl)) {
+          console.error('[semanticDateEmbeddingEval] UNEXPECTED Hugging Face fetch attempted', {
+            requestedUrl,
+            finalUrl,
+            model: MODEL_ID,
+            remoteHost: MODEL_REMOTE_HOST,
+            cacheHitBeforeFetch,
+          });
+        } else if (logModelFetch) {
+          console.log('[semanticDateEmbeddingEval] model asset fetch', {
+            requestedUrl,
+            finalUrl,
+            remapped,
+            fromConfiguredRemoteHost: finalUrl.startsWith(MODEL_REMOTE_HOST),
+            cacheName: 'transformers-cache',
+            cacheHitBeforeFetch,
+          });
+        }
+
+        return fetchModelFile(remappedInput, init);
+      };
 
       const extractor = await pipeline('feature-extraction', MODEL_ID, {
         device: 'cpu',

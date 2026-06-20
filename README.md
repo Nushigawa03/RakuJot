@@ -33,6 +33,8 @@ If the Blob copy had to be renamed, keep `VITE_BROWSER_EMBED_MODEL_DTYPE=q8` and
 VITE_BROWSER_EMBED_MODEL_ONNX_FILE=M_quantize.onnx
 ```
 
+Transformers.js stores fetched model assets in Cache Storage under `transformers-cache`. During model loading, the console logs `cacheHitBeforeFetch`; after the first successful load, reload the app and confirm this is `true` for the model asset URLs.
+
 Do not mix embeddings from different models for semantic search; regenerate stored memo embeddings after switching providers. The client refreshes local memo embeddings gradually when memos are loaded.
 
 ## Deployment
