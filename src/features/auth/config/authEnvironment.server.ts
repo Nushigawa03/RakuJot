@@ -3,7 +3,7 @@ export type AuthMode = 'dev' | 'google';
 export type DevUserProfile = {
     email: string;
     name: string;
-    googleId: string;
+    accountId: string;
     picture: string | null;
 };
 
@@ -17,7 +17,7 @@ export type PublicAuthConfig = {
 const DEFAULT_DEV_USER_PROFILE: DevUserProfile = {
     email: 'dev@example.com',
     name: 'Dev User',
-    googleId: 'dev-google-id',
+    accountId: 'dev-google-id',
     picture: null,
 };
 
@@ -46,7 +46,10 @@ export const getDevUserProfile = (): DevUserProfile => {
     return {
         email: getEnv('AUTH_DEV_USER_EMAIL') || DEFAULT_DEV_USER_PROFILE.email,
         name: getEnv('AUTH_DEV_USER_NAME') || DEFAULT_DEV_USER_PROFILE.name,
-        googleId: getEnv('AUTH_DEV_USER_GOOGLE_ID') || DEFAULT_DEV_USER_PROFILE.googleId,
+        accountId:
+            getEnv('AUTH_DEV_USER_ACCOUNT_ID') ||
+            getEnv('AUTH_DEV_USER_GOOGLE_ID') ||
+            DEFAULT_DEV_USER_PROFILE.accountId,
         picture: getEnv('AUTH_DEV_USER_PICTURE') || null,
     };
 };

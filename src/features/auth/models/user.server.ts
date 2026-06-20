@@ -10,7 +10,6 @@ const CORE_USER_SELECT = {
     email: true,
     name: true,
     picture: true,
-    googleId: true,
     createdAt: true,
     updatedAt: true,
 } satisfies Prisma.UserSelect;
@@ -25,7 +24,7 @@ const CORE_USER_SELECT = {
  */
 export const findUserByEmail = async (email: string) => {
     try {
-        return await prisma.user.findUnique({
+        return await prisma.user.findFirst({
             where: { email },
             select: CORE_USER_SELECT,
         });
@@ -36,16 +35,29 @@ export const findUserByEmail = async (email: string) => {
 };
 
 /**
- * Google ID でユーザーを検索
+ * 外部アカウントでユーザーを検索
  */
-export const findUserByGoogleId = async (googleId: string) => {
+export const findUserByAccount = async (
+    provider: string,
+    providerAccountId: string
+) => {
     try {
-        return await prisma.user.findUnique({
-            where: { googleId },
-            select: CORE_USER_SELECT,
+        const account = await prisma.account.findUnique({
+            where: {
+                provider_providerAccountId: {
+                    provider,
+                    providerAccountId,
+                },
+            },
+            select: {
+                user: {
+                    select: CORE_USER_SELECT,
+                },
+            },
         });
+        return account?.user ?? null;
     } catch (error) {
-        console.error("User findByGoogleId error:", error);
+        console.error("User findByAccount error:", error);
         return null;
     }
 };
@@ -69,9 +81,8 @@ export const findUserById = async (id: string) => {
  * ユーザーを作成
  */
 export const createUser = async (data: {
-    email: string;
+    email?: string | null;
     name?: string;
-    googleId: string;
     picture?: string;
 }) => {
     try {
@@ -79,7 +90,6 @@ export const createUser = async (data: {
             data: {
                 email: data.email,
                 name: data.name,
-                googleId: data.googleId,
                 picture: data.picture,
             },
             select: CORE_USER_SELECT,
@@ -91,7 +101,75 @@ export const createUser = async (data: {
 };
 
 /**
- * Google ログイン用にユーザーを同期
+ * 外部ログイン用にユーザーとアカウントを同期
+ */
+export const syncExternalAccount = async (data: {
+    provider: string;
+    providerAccountId: string;
+    email?: string | null;
+    emailVerified?: boolean;
+    name?: string;
+    picture?: string | null;
+}) => {
+    try {
+        const profileData = {
+            email: data.email ?? null,
+            name: data.name,
+            picture: data.picture ?? null,
+        };
+
+        const existingAccount = await prisma.account.findUnique({
+            where: {
+                provider_providerAccountId: {
+                    provider: data.provider,
+                    providerAccountId: data.providerAccountId,
+                },
+            },
+            select: { id: true, userId: true },
+        });
+
+        if (existingAccount) {
+            await prisma.account.update({
+                where: { id: existingAccount.id },
+                data: {
+                    email: data.email ?? null,
+                    emailVerified: data.emailVerified ?? false,
+                    name: data.name,
+                    picture: data.picture ?? null,
+                },
+            });
+
+            return await prisma.user.update({
+                where: { id: existingAccount.userId },
+                data: profileData,
+                select: CORE_USER_SELECT,
+            });
+        }
+
+        return await prisma.user.create({
+            data: {
+                ...profileData,
+                accounts: {
+                    create: {
+                        provider: data.provider,
+                        providerAccountId: data.providerAccountId,
+                        email: data.email ?? null,
+                        emailVerified: data.emailVerified ?? false,
+                        name: data.name,
+                        picture: data.picture ?? null,
+                    },
+                },
+            },
+            select: CORE_USER_SELECT,
+        });
+    } catch (error) {
+        console.error("User syncExternalAccount error:", error);
+        throw error;
+    }
+};
+
+/**
+ * Google ログイン用にユーザーと Google アカウントを同期
  */
 export const syncGoogleUser = async (data: {
     email: string;
@@ -99,46 +177,85 @@ export const syncGoogleUser = async (data: {
     googleId: string;
     picture?: string;
 }) => {
-    try {
-        const existingByGoogleId = await prisma.user.findUnique({
-            where: { googleId: data.googleId },
-            select: CORE_USER_SELECT,
+    return syncExternalAccount({
+        provider: "google",
+        providerAccountId: data.googleId,
+        email: data.email,
+        emailVerified: true,
+        name: data.name,
+        picture: data.picture,
+    });
+};
+
+/**
+ * 開発モード用アカウントを同期
+ */
+export const syncDevUser = async (data: {
+    email: string;
+    name?: string;
+    accountId: string;
+    picture?: string | null;
+}) => {
+    const existingDevAccount = await findUserByAccount("dev", data.accountId);
+    if (existingDevAccount) {
+        return syncExternalAccount({
+            provider: "dev",
+            providerAccountId: data.accountId,
+            email: data.email,
+            emailVerified: true,
+            name: data.name,
+            picture: data.picture,
         });
-
-        if (existingByGoogleId) {
-            return await prisma.user.update({
-                where: { id: existingByGoogleId.id },
-                data: {
-                    email: data.email,
-                    name: data.name,
-                    picture: data.picture,
-                },
-                select: CORE_USER_SELECT,
-            });
-        }
-
-        const existingByEmail = await prisma.user.findUnique({
-            where: { email: data.email },
-            select: CORE_USER_SELECT,
-        });
-
-        if (existingByEmail) {
-            return await prisma.user.update({
-                where: { id: existingByEmail.id },
-                data: {
-                    googleId: data.googleId,
-                    name: data.name ?? existingByEmail.name,
-                    picture: data.picture,
-                },
-                select: CORE_USER_SELECT,
-            });
-        }
-
-        return await createUser(data);
-    } catch (error) {
-        console.error("User syncGoogleUser error:", error);
-        throw error;
     }
+
+    const existingByEmail = await findUserByEmail(data.email);
+    if (existingByEmail) {
+        await prisma.account.create({
+            data: {
+                userId: existingByEmail.id,
+                provider: "dev",
+                providerAccountId: data.accountId,
+                email: data.email,
+                emailVerified: true,
+                name: data.name,
+                picture: data.picture ?? null,
+            },
+        });
+
+        return await prisma.user.update({
+            where: { id: existingByEmail.id },
+            data: {
+                email: data.email,
+                name: data.name,
+                picture: data.picture ?? null,
+            },
+            select: CORE_USER_SELECT,
+        });
+    }
+
+    return syncExternalAccount({
+        provider: "dev",
+        providerAccountId: data.accountId,
+        email: data.email,
+        emailVerified: true,
+        name: data.name,
+        picture: data.picture,
+    });
+};
+
+/**
+ * 指定メールのユーザーを検索し、存在しなければプロフィールのみのユーザーを作成
+ */
+export const findOrCreateUserByEmail = async (data: {
+    email: string;
+    name?: string;
+    picture?: string;
+}) => {
+    const existing = await findUserByEmail(data.email);
+    if (existing) {
+        return existing;
+    }
+    return await createUser(data);
 };
 
 /**
@@ -197,18 +314,3 @@ export const updateUserSettings = async (
     }
 };
 
-/**
- * メールアドレスでユーザーを検索し、存在しなければ作成
- */
-export const findOrCreateUserByEmail = async (data: {
-    email: string;
-    name?: string;
-    googleId: string;
-    picture?: string;
-}) => {
-    const existing = await findUserByEmail(data.email);
-    if (existing) {
-        return existing;
-    }
-    return await createUser(data);
-};

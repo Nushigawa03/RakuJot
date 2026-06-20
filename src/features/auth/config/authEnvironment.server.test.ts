@@ -4,6 +4,7 @@ import { getDevUserProfile } from './authEnvironment.server';
 const envKeys = [
     'AUTH_DEV_USER_EMAIL',
     'AUTH_DEV_USER_NAME',
+    'AUTH_DEV_USER_ACCOUNT_ID',
     'AUTH_DEV_USER_GOOGLE_ID',
     'AUTH_DEV_USER_PICTURE',
 ] as const;
@@ -32,7 +33,7 @@ describe('getDevUserProfile', () => {
         expect(getDevUserProfile()).toEqual({
             email: 'dev@example.com',
             name: 'Dev User',
-            googleId: 'dev-google-id',
+            accountId: 'dev-google-id',
             picture: null,
         });
     });
@@ -40,14 +41,21 @@ describe('getDevUserProfile', () => {
     it('allows env vars to override the built-in dummy user', () => {
         process.env.AUTH_DEV_USER_EMAIL = 'preview@example.com';
         process.env.AUTH_DEV_USER_NAME = 'Preview User';
-        process.env.AUTH_DEV_USER_GOOGLE_ID = 'preview-google-id';
+        process.env.AUTH_DEV_USER_ACCOUNT_ID = 'preview-dev-id';
         process.env.AUTH_DEV_USER_PICTURE = 'https://example.com/avatar.png';
 
         expect(getDevUserProfile()).toEqual({
             email: 'preview@example.com',
             name: 'Preview User',
-            googleId: 'preview-google-id',
+            accountId: 'preview-dev-id',
             picture: 'https://example.com/avatar.png',
         });
+    });
+
+    it('supports the old dev google id env var as a compatibility fallback', () => {
+        delete process.env.AUTH_DEV_USER_ACCOUNT_ID;
+        process.env.AUTH_DEV_USER_GOOGLE_ID = 'legacy-dev-id';
+
+        expect(getDevUserProfile().accountId).toBe('legacy-dev-id');
     });
 });

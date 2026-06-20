@@ -18,7 +18,7 @@ type Props = {
 
 type AuthUser = {
   id: string;
-  email: string;
+  email: string | null;
   name: string | null;
   picture: string | null;
 };
@@ -202,6 +202,8 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings, activeTextQu
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, []);
 
+  const authUserLabel = authUser?.name || authUser?.email || 'ユーザー';
+
   return (
     <div ref={containerRef} className="nav-mobile-wrapper" tabIndex={-1} onClick={stop}>
       <div className="nav-mobile">
@@ -275,17 +277,17 @@ const NavigationBarMobile: React.FC<Props> = ({ onBack, onSettings, activeTextQu
           className="nav-right"
           onClick={handleUserButtonClick}
           aria-label={authUser ? 'ユーザー設定' : 'ログイン'}
-          title={authUser ? (authUser.name || authUser.email || 'ユーザー') : 'ログイン'}
+          title={authUser ? authUserLabel : 'ログイン'}
         >
           {authUser?.picture ? (
             <img
               src={authUser.picture}
-              alt={authUser.name || 'ユーザー'}
+              alt={authUserLabel}
               className="nav-user-avatar"
             />
           ) : (
             <span className="nav-user-fallback">
-              {authUser ? (authUser.name || authUser.email).slice(0, 1).toUpperCase() : '👤'}
+              {authUser ? authUserLabel.slice(0, 1).toUpperCase() : '👤'}
             </span>
           )}
         </button>

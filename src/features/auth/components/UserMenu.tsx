@@ -4,7 +4,7 @@ import { setLoggedOut } from '~/features/sync/syncService';
 
 type User = {
     id: string;
-    email: string;
+    email: string | null;
     name: string | null;
     picture: string | null;
 };
@@ -73,6 +73,8 @@ const UserMenu: React.FC = () => {
         return null;
     }
 
+    const displayName = authState.user.name || authState.user.email || 'ユーザー';
+
     return (
         <div className="user-menu">
             <button
@@ -88,12 +90,12 @@ const UserMenu: React.FC = () => {
                     />
                 ) : (
                     <div className="user-menu__avatar user-menu__avatar--placeholder">
-                        {(authState.user.name || authState.user.email)[0].toUpperCase()}
+                        {displayName[0].toUpperCase()}
                     </div>
                 )}
                 <div className="user-menu__details">
                     <span className="user-menu__name">
-                        {authState.user.name || 'ユーザー'}
+                        {displayName}
                     </span>
                     {authState.isDevMode && (
                         <span className="user-menu__badge user-menu__badge--dev">

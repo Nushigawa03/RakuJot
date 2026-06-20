@@ -13,13 +13,31 @@ import {
   verifyRegistrationResponse,
 } from "@simplewebauthn/server";
 import { prisma } from "~/db.server";
+import { getWebAuthnRequestConfig } from "~/features/auth/config/webauthn.server";
 
-const RP_NAME = "RakuJot";
-const RP_ID = typeof process !== "undefined" ? (process.env.WEBAUTHN_RP_ID || "localhost") : "localhost";
-const ORIGIN = typeof process !== "undefined" ? (process.env.WEBAUTHN_ORIGIN || "http://localhost:3000") : "http://localhost:3000";
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+type StoredRegistrationChallenge = {
+  challenge: string;
+  origin: string;
+  rpID: string;
+  expiresAt: number;
+};
 
 // チャレンジの一時保存（本番では Redis 等が望ましい）
-const challengeStore = new Map<string, string>();
+const challengeStore = new Map<string, StoredRegistrationChallenge>();
+
+const getStoredChallenge = (userId: string): StoredRegistrationChallenge | null => {
+  const stored = challengeStore.get(userId);
+  if (!stored) return null;
+
+  if (stored.expiresAt < Date.now()) {
+    challengeStore.delete(userId);
+    return null;
+  }
+
+  return stored;
+};
 
 export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
@@ -31,7 +49,20 @@ export const action: ActionFunction = async ({ request }) => {
     const body = await request.json();
     const { phase } = body;
 
+    if (phase === "status") {
+      const credentialCount = await prisma.webAuthnCredential.count({
+        where: { userId },
+      });
+
+      return Response.json({
+        supported: true,
+        registered: credentialCount > 0,
+        credentialCount,
+      });
+    }
+
     if (phase === "challenge") {
+      const { rpName, rpID, origin } = getWebAuthnRequestConfig(request);
       // ユーザーの既存クレデンシャルを取得
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -43,31 +74,36 @@ export const action: ActionFunction = async ({ request }) => {
       }
 
       const options = await generateRegistrationOptions({
-        rpName: RP_NAME,
-        rpID: RP_ID,
-        userName: user.email,
-        userDisplayName: user.name || user.email,
+        rpName,
+        rpID,
+        userID: Buffer.from(user.id, "utf-8"),
+        userName: user.email ?? user.id,
+        userDisplayName: user.name || user.email || "RakuJot user",
         attestationType: "none",
         excludeCredentials: user.webauthnCredentials.map((cred) => ({
           id: cred.credentialId,
           transports: cred.transports as any[],
         })),
         authenticatorSelection: {
-          residentKey: "preferred",
-          userVerification: "preferred",
-          authenticatorAttachment: "platform",
+          residentKey: "required",
+          userVerification: "required",
         },
       });
 
       // チャレンジを保存
-      challengeStore.set(userId, options.challenge);
+      challengeStore.set(userId, {
+        challenge: options.challenge,
+        origin,
+        rpID,
+        expiresAt: Date.now() + CHALLENGE_TTL_MS,
+      });
 
       return Response.json(options);
     }
 
     if (phase === "verify") {
-      const expectedChallenge = challengeStore.get(userId);
-      if (!expectedChallenge) {
+      const stored = getStoredChallenge(userId);
+      if (!stored) {
         return Response.json({ error: "チャレンジが見つかりません。もう一度お試しください。" }, { status: 400 });
       }
 
@@ -75,9 +111,10 @@ export const action: ActionFunction = async ({ request }) => {
 
       const verification = await verifyRegistrationResponse({
         response: attestationResponse,
-        expectedChallenge,
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID,
+        expectedChallenge: stored.challenge,
+        expectedOrigin: stored.origin,
+        expectedRPID: stored.rpID,
+        requireUserVerification: true,
       });
 
       if (!verification.verified || !verification.registrationInfo) {
@@ -85,6 +122,18 @@ export const action: ActionFunction = async ({ request }) => {
       }
 
       const { credential } = verification.registrationInfo;
+
+      const existingCredential = await prisma.webAuthnCredential.findUnique({
+        where: { credentialId: credential.id },
+      });
+
+      if (existingCredential) {
+        challengeStore.delete(userId);
+        if (existingCredential.userId === userId) {
+          return Response.json({ success: true, message: "このパスキーは登録済みです" });
+        }
+        return Response.json({ error: "このパスキーは別のユーザーに登録済みです" }, { status: 409 });
+      }
 
       // クレデンシャルをDBに保存
       await prisma.webAuthnCredential.create({

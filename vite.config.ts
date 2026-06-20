@@ -2,9 +2,25 @@ import { defineConfig } from "vite";
 import { reactRouter } from "@react-router/dev/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from "vite-plugin-pwa";
+import { fileURLToPath } from "node:url";
+
+const browserEmbeddingServerStub = fileURLToPath(
+  new URL("./src/features/App/services/browserEmbeddingService.server.ts", import.meta.url)
+);
+
+const browserEmbeddingSsrStub = {
+  name: "browser-embedding-ssr-stub",
+  enforce: "pre" as const,
+  resolveId(source: string, _importer: string | undefined, options: { ssr?: boolean }) {
+    if (options?.ssr && source.endsWith("browserEmbeddingService")) {
+      return browserEmbeddingServerStub;
+    }
+  },
+};
 
 const config = defineConfig({
   plugins: [
+    browserEmbeddingSsrStub,
     // @ts-expect-error
     reactRouter({
       appDirectory: "src",
