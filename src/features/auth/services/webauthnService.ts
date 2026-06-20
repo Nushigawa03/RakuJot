@@ -16,6 +16,12 @@ type WebAuthnStatus = {
   credentialCount: number;
 };
 
+export type WebAuthnCredentialSummary = {
+  id: string;
+  transports: string[];
+  createdAt: string;
+};
+
 /**
  * ブラウザが WebAuthn をサポートしているか
  */
@@ -52,6 +58,35 @@ export const getWebAuthnStatus = async (): Promise<WebAuthnStatus> => {
   }
 
   return await resp.json();
+};
+
+export const listCredentials = async (): Promise<WebAuthnCredentialSummary[]> => {
+  const resp = await fetch("/api/auth/webauthn/credentials", {
+    credentials: "include",
+  });
+
+  if (!resp.ok) {
+    return [];
+  }
+
+  const data = await resp.json();
+  return Array.isArray(data?.credentials) ? data.credentials : [];
+};
+
+export const deleteCredential = async (id: string): Promise<{ success: boolean; error?: string }> => {
+  const resp = await fetch("/api/auth/webauthn/credentials", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ id }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    return { success: false, error: err?.error || "パスキーの削除に失敗しました" };
+  }
+
+  return { success: true };
 };
 
 /**

@@ -70,7 +70,17 @@ const UserMenu: React.FC = () => {
     }
 
     if (!authState.user) {
-        return null;
+        return (
+            <div className="user-menu">
+                <button
+                    className="user-menu__login"
+                    onClick={() => window.location.href = '/login'}
+                    type="button"
+                >
+                    ログイン
+                </button>
+            </div>
+        );
     }
 
     const displayName = authState.user.name || authState.user.email || 'ユーザー';

@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useSettings } from '../hooks/useSettings';
 import { BiometricRegisterButton } from '~/features/auth/components/BiometricAuthButton';
+import {
+    deleteCredential,
+    listCredentials,
+    type WebAuthnCredentialSummary,
+} from '~/features/auth/services/webauthnService';
 import './SettingsPage.css';
 
 const SettingsPage: React.FC = () => {
@@ -10,6 +15,62 @@ const SettingsPage: React.FC = () => {
     const [showApiKey, setShowApiKey] = useState(false);
     const [passkeyMessage, setPasskeyMessage] = useState('');
     const [passkeyError, setPasskeyError] = useState('');
+    const [passkeys, setPasskeys] = useState<WebAuthnCredentialSummary[]>([]);
+    const [passkeysLoaded, setPasskeysLoaded] = useState(false);
+    const [deletingPasskeyId, setDeletingPasskeyId] = useState<string | null>(null);
+
+    const loadPasskeys = async () => {
+        const credentials = await listCredentials();
+        setPasskeys(credentials);
+        setPasskeysLoaded(true);
+    };
+
+    useEffect(() => {
+        loadPasskeys().catch(() => {
+            setPasskeys([]);
+            setPasskeysLoaded(true);
+        });
+    }, []);
+
+    const handleDeletePasskey = async (id: string) => {
+        setDeletingPasskeyId(id);
+        setPasskeyMessage('');
+        setPasskeyError('');
+
+        try {
+            const result = await deleteCredential(id);
+            if (!result.success) {
+                setPasskeyError(result.error || 'パスキーの削除に失敗しました。');
+                return;
+            }
+
+            setPasskeys((current) => current.filter((passkey) => passkey.id !== id));
+            setPasskeyMessage('パスキーを削除しました。');
+        } finally {
+            setDeletingPasskeyId(null);
+        }
+    };
+
+    const formatPasskeyDate = (value: string) => {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+
+        return new Intl.DateTimeFormat('ja-JP', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        }).format(date);
+    };
+
+    const getPasskeyLabel = (passkey: WebAuthnCredentialSummary, index: number) => {
+        const transports = passkey.transports || [];
+        if (transports.includes('internal')) return 'この端末のパスキー';
+        if (transports.includes('hybrid')) return 'スマホ連携のパスキー';
+        if (transports.includes('usb') || transports.includes('nfc') || transports.includes('ble')) {
+            return 'セキュリティキー';
+        }
+        return `パスキー ${index + 1}`;
+    };
 
     if (!isLoaded) {
         return null; // or a loading spinner
@@ -49,6 +110,7 @@ const SettingsPage: React.FC = () => {
                                 onSuccess={() => {
                                     setPasskeyError('');
                                     setPasskeyMessage('パスキーを登録しました。');
+                                    loadPasskeys().catch(() => undefined);
                                 }}
                                 onError={(error) => {
                                     setPasskeyMessage('');
@@ -65,6 +127,46 @@ const SettingsPage: React.FC = () => {
                                     {passkeyError}
                                 </p>
                             )}
+                            <div className="passkey-devices">
+                                <div className="passkey-devices__header">
+                                    <span>デバイス管理</span>
+                                    <button
+                                        type="button"
+                                        className="passkey-devices__refresh"
+                                        onClick={() => loadPasskeys().catch(() => undefined)}
+                                    >
+                                        更新
+                                    </button>
+                                </div>
+                                {!passkeysLoaded ? (
+                                    <p className="passkey-devices__empty">読み込み中...</p>
+                                ) : passkeys.length === 0 ? (
+                                    <p className="passkey-devices__empty">登録済みのパスキーはありません。</p>
+                                ) : (
+                                    <ul className="passkey-device-list">
+                                        {passkeys.map((passkey, index) => (
+                                            <li className="passkey-device" key={passkey.id}>
+                                                <div className="passkey-device__info">
+                                                    <span className="passkey-device__name">
+                                                        {getPasskeyLabel(passkey, index)}
+                                                    </span>
+                                                    <span className="passkey-device__meta">
+                                                        {formatPasskeyDate(passkey.createdAt)}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="passkey-device__delete"
+                                                    disabled={deletingPasskeyId === passkey.id}
+                                                    onClick={() => handleDeletePasskey(passkey.id)}
+                                                >
+                                                    {deletingPasskeyId === passkey.id ? '削除中...' : '削除'}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </section>

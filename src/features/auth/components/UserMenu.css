@@ -95,3 +95,20 @@
     border-color: var(--color-danger-300);
     color: var(--color-danger-600);
 }
+
+.user-menu__login {
+    width: 100%;
+    padding: var(--spacing-2);
+    background: var(--color-primary-500);
+    border: 1px solid var(--color-primary-600);
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-base) var(--ease-out);
+}
+
+.user-menu__login:hover {
+    background: var(--color-primary-600);
+}
