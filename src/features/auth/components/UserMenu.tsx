@@ -1,130 +1,52 @@
-import React, { useEffect, useState } from 'react';
-import './UserMenu.css';
+import { Link } from 'react-router';
 import { setLoggedOut } from '~/features/sync/syncService';
+import { displayName, useCurrentUser, type CurrentUser } from '../currentUser';
 
-type User = {
-    id: string;
-    email: string | null;
-    name: string | null;
-    picture: string | null;
+const Avatar = ({ user }: { user: CurrentUser }) =>
+  user.picture
+    ? <img src={user.picture} alt={displayName(user)} className="avatar" />
+    : <span className="avatar avatar--placeholder">{displayName(user)[0].toUpperCase()}</span>;
+
+const logout = async () => {
+  try {
+    await setLoggedOut(); // ユーザー DB を削除して匿名 DB に切替
+    navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_API_CACHE' });
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/';
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
 };
 
-type AuthState = {
-    user: User | null;
-    isDevMode: boolean;
-    loading: boolean;
-};
-
-const UserMenu: React.FC = () => {
-    const [authState, setAuthState] = useState<AuthState>({
-        user: null,
-        isDevMode: false,
-        loading: true,
-    });
-
-    useEffect(() => {
-        fetchCurrentUser();
-    }, []);
-
-    const fetchCurrentUser = async () => {
-        try {
-            const res = await fetch('/api/auth/me');
-            if (res.ok) {
-                const data = await res.json();
-                setAuthState({
-                    user: data.user,
-                    isDevMode: data.isDevMode,
-                    loading: false,
-                });
-            } else {
-                setAuthState({ user: null, isDevMode: false, loading: false });
-            }
-        } catch {
-            setAuthState({ user: null, isDevMode: false, loading: false });
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            // 1. ユーザーDBを削除して匿名DBに切替
-            await setLoggedOut();
-
-            // 2. Service Worker の API キャッシュをクリア
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'CLEAR_API_CACHE',
-                });
-            }
-
-            // 3. サーバーのセッションを破棄
-            await fetch('/api/auth/logout', { method: 'POST' });
-
-            window.location.href = '/';
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
-    };
-
-    if (authState.loading) {
-        return <div className="user-menu user-menu--loading">読み込み中...</div>;
-    }
-
-    if (!authState.user) {
-        return (
-            <div className="user-menu">
-                <button
-                    className="user-menu__login"
-                    onClick={() => window.location.href = '/login'}
-                    type="button"
-                >
-                    ログイン
-                </button>
-            </div>
-        );
-    }
-
-    const displayName = authState.user.name || authState.user.email || 'ユーザー';
-
-    return (
-        <div className="user-menu">
-            <button
-                className="user-menu__info"
-                onClick={() => window.location.href = '/app/settings'}
-                title="設定を開く"
-            >
-                {authState.user.picture ? (
-                    <img
-                        src={authState.user.picture}
-                        alt={authState.user.name || 'ユーザー'}
-                        className="user-menu__avatar"
-                    />
-                ) : (
-                    <div className="user-menu__avatar user-menu__avatar--placeholder">
-                        {displayName[0].toUpperCase()}
-                    </div>
-                )}
-                <div className="user-menu__details">
-                    <span className="user-menu__name">
-                        {displayName}
-                    </span>
-                    {authState.isDevMode && (
-                        <span className="user-menu__badge user-menu__badge--dev">
-                            開発モード
-                        </span>
-                    )}
-                </div>
-            </button>
-            {!authState.isDevMode && (
-                <button
-                    className="user-menu__logout"
-                    onClick={handleLogout}
-                    title="ログアウト"
-                >
-                    ログアウト
-                </button>
-            )}
-        </div>
-    );
+/** PC サイドバー下部: ユーザー情報（クリックで設定）とログアウト */
+const UserMenu = () => {
+  const { user, isDevMode, loading } = useCurrentUser();
+  if (loading) return <div className="user-menu muted">読み込み中...</div>;
+  if (!user) {
+    return <div className="user-menu"><Link className="btn btn--primary btn--sm" to="/login">ログイン</Link></div>;
+  }
+  return (
+    <div className="user-menu">
+      <Link className="user-menu__info" to="/app/settings" title="設定を開く">
+        <Avatar user={user} />
+        <span className="user-menu__name">
+          {displayName(user)}
+          {isDevMode && <span className="badge">開発モード</span>}
+        </span>
+      </Link>
+      {!isDevMode && <button type="button" className="btn btn--ghost btn--sm" onClick={logout}>ログアウト</button>}
+    </div>
+  );
 };
 
 export default UserMenu;
+
+/** スマホのナビバー右端: ログイン済みなら設定へ、未ログインならログインへ */
+export const UserAvatarButton = () => {
+  const { user } = useCurrentUser();
+  return (
+    <Link className="icon-btn" to={user ? '/app/settings' : '/login'} title={user ? displayName(user) : 'ログイン'} aria-label={user ? 'ユーザー設定' : 'ログイン'}>
+      {user ? <Avatar user={user} /> : '👤'}
+    </Link>
+  );
+};

@@ -49,18 +49,6 @@ export const action: ActionFunction = async ({ request }) => {
     const body = await request.json();
     const { phase } = body;
 
-    if (phase === "status") {
-      const credentialCount = await prisma.webAuthnCredential.count({
-        where: { userId },
-      });
-
-      return Response.json({
-        supported: true,
-        registered: credentialCount > 0,
-        credentialCount,
-      });
-    }
-
     if (phase === "challenge") {
       const { rpName, rpID, origin } = getWebAuthnRequestConfig(request);
       // ユーザーの既存クレデンシャルを取得

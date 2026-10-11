@@ -1,141 +1,49 @@
-import { Memo } from '../types/memo';
-import { evaluateSemanticDateSimilarity } from './semanticDateUtils';
+import type { Memo } from '../types/memo';
+import { computeCosineSimilarity } from './similarityUtils';
 import { parseFuzzyDate } from './dateUtils';
 
-/**
- * Configuration for date query evaluation.
- */
 export interface DateQueryEvalConfig {
-  queryEmbedding?: number[]; // Embedding of the original date query text
-  semanticThreshold?: number; // Minimum similarity score (0-1), default 0.7
-  useSemanticFallback?: boolean; // Use semantic matching if exact date fails, default true
+  queryEmbedding?: number[]; // 元の曖昧な日付表現の埋め込み
+  semanticThreshold?: number;
+  useSemanticFallback?: boolean;
 }
 
 export const DEFAULT_SEMANTIC_DATE_THRESHOLD = 0.835;
 
-function shouldUseSemanticDateFallback(
-  memoDate: string | undefined,
-  dateQuery: string,
-  config?: DateQueryEvalConfig
-): boolean {
-  return Boolean(
-    config?.useSemanticFallback !== false &&
-    config?.queryEmbedding &&
-    memoDate &&
-    !isPlainDateQuery(dateQuery)
-  );
+// 「2024-03-01」「2024年3月」のような明示的な日付クエリには意味検索を使わない
+const PLAIN_DATE = [/^\d{4}-\d{2}(-\d{2})?$/, /^\d{4}\/\d{2}\/\d{2}$/, /^\d{4}年(\d{1,2}月(\d{1,2}日)?)?$/, /^\d{4}$/];
+const isPlainDateQuery = (q: string) => PLAIN_DATE.some((r) => r.test(q.trim().replace(/^date:/, '').trim()));
+
+function parseRange(dateQuery: string): { from?: string; to?: string } | null {
+  const range = dateQuery.match(/^date:(.+?)\.\.(.+)$/);
+  if (range) return { from: range[1].trim(), to: range[2].trim() };
+  const gte = dateQuery.match(/^date>=(.+)$/);
+  if (gte) return { from: gte[1].trim() };
+  const lte = dateQuery.match(/^date<=(.+)$/);
+  return lte ? { to: lte[1].trim() } : null;
 }
 
-// If the user provided a plain/normal date string (e.g. "2024-03-01", "2024/03/01", "2024年3月1日",
-// or short forms like "2024-03"), we should NOT run semantic matching - treat this as an explicit date query.
-function isPlainDateQuery(q: string): boolean {
-  if (!q) return false;
-  const patterns = [
-    /^\d{4}-\d{2}-\d{2}$/,
-    /^\d{4}\/\d{2}\/\d{2}$/,
-    /^\d{4}-\d{2}$/,
-    /^\d{4}年\d{1,2}月\d{1,2}日$/,
-    /^\d{4}年\d{1,2}月$/,
-    /^\d{4}年$/,
-    /^\d{4}$/,
-  ];
-
-  const trimmed = q.trim();
-  const datePrefixMatch = trimmed.match(/^date:(.+)$/);
-  const inspect = datePrefixMatch ? datePrefixMatch[1].trim() : trimmed;
-
-  return patterns.some((r) => r.test(inspect));
+function semanticDateMatches(memo: Memo, queryEmbedding: number[], threshold = 0.7): boolean {
+  const embedding = memo.embedding;
+  if (!Array.isArray(embedding) || !embedding.length || embedding.length !== queryEmbedding.length) return false;
+  return computeCosineSimilarity(queryEmbedding, embedding) >= threshold;
 }
 
 /**
- * Evaluates a date query against a memo using both exact date matching and optional semantic similarity.
- * Supports three exact date formats:
- *  - date:START..END (range)
- *  - date>=START (start date only)
- *  - date<=END (end date only)
- * 
- * If semantic config is provided, falls back to semantic similarity matching.
- * Dates should be in YYYY-MM-DD format for string comparison.
+ * 日付クエリ（date:S..E / date>=S / date<=E）でメモを判定する。
+ * メモの日付が具体的な区間として解釈できればそれで判定し、
+ * 解釈できない自由記述の日付だけ埋め込みの類似度で判定する。
  */
-export function evaluateDateQuery(
-  memo: Memo,
-  dateQuery: string,
-  config?: DateQueryEvalConfig
-): boolean {
+export function evaluateDateQuery(memo: Memo, dateQuery: string, config?: DateQueryEvalConfig): boolean {
   const memoDate = memo.date?.trim();
-  const memoDateStart = memoDate ? parseFuzzyDate(memoDate, false) : null;
-  const memoDateEnd = memoDate ? parseFuzzyDate(memoDate, true) : null;
+  const start = memoDate ? parseFuzzyDate(memoDate, false) : null;
+  const end = memoDate ? parseFuzzyDate(memoDate, true) : null;
+  const range = parseRange(dateQuery);
 
-  // Format 1: "date:START..END" (range)
-  const rangeMatch = dateQuery.match(/^date:(.+?)\.\.(.+)$/);
-  if (rangeMatch) {
-    const start = rangeMatch[1].trim();
-    const end = rangeMatch[2].trim();
-    if (memoDateStart && memoDateEnd && memoDateEnd >= start && memoDateStart <= end) {
-      console.log('[evaluateDateQuery] parsed memo date matched range', {
-        memoId: (memo as any).id ?? 'unknown',
-        memoDate,
-        memoDateStart,
-        memoDateEnd,
-        start,
-        end,
-      });
-      return true;
-    }
-    if (memoDateStart || memoDateEnd) {
-      console.log('[evaluateDateQuery] parsed memo date outside range', {
-        memoId: (memo as any).id ?? 'unknown',
-        memoDate,
-        memoDateStart,
-        memoDateEnd,
-        start,
-        end,
-      });
-      return false;
-    }
-    // Fall back to semantic only when the memo date is not parseable as a concrete range.
-    if (shouldUseSemanticDateFallback(memoDate, dateQuery, config)) {
-      return evaluateSemanticDateSimilarity(memo, config!.queryEmbedding!, config!.semanticThreshold);
-    }
-    return false;
+  if (range && start && end) {
+    return (!range.from || end >= range.from) && (!range.to || start <= range.to);
   }
 
-  // Format 2: "date>=YYYY-MM-DD" (start only)
-  const gteMatch = dateQuery.match(/^date>=(.+)$/);
-  if (gteMatch) {
-    const start = gteMatch[1].trim();
-    if (memoDateEnd && memoDateEnd >= start) {
-      return true;
-    }
-    if (memoDateStart || memoDateEnd) {
-      return false;
-    }
-    if (shouldUseSemanticDateFallback(memoDate, dateQuery, config)) {
-      return evaluateSemanticDateSimilarity(memo, config!.queryEmbedding!, config!.semanticThreshold);
-    }
-    return false;
-  }
-
-  // Format 3: "date<=YYYY-MM-DD" (end only)
-  const lteMatch = dateQuery.match(/^date<=(.+)$/);
-  if (lteMatch) {
-    const end = lteMatch[1].trim();
-    if (memoDateStart && memoDateStart <= end) {
-      return true;
-    }
-    if (memoDateStart || memoDateEnd) {
-      return false;
-    }
-    if (shouldUseSemanticDateFallback(memoDate, dateQuery, config)) {
-      return evaluateSemanticDateSimilarity(memo, config!.queryEmbedding!, config!.semanticThreshold);
-    }
-    return false;
-  }
-
-  // If no exact format matched, try semantic matching as fallback (but skip if the query is a plain date)
-  if (shouldUseSemanticDateFallback(memoDate, dateQuery, config)) {
-    return evaluateSemanticDateSimilarity(memo, config!.queryEmbedding!, config!.semanticThreshold);
-  }
-
-  return false;
+  const canUseSemantic = config?.useSemanticFallback !== false && config?.queryEmbedding && memoDate && !isPlainDateQuery(dateQuery);
+  return canUseSemantic ? semanticDateMatches(memo, config!.queryEmbedding!, config!.semanticThreshold) : false;
 }

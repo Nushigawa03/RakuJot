@@ -1,85 +1,45 @@
+/** サーバーにも保存する設定 */
 export interface PersistedUserSettings {
-    aiUsageEnabled: boolean;
-    detailSearchAlwaysVisible: boolean;
+  aiUsageEnabled: boolean;
+  detailSearchAlwaysVisible: boolean;
 }
 
-export interface LocalOnlySettings {
-    googleApiKey: string;
+/** 端末内（localStorage）だけに保存する設定 */
+export interface Settings extends PersistedUserSettings {
+  googleApiKey: string;
 }
-
-export interface Settings extends PersistedUserSettings, LocalOnlySettings {}
 
 export const DEFAULT_PERSISTED_USER_SETTINGS: PersistedUserSettings = {
-    aiUsageEnabled: true,
-    detailSearchAlwaysVisible: false,
+  aiUsageEnabled: true,
+  detailSearchAlwaysVisible: false,
 };
 
-export const DEFAULT_LOCAL_ONLY_SETTINGS: LocalOnlySettings = {
-    googleApiKey: '',
-};
-
-export const DEFAULT_SETTINGS: Settings = {
-    ...DEFAULT_PERSISTED_USER_SETTINGS,
-    ...DEFAULT_LOCAL_ONLY_SETTINGS,
-};
+export const DEFAULT_SETTINGS: Settings = { ...DEFAULT_PERSISTED_USER_SETTINGS, googleApiKey: '' };
 
 export const SETTINGS_KEY = 'rakujot_user_settings';
 
-export const PERSISTED_SETTINGS_KEYS = ['aiUsageEnabled', 'detailSearchAlwaysVisible'] as const;
+const PERSISTED_KEYS = Object.keys(DEFAULT_PERSISTED_USER_SETTINGS) as (keyof PersistedUserSettings)[];
 
-type UnknownRecord = Record<string, unknown>;
+export const isPersistedSettingsKey = (key: keyof Settings): key is keyof PersistedUserSettings =>
+  (PERSISTED_KEYS as string[]).includes(key);
 
-const isRecord = (value: unknown): value is UnknownRecord => {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+export const sanitizePersistedUserSettings = (value: unknown): PersistedUserSettings => {
+  const source = isRecord(value) ? value : {};
+  return Object.fromEntries(
+    PERSISTED_KEYS.map((k) => [k, typeof source[k] === 'boolean' ? source[k] : DEFAULT_PERSISTED_USER_SETTINGS[k]]),
+  ) as unknown as PersistedUserSettings;
 };
 
-export const isPersistedSettingsKey = (
-    key: keyof Settings
-): key is (typeof PERSISTED_SETTINGS_KEYS)[number] => {
-    return (PERSISTED_SETTINGS_KEYS as readonly string[]).includes(key);
-};
-
-export const sanitizePersistedUserSettings = (
-    value: unknown
-): PersistedUserSettings => {
-    if (!isRecord(value)) {
-        return { ...DEFAULT_PERSISTED_USER_SETTINGS };
-    }
-
-    return {
-        aiUsageEnabled:
-            typeof value.aiUsageEnabled === 'boolean'
-                ? value.aiUsageEnabled
-                : DEFAULT_PERSISTED_USER_SETTINGS.aiUsageEnabled,
-        detailSearchAlwaysVisible:
-            typeof value.detailSearchAlwaysVisible === 'boolean'
-                ? value.detailSearchAlwaysVisible
-                : DEFAULT_PERSISTED_USER_SETTINGS.detailSearchAlwaysVisible,
-    };
-};
-
-export const sanitizePersistedUserSettingsPatch = (
-    value: unknown
-): Partial<PersistedUserSettings> | null => {
-    if (!isRecord(value)) {
-        return null;
-    }
-
-    const patch: Partial<PersistedUserSettings> = {};
-
-    if ('aiUsageEnabled' in value) {
-        if (typeof value.aiUsageEnabled !== 'boolean') {
-            return null;
-        }
-        patch.aiUsageEnabled = value.aiUsageEnabled;
-    }
-
-    if ('detailSearchAlwaysVisible' in value) {
-        if (typeof value.detailSearchAlwaysVisible !== 'boolean') {
-            return null;
-        }
-        patch.detailSearchAlwaysVisible = value.detailSearchAlwaysVisible;
-    }
-
-    return patch;
+/** 既知のキーだけを受け付け、型が違えば null */
+export const sanitizePersistedUserSettingsPatch = (value: unknown): Partial<PersistedUserSettings> | null => {
+  if (!isRecord(value)) return null;
+  const patch: Partial<PersistedUserSettings> = {};
+  for (const k of PERSISTED_KEYS) {
+    if (!(k in value)) continue;
+    if (typeof value[k] !== 'boolean') return null;
+    patch[k] = value[k] as boolean;
+  }
+  return patch;
 };

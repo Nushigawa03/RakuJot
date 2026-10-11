@@ -1,39 +1,21 @@
-import {
-  isRouteErrorResponse,
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-} from "react-router";
-
-// import type { Route } from "./+types/root";
+import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, type LinksFunction } from "react-router";
 import "./app.css";
-import { useDarkMode } from "./hooks/useDarkMode";
 
-export const links: any = () => [
+export const links: LinksFunction = () => [
   { rel: "manifest", href: "/manifest.json" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
+  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+  { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  useDarkMode(); // Initialize dark mode
-
   return (
-    <html lang="en">
+    <html lang="ja">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
         <meta name="description" content="AIを搭載した高速メモ管理アプリケーション" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -56,30 +38,18 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
-
-  if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
-  }
-
+  const notFound = isRouteErrorResponse(error) && error.status === 404;
+  const details = notFound
+    ? "ページが見つかりません。"
+    : isRouteErrorResponse(error)
+      ? error.statusText || "エラーが発生しました。"
+      : import.meta.env.DEV && error instanceof Error ? error.message : "予期しないエラーが発生しました。";
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
+    <main className="loading">
+      <h1>{notFound ? "404" : "エラー"}</h1>
       <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
+      {import.meta.env.DEV && error instanceof Error && <pre className="error-stack">{error.stack}</pre>}
+      <a className="btn btn--secondary" href="/app">ホームへ戻る</a>
     </main>
   );
 }

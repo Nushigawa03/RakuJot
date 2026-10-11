@@ -1,30 +1,20 @@
 /**
- * IndexedDB ローカルデータベース
- * idb ライブラリを使った軽量ラッパー
- * オフライン時のデータ保持と同期状態管理を担う
- *
- * ユーザーごとに別のDB名を使用:
- *   - ログイン済: rakujot-{userId}
- *   - 未ログイン: rakujot-anonymous
+ * IndexedDB ローカルデータベース（ユーザーごとに rakujot-{userId} / rakujot-anonymous）。
+ * 書き込みのたびに subscribeLocalDb の購読者へ通知し、UI はそれを合図に再読込する。
  */
-
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import type { TagExpressionTerm } from '../memos/types/tagExpressions';
+import type { TrashedMemo } from '../memos/types/trashedMemo';
 
-// ─── 同期ステータス ───────────────────────────────────
-export type SyncStatus =
-  | 'synced'
-  | 'pending-create'
-  | 'pending-update'
-  | 'pending-delete';
+export type SyncStatus = 'synced' | 'pending-create' | 'pending-update' | 'pending-delete';
 
-// ─── ローカル用の型定義 ──────────────────────────────
 export interface LocalMemo {
   id: string;
   title: string;
   date?: string;
-  tags: string[];        // tag ID の配列
+  tags: string[]; // tag ID の配列
   body?: string;
-  embedding?: any;
+  embedding?: number[] | null;
   createdAt: string;
   updatedAt: string;
   _syncStatus: SyncStatus;
@@ -39,7 +29,7 @@ export interface LocalTag {
 
 export interface LocalTagExpression {
   id: string;
-  orTerms: any[];          // TagExpressionTerm[]
+  orTerms: TagExpressionTerm[];
   name?: string | null;
   color?: string | null;
   icon?: string | null;
@@ -48,657 +38,324 @@ export interface LocalTagExpression {
   _syncStatus: SyncStatus;
 }
 
-export interface LocalTrashedMemo {
-  id: string;
-  originalId: string;
-  title: string;
-  date?: string | null;
-  tagNames: string[];
-  body?: string | null;
-  embedding?: any;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string;
-  _syncStatus: SyncStatus;
-}
+type LocalTrashedMemo = TrashedMemo;
 
-export interface SyncMeta {
-  key: string;           // 例: 'lastSyncAt'
-  value: string;
-}
-
-// ─── IndexedDB スキーマ ──────────────────────────────
 interface RakuJotDB extends DBSchema {
-  memos: {
-    key: string;
-    value: LocalMemo;
-    indexes: { 'by-sync-status': SyncStatus };
-  };
-  tags: {
-    key: string;
-    value: LocalTag;
-    indexes: { 'by-sync-status': SyncStatus };
-  };
-  tagExpressions: {
-    key: string;
-    value: LocalTagExpression;
-    indexes: { 'by-sync-status': SyncStatus };
-  };
-  trashedMemos: {
-    key: string;
-    value: LocalTrashedMemo;
-    indexes: { 'by-sync-status': SyncStatus };
-  };
-  syncMeta: {
-    key: string;
-    value: SyncMeta;
-  };
+  memos: { key: string; value: LocalMemo; indexes: { 'by-sync-status': SyncStatus } };
+  tags: { key: string; value: LocalTag; indexes: { 'by-sync-status': SyncStatus } };
+  tagExpressions: { key: string; value: LocalTagExpression; indexes: { 'by-sync-status': SyncStatus } };
+  trashedMemos: { key: string; value: LocalTrashedMemo };
+  syncMeta: { key: string; value: { key: string; value: string } };
 }
 
-const DB_PREFIX = 'rakujot';
-const ANONYMOUS_USER_ID = 'anonymous';
-const DB_VERSION = 1;
+type SyncedStore = 'memos' | 'tags' | 'tagExpressions';
+const ALL_STORES = ['memos', 'tags', 'tagExpressions', 'trashedMemos', 'syncMeta'] as const;
+const ANONYMOUS = 'anonymous';
 const LAST_USER_ID_KEY = 'rakujot:last-user-id';
 const MEMO_ID_ALIASES_KEY = 'memoIdAliases';
 
-// ─── ユーザー管理 ────────────────────────────────────
-const readStoredUserId = (): string | null => {
-  if (typeof localStorage === 'undefined') return null;
-  try {
-    return localStorage.getItem(LAST_USER_ID_KEY);
-  } catch {
-    return null;
-  }
+// ─── 変更通知 ─────────────────────────────────────────
+const listeners = new Set<() => void>();
+let notifyScheduled = false;
+
+export const subscribeLocalDb = (fn: () => void): (() => void) => {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
 };
 
-const writeStoredUserId = (userId: string | null): void => {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    if (userId) {
-      localStorage.setItem(LAST_USER_ID_KEY, userId);
-    } else {
-      localStorage.removeItem(LAST_USER_ID_KEY);
-    }
-  } catch {
-    // localStorage may be unavailable in private / test contexts.
-  }
-};
-
-let currentUserId: string = readStoredUserId() || ANONYMOUS_USER_ID;
-
-// ユーザーID毎にDBインスタンスをキャッシュ
-const dbInstances = new Map<string, IDBPDatabase<RakuJotDB>>();
-
-/**
- * 現在のユーザーIDを設定
- * DBインスタンスを切り替える（次の getDb() で新しいDBが開く）
- */
-export const setCurrentUserId = (userId: string | null): void => {
-  const newId = userId || ANONYMOUS_USER_ID;
-  if (currentUserId !== newId) {
-    currentUserId = newId;
-  }
-  if (userId) {
-    writeStoredUserId(userId);
-  }
-};
-
-/**
- * 現在のユーザーIDを取得
- */
-export const getCurrentUserId = (): string => currentUserId;
-
-export const forgetStoredUserId = (): void => {
-  writeStoredUserId(null);
-};
-
-/**
- * ユーザーIDからDB名を取得
- */
-const getDbName = (userId: string): string => `${DB_PREFIX}-${userId}`;
-
-/**
- * 共通のDB作成ロジック
- */
-const openUserDb = async (userId: string): Promise<IDBPDatabase<RakuJotDB>> => {
-  const dbName = getDbName(userId);
-  return openDB<RakuJotDB>(dbName, DB_VERSION, {
-    upgrade(db) {
-      // memos
-      const memoStore = db.createObjectStore('memos', { keyPath: 'id' });
-      memoStore.createIndex('by-sync-status', '_syncStatus');
-
-      // tags
-      const tagStore = db.createObjectStore('tags', { keyPath: 'id' });
-      tagStore.createIndex('by-sync-status', '_syncStatus');
-
-      // tagExpressions
-      const teStore = db.createObjectStore('tagExpressions', { keyPath: 'id' });
-      teStore.createIndex('by-sync-status', '_syncStatus');
-
-      // trashedMemos
-      const trashStore = db.createObjectStore('trashedMemos', { keyPath: 'id' });
-      trashStore.createIndex('by-sync-status', '_syncStatus');
-
-      // syncMeta
-      db.createObjectStore('syncMeta', { keyPath: 'key' });
-    },
+const emitChange = () => {
+  if (notifyScheduled) return;
+  notifyScheduled = true;
+  queueMicrotask(() => {
+    notifyScheduled = false;
+    listeners.forEach((fn) => fn());
   });
 };
 
-/**
- * データベース接続を取得（ユーザー毎にキャッシュ）
- */
-export const getDb = async (): Promise<IDBPDatabase<RakuJotDB>> => {
-  const existing = dbInstances.get(currentUserId);
-  if (existing) return existing;
+// ─── ユーザー管理 ────────────────────────────────────
+const storage = {
+  get: () => { try { return localStorage.getItem(LAST_USER_ID_KEY); } catch { return null; } },
+  set: (id: string | null) => {
+    try { id ? localStorage.setItem(LAST_USER_ID_KEY, id) : localStorage.removeItem(LAST_USER_ID_KEY); } catch { /* private mode */ }
+  },
+};
 
-  const db = await openUserDb(currentUserId);
-  dbInstances.set(currentUserId, db);
+let currentUserId = (typeof localStorage !== 'undefined' && storage.get()) || ANONYMOUS;
+const dbInstances = new Map<string, IDBPDatabase<RakuJotDB>>();
+
+export const setCurrentUserId = (userId: string | null): void => {
+  const next = userId || ANONYMOUS;
+  if (userId) storage.set(userId);
+  if (currentUserId !== next) {
+    currentUserId = next;
+    emitChange();
+  }
+};
+
+export const forgetStoredUserId = (): void => storage.set(null);
+
+const dbName = (userId: string) => `rakujot-${userId}`;
+
+const openUserDb = (userId: string) =>
+  openDB<RakuJotDB>(dbName(userId), 1, {
+    upgrade(db) {
+      db.createObjectStore('memos', { keyPath: 'id' }).createIndex('by-sync-status', '_syncStatus');
+      db.createObjectStore('tags', { keyPath: 'id' }).createIndex('by-sync-status', '_syncStatus');
+      db.createObjectStore('tagExpressions', { keyPath: 'id' }).createIndex('by-sync-status', '_syncStatus');
+      db.createObjectStore('trashedMemos', { keyPath: 'id' });
+      db.createObjectStore('syncMeta', { keyPath: 'key' });
+    },
+  });
+
+const getDbFor = async (userId: string) => {
+  let db = dbInstances.get(userId);
+  if (!db) {
+    db = await openUserDb(userId);
+    dbInstances.set(userId, db);
+  }
   return db;
 };
 
-// ─── テスト用ヘルパー ────────────────────────────────
-/** テスト時にDB接続をリセット */
-export const _resetDbInstance = () => {
-  dbInstances.clear();
-  currentUserId = ANONYMOUS_USER_ID;
-  writeStoredUserId(null);
+const getDb = () => getDbFor(currentUserId);
+
+const closeDb = (userId: string) => {
+  dbInstances.get(userId)?.close();
+  dbInstances.delete(userId);
 };
 
-// ─── Memo CRUD ───────────────────────────────────────
-export const getAllMemos = async (): Promise<LocalMemo[]> => {
-  const db = await getDb();
-  const all = await db.getAll('memos');
-  // pending-delete のものは除外して返す
-  return all.filter((m) => m._syncStatus !== 'pending-delete');
+// ─── 汎用ヘルパー ─────────────────────────────────────
+const getActive = async <S extends SyncedStore>(store: S) =>
+  (await (await getDb()).getAll(store)).filter((r) => r._syncStatus !== 'pending-delete') as RakuJotDB[S]['value'][];
+
+const getPending = async <S extends SyncedStore>(store: S) =>
+  (await (await getDb()).getAll(store)).filter((r) => r._syncStatus !== 'synced') as RakuJotDB[S]['value'][];
+
+const put = async <S extends (typeof ALL_STORES)[number]>(store: S, value: RakuJotDB[S]['value']) => {
+  await (await getDb()).put(store, value as never);
+  emitChange();
 };
 
-export const hasAnyMemoRecords = async (): Promise<boolean> => {
-  const db = await getDb();
-  return (await db.count('memos')) > 0;
+const remove = async (store: (typeof ALL_STORES)[number], id: string) => {
+  await (await getDb()).delete(store, id);
+  emitChange();
 };
 
-export const getMemo = async (id: string): Promise<LocalMemo | undefined> => {
-  const db = await getDb();
-  return db.get('memos', id);
+/** 同期済みデータで置き換えつつ、keep が真を返す未同期レコードは残す */
+const replaceKeepingPending = async <S extends SyncedStore>(
+  store: S,
+  records: RakuJotDB[S]['value'][],
+  keep: (pending: RakuJotDB[S]['value']) => boolean,
+  transform: (record: RakuJotDB[S]['value'], existing: Map<string, RakuJotDB[S]['value']>) => RakuJotDB[S]['value'] = (r) => r,
+) => {
+  const tx = (await getDb()).transaction(store, 'readwrite');
+  const existing = (await tx.store.getAll()) as RakuJotDB[S]['value'][];
+  const existingById = new Map(existing.map((r) => [r.id, r]));
+  await tx.store.clear();
+  for (const record of records) await tx.store.put(transform(record, existingById) as never);
+  for (const pending of existing) {
+    if (pending._syncStatus !== 'synced' && keep(pending)) await tx.store.put(pending as never);
+  }
+  await tx.done;
+  emitChange();
 };
 
-export const putMemo = async (memo: LocalMemo): Promise<void> => {
-  const db = await getDb();
-  await db.put('memos', memo);
+const isNewer = (a: string, b: string) => {
+  const [ta, tb] = [new Date(a).getTime(), new Date(b).getTime()];
+  return Number.isFinite(ta) && Number.isFinite(tb) ? ta > tb : a > b;
 };
 
-export const deleteMemo = async (id: string): Promise<void> => {
-  const db = await getDb();
-  await db.delete('memos', id);
+const hasEmbedding = (m: LocalMemo) => Array.isArray(m.embedding) && m.embedding.length > 0;
+
+// ─── Memo ────────────────────────────────────────────
+export const getAllMemos = () => getActive('memos');
+export const getPendingMemos = () => getPending('memos');
+export const getMemo = async (id: string) => (await getDb()).get('memos', id);
+export const putMemo = (memo: LocalMemo) => put('memos', memo);
+
+export const markMemoDeleted = async (id: string) => {
+  const memo = await getMemo(id);
+  if (memo) await putMemo({ ...memo, _syncStatus: 'pending-delete' });
 };
 
-export const replaceMemoId = async (
-  localId: string,
-  serverMemo: LocalMemo
-): Promise<void> => {
-  const db = await getDb();
-  const tx = db.transaction('memos', 'readwrite');
-  const localMemo = await tx.store.get(localId);
-  const existingServerMemo = await tx.store.get(serverMemo.id);
-
+/** pending-create のメモがサーバーで採番されたとき、ローカル ID を正式 ID に置き換える */
+export const replaceMemoId = async (localId: string, serverMemo: LocalMemo) => {
+  const tx = (await getDb()).transaction('memos', 'readwrite');
+  const local = await tx.store.get(localId);
+  const existingServer = (await tx.store.get(serverMemo.id)) || serverMemo;
   await tx.store.delete(localId);
 
-  if (!localMemo) {
-    await tx.store.put(existingServerMemo || serverMemo);
-    await tx.done;
-    await rememberMemoIdAlias(localId, serverMemo.id);
-    return;
-  }
-
-  if (localMemo._syncStatus === 'pending-delete') {
+  if (local?._syncStatus === 'pending-delete') {
+    await tx.store.put({ ...existingServer, _syncStatus: 'pending-delete' });
+  } else if (local && isNewer(local.updatedAt, serverMemo.updatedAt)) {
     await tx.store.put({
-      ...(existingServerMemo || serverMemo),
-      _syncStatus: 'pending-delete',
-    });
-    await tx.done;
-    await rememberMemoIdAlias(localId, serverMemo.id);
-    return;
-  }
-
-  const localTime = new Date(localMemo.updatedAt).getTime();
-  const serverTime = new Date(serverMemo.updatedAt).getTime();
-  const localIsNewer = Number.isFinite(localTime) && Number.isFinite(serverTime)
-    ? localTime > serverTime
-    : localMemo.updatedAt > serverMemo.updatedAt;
-
-  if (localIsNewer) {
-    await tx.store.put({
-      ...localMemo,
+      ...local,
       id: serverMemo.id,
-      createdAt: serverMemo.createdAt || localMemo.createdAt,
+      createdAt: serverMemo.createdAt || local.createdAt,
       _syncStatus: 'pending-update',
     });
   } else {
-    await tx.store.put(existingServerMemo || serverMemo);
+    await tx.store.put(existingServer);
   }
-
   await tx.done;
   await rememberMemoIdAlias(localId, serverMemo.id);
+  emitChange();
 };
 
-export const markMemoDeleted = async (id: string): Promise<void> => {
-  const db = await getDb();
-  const memo = await db.get('memos', id);
-  if (memo) {
-    memo._syncStatus = 'pending-delete';
-    await db.put('memos', memo);
-  }
+/**
+ * サーバーの全メモでローカルを置き換える。未同期の変更は保護する:
+ * - サーバーにない pending → まだ未同期なので残す（pending-delete は反映済みなので捨てる）
+ * - サーバーより新しい pending → 同期中の再編集なので残す
+ * サーバー側に埋め込みがなく、日付が変わっていなければローカルの埋め込みを引き継ぐ。
+ */
+export const bulkReplaceMemos = async (
+  memos: LocalMemo[],
+  idMapping: Array<{ localId: string; serverId: string }> = [],
+) => {
+  const serverById = new Map(memos.map((m) => [m.id, m]));
+  const mapped = new Map(idMapping.map((m) => [m.localId, m.serverId]));
+  await replaceKeepingPending(
+    'memos',
+    memos,
+    (pending) => {
+      const server = serverById.get(mapped.get(pending.id) || pending.id);
+      if (pending._syncStatus === 'pending-delete') return Boolean(server);
+      return !server || isNewer(pending.updatedAt, server.updatedAt);
+    },
+    (memo, existing) => {
+      const local = existing.get(memo.id);
+      return !hasEmbedding(memo) && local && hasEmbedding(local) && local.date === memo.date
+        ? { ...memo, embedding: local.embedding }
+        : memo;
+    },
+  );
 };
 
-export const getPendingMemos = async (): Promise<LocalMemo[]> => {
-  const db = await getDb();
-  const all = await db.getAll('memos');
-  return all.filter((m) => m._syncStatus !== 'synced');
-};
+// ─── Tag / TagExpression / Trash ─────────────────────
+export const getAllTags = () => getActive('tags');
+export const getPendingTags = () => getPending('tags');
+export const putTag = (tag: LocalTag) => put('tags', tag);
 
-// ─── Tag CRUD ────────────────────────────────────────
-export const getAllTags = async (): Promise<LocalTag[]> => {
-  const db = await getDb();
-  const all = await db.getAll('tags');
-  return all.filter((t) => t._syncStatus !== 'pending-delete');
-};
-
-export const putTag = async (tag: LocalTag): Promise<void> => {
-  const db = await getDb();
-  await db.put('tags', tag);
-};
-
-export const deleteTag = async (id: string): Promise<void> => {
-  const db = await getDb();
-  await db.delete('tags', id);
-};
-
-export const markTagDeleted = async (id: string): Promise<void> => {
-  const db = await getDb();
-  const tag = await db.get('tags', id);
+export const markTagDeleted = async (id: string) => {
+  const tag = await (await getDb()).get('tags', id);
   if (!tag) return;
-
-  if (tag._syncStatus === 'pending-create') {
-    await db.delete('tags', id);
-  } else {
-    await db.put('tags', { ...tag, _syncStatus: 'pending-delete' });
-  }
+  if (tag._syncStatus === 'pending-create') await remove('tags', id);
+  else await putTag({ ...tag, _syncStatus: 'pending-delete' });
 };
 
-export const getPendingTags = async (): Promise<LocalTag[]> => {
-  const db = await getDb();
-  const all = await db.getAll('tags');
-  return all.filter((t) => t._syncStatus !== 'synced');
-};
+export const bulkReplaceTags = (tags: LocalTag[]) =>
+  replaceKeepingPending('tags', tags, (pending) =>
+    !tags.some((t) => t.id === pending.id || (pending._syncStatus === 'pending-create' && t.name === pending.name)));
 
-// ─── TagExpression CRUD ──────────────────────────────
-export const getAllTagExpressions = async (): Promise<LocalTagExpression[]> => {
-  const db = await getDb();
-  const all = await db.getAll('tagExpressions');
-  return all.filter((te) => te._syncStatus !== 'pending-delete');
-};
+export const getAllTagExpressions = () => getActive('tagExpressions');
+export const getPendingTagExpressions = () => getPending('tagExpressions');
+export const putTagExpression = (te: LocalTagExpression) => put('tagExpressions', te);
+export const getTagExpression = async (id: string) => (await getDb()).get('tagExpressions', id);
+export const deleteTagExpression = (id: string) => remove('tagExpressions', id);
 
-export const putTagExpression = async (te: LocalTagExpression): Promise<void> => {
-  const db = await getDb();
-  await db.put('tagExpressions', te);
-};
+export const bulkReplaceTagExpressions = (tes: LocalTagExpression[]) =>
+  replaceKeepingPending('tagExpressions', tes, (pending) => !tes.some((t) => t.id === pending.id));
 
-export const deleteTagExpression = async (id: string): Promise<void> => {
-  const db = await getDb();
-  await db.delete('tagExpressions', id);
-};
+export const getAllTrashedMemos = async () => (await getDb()).getAll('trashedMemos');
+export const deleteTrashedMemo = (id: string) => remove('trashedMemos', id);
 
-export const getPendingTagExpressions = async (): Promise<LocalTagExpression[]> => {
-  const db = await getDb();
-  const all = await db.getAll('tagExpressions');
-  return all.filter((te) => te._syncStatus !== 'synced');
-};
-
-// ─── TrashedMemo CRUD ────────────────────────────────
-export const getAllTrashedMemos = async (): Promise<LocalTrashedMemo[]> => {
-  const db = await getDb();
-  return db.getAll('trashedMemos');
-};
-
-export const putTrashedMemo = async (tm: LocalTrashedMemo): Promise<void> => {
-  const db = await getDb();
-  await db.put('trashedMemos', tm);
-};
-
-export const deleteTrashedMemo = async (id: string): Promise<void> => {
-  const db = await getDb();
-  await db.delete('trashedMemos', id);
+export const bulkReplaceTrashedMemos = async (items: LocalTrashedMemo[]) => {
+  const tx = (await getDb()).transaction('trashedMemos', 'readwrite');
+  await tx.store.clear();
+  for (const item of items) await tx.store.put(item);
+  await tx.done;
+  emitChange();
 };
 
 // ─── SyncMeta ────────────────────────────────────────
-export const getLastSyncAt = async (): Promise<string | null> => {
-  const db = await getDb();
-  const meta = await db.get('syncMeta', 'lastSyncAt');
-  return meta?.value ?? null;
-};
+const getMeta = async (key: string) => (await (await getDb()).get('syncMeta', key))?.value ?? null;
+const setMeta = async (key: string, value: string) => { await (await getDb()).put('syncMeta', { key, value }); };
 
-export const setLastSyncAt = async (isoString: string): Promise<void> => {
-  const db = await getDb();
-  await db.put('syncMeta', { key: 'lastSyncAt', value: isoString });
-};
+export const getLastSyncAt = () => getMeta('lastSyncAt');
+export const setLastSyncAt = (iso: string) => setMeta('lastSyncAt', iso);
 
 const getMemoIdAliases = async (): Promise<Record<string, string>> => {
-  const db = await getDb();
-  const meta = await db.get('syncMeta', MEMO_ID_ALIASES_KEY);
-  if (!meta?.value) return {};
-
   try {
-    const parsed = JSON.parse(meta.value);
+    const parsed = JSON.parse((await getMeta(MEMO_ID_ALIASES_KEY)) || '{}');
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
     return {};
   }
 };
 
-const setMemoIdAliases = async (aliases: Record<string, string>): Promise<void> => {
-  const db = await getDb();
-  await db.put('syncMeta', { key: MEMO_ID_ALIASES_KEY, value: JSON.stringify(aliases) });
-};
-
-const rememberMemoIdAlias = async (localId: string, serverId: string): Promise<void> => {
+const rememberMemoIdAlias = async (localId: string, serverId: string) => {
   if (!localId || !serverId || localId === serverId) return;
-
   const aliases = await getMemoIdAliases();
   aliases[localId] = serverId;
-  await setMemoIdAliases(aliases);
+  await setMeta(MEMO_ID_ALIASES_KEY, JSON.stringify(aliases));
 };
 
-export const getCanonicalMemoId = async (id: string): Promise<string> => {
+/** 仮 ID から正式 ID をたどる（同期後も古い URL で開けるように） */
+export const getCanonicalMemoId = async (id: string) => {
   const aliases = await getMemoIdAliases();
   const seen = new Set<string>();
   let current = id;
-
   while (aliases[current] && !seen.has(current)) {
     seen.add(current);
     current = aliases[current];
   }
-
   return current;
 };
 
-// ─── バルク操作 ──────────────────────────────────────
-/**
- * サーバーから取得した全データでローカルDBを上書き
- * ★改善: pending（未同期）のメモは保護する
- *   - サーバーにないpendingメモ = まだ未同期 → 復元
- *   - サーバーにあるが、ローカルのpending版のupdatedAtが新しい
- *     = 同期中にユーザーが再編集した → ローカル版を維持
- */
-export const bulkReplaceMemos = async (
-  memos: LocalMemo[],
-  idMapping: Array<{ localId: string; serverId: string }> = []
-): Promise<void> => {
-  const db = await getDb();
-  const tx = db.transaction('memos', 'readwrite');
-
-  // 既存のpendingメモを保護（トランザクション内で最新を取得）
-  const existing = await tx.store.getAll();
-  const pendingMemos = existing.filter(
-    (m) => m._syncStatus !== 'synced'
-  );
-
-  // サーバーデータをMapに変換（高速ルックアップ用）
-  const serverMemoMap = new Map(memos.map(m => [m.id, m]));
-  const mappedServerIdByLocalId = new Map(idMapping.map(m => [m.localId, m.serverId]));
-
-  // 全クリアしてサーバーデータを書き込み
-  await tx.store.clear();
-  for (const memo of memos) {
-    await tx.store.put(memo);
-  }
-
-  // pendingメモを復元
-  for (const pending of pendingMemos) {
-    const mappedServerId = mappedServerIdByLocalId.get(pending.id);
-    const serverVersion = serverMemoMap.get(mappedServerId || pending.id);
-    if (pending._syncStatus === 'pending-delete') {
-      // 削除がサーバーに反映済みなら、サーバーデータには含まれない。
-      // その場合に復元すると削除したメモが同期後に復活してしまう。
-      if (serverVersion) {
-        await tx.store.put(pending);
-      }
-      continue;
-    }
-
-    if (!serverVersion) {
-      // サーバーにない = まだ同期されていない新規メモ → 復元
-      await tx.store.put(pending);
-    } else {
-      // サーバーにある: ローカルのpending版がサーバー版より新しいか確認
-      // （同期中にユーザーが再編集した場合）
-      const localTime = new Date(pending.updatedAt).getTime();
-      const serverTime = new Date(serverVersion.updatedAt).getTime();
-      if (localTime > serverTime) {
-        // ローカルの方が新しい = 同期中に再編集された → ローカル版を維持
-        await tx.store.put(pending);
-      }
-      // サーバーの方が新しいか同じ = サーバー版が正 → そのまま
-    }
-  }
-
+// ─── 一括操作 / ユーザー切替 ─────────────────────────
+const clearDb = async (db: IDBPDatabase<RakuJotDB>) => {
+  const tx = db.transaction([...ALL_STORES], 'readwrite');
+  await Promise.all(ALL_STORES.map((s) => tx.objectStore(s).clear()));
   await tx.done;
 };
 
-export const bulkReplaceTags = async (tags: LocalTag[]): Promise<void> => {
-  const db = await getDb();
-  const tx = db.transaction('tags', 'readwrite');
-
-  // 既存のpendingタグを保護
-  const existing = await tx.store.getAll();
-  const pendingTags = existing.filter((t) => t._syncStatus !== 'synced');
-
-  await tx.store.clear();
-  for (const tag of tags) {
-    await tx.store.put(tag);
-  }
-
-  for (const pending of pendingTags) {
-    const existsInServer = tags.some((t) => t.id === pending.id);
-    const sameNameExistsInServer = pending._syncStatus === 'pending-create'
-      && tags.some((t) => t.name === pending.name);
-    if (!existsInServer && !sameNameExistsInServer) {
-      await tx.store.put(pending);
-    }
-  }
-
-  await tx.done;
+export const clearAllLocalData = async () => {
+  await clearDb(await getDb());
+  emitChange();
 };
 
-export const bulkReplaceTagExpressions = async (tes: LocalTagExpression[]): Promise<void> => {
-  const db = await getDb();
-  const tx = db.transaction('tagExpressions', 'readwrite');
-
-  // 既存のpending TagExpressionを保護
-  const existing = await tx.store.getAll();
-  const pendingTes = existing.filter((te) => te._syncStatus !== 'synced');
-
-  await tx.store.clear();
-  for (const te of tes) {
-    await tx.store.put(te);
-  }
-
-  for (const pending of pendingTes) {
-    const existsInServer = tes.some((s) => s.id === pending.id);
-    if (!existsInServer) {
-      await tx.store.put(pending);
-    }
-  }
-
-  await tx.done;
-};
-
-export const bulkReplaceTrashedMemos = async (tms: LocalTrashedMemo[]): Promise<void> => {
-  const db = await getDb();
-  const tx = db.transaction('trashedMemos', 'readwrite');
-  await tx.store.clear();
-  for (const tm of tms) {
-    await tx.store.put(tm);
-  }
-  await tx.done;
-};
-
-/**
- * 現在のユーザーの全ローカルデータをクリア
- */
-export const clearAllLocalData = async (): Promise<void> => {
-  const db = await getDb();
-  const tx = db.transaction(
-    ['memos', 'tags', 'tagExpressions', 'trashedMemos', 'syncMeta'],
-    'readwrite'
-  );
-  await tx.objectStore('memos').clear();
-  await tx.objectStore('tags').clear();
-  await tx.objectStore('tagExpressions').clear();
-  await tx.objectStore('trashedMemos').clear();
-  await tx.objectStore('syncMeta').clear();
-  await tx.done;
-};
-
-// ─── ユーザー切替 ────────────────────────────────────
-/**
- * 匿名DBのデータをユーザーDBに移行
- * pending-create のメモ/タグ/タグ式をすべてユーザーDBにコピー
- */
+/** 匿名 DB の未同期データをユーザー DB に移行する。重複名のタグは既存タグに寄せる */
 export const migrateAnonymousToUser = async (userId: string): Promise<boolean> => {
-  // 匿名DBを開く
-  let anonDb: IDBPDatabase<RakuJotDB>;
+  // 画面側が使っている接続を閉じないよう、移行用に専用の接続を開く
+  const anonDb = await openUserDb(ANONYMOUS);
   try {
-    anonDb = await openUserDb(ANONYMOUS_USER_ID);
-  } catch {
-    return false;
-  }
+    const [memos, tags, expressions] = await Promise.all([
+      anonDb.getAll('memos'), anonDb.getAll('tags'), anonDb.getAll('tagExpressions'),
+    ]);
+    if (!memos.length && !tags.length && !expressions.length) return false;
 
-  try {
-    const anonMemos = await anonDb.getAll('memos');
-    const anonTags = await anonDb.getAll('tags');
-    const anonTagExpressions = await anonDb.getAll('tagExpressions');
-
-    // 移行するデータがなければスキップ
-    if (anonMemos.length === 0 && anonTags.length === 0 && anonTagExpressions.length === 0) {
-      return false;
-    }
-
-    // ユーザーDBに切り替えて保存
-    const prevUserId = currentUserId;
-    setCurrentUserId(userId);
-    const userDb = await getDb();
-
-    // タグを移行
-    const tagTx = userDb.transaction('tags', 'readwrite');
-    for (const tag of anonTags) {
-      // 既存のタグと名前が重複しない場合のみ追加
-      const existingTags = await tagTx.store.getAll();
+    const userDb = await getDbFor(userId);
+    const existingTags = await userDb.getAll('tags');
+    const tagIdMap = new Map<string, string>();
+    const tx = userDb.transaction(['tags', 'memos', 'tagExpressions'], 'readwrite');
+    for (const tag of tags) {
       const dup = existingTags.find((t) => t.name === tag.name);
-      if (!dup) {
-        await tagTx.store.put(tag);
-      }
+      if (dup) tagIdMap.set(tag.id, dup.id);
+      else await tx.objectStore('tags').put(tag);
     }
-    await tagTx.done;
-
-    // メモを移行
-    const memoTx = userDb.transaction('memos', 'readwrite');
-    for (const memo of anonMemos) {
-      // _syncStatusを維持してそのまま追加
-      await memoTx.store.put(memo);
+    const remap = (ids: string[]) => ids.map((id) => tagIdMap.get(id) || id);
+    for (const memo of memos) await tx.objectStore('memos').put({ ...memo, tags: remap(memo.tags) });
+    for (const te of expressions) {
+      await tx.objectStore('tagExpressions').put({
+        ...te,
+        orTerms: te.orTerms.map((t) => ({ include: remap(t.include), exclude: remap(t.exclude) })),
+      });
     }
-    await memoTx.done;
-
-    // タグ式を移行
-    const teTx = userDb.transaction('tagExpressions', 'readwrite');
-    for (const te of anonTagExpressions) {
-      await teTx.store.put(te);
-    }
-    await teTx.done;
-
-    // 匿名DBをクリア
-    await clearAnonymousData();
-
-    // ユーザーIDを戻す
-    setCurrentUserId(prevUserId);
-
-    return true; // データが移行された
-  } finally {
-    anonDb.close();
-    dbInstances.delete(ANONYMOUS_USER_ID);
-  }
-};
-
-/**
- * 匿名DBのデータをクリア
- */
-export const clearAnonymousData = async (): Promise<void> => {
-  let anonDb: IDBPDatabase<RakuJotDB>;
-  try {
-    anonDb = await openUserDb(ANONYMOUS_USER_ID);
-  } catch {
-    return;
-  }
-
-  try {
-    const tx = anonDb.transaction(
-      ['memos', 'tags', 'tagExpressions', 'trashedMemos', 'syncMeta'],
-      'readwrite'
-    );
-    await tx.objectStore('memos').clear();
-    await tx.objectStore('tags').clear();
-    await tx.objectStore('tagExpressions').clear();
-    await tx.objectStore('trashedMemos').clear();
-    await tx.objectStore('syncMeta').clear();
     await tx.done;
+    await clearDb(anonDb);
+    emitChange();
+    return true;
   } finally {
     anonDb.close();
-    dbInstances.delete(ANONYMOUS_USER_ID);
   }
 };
 
-/**
- * ユーザーDBを削除（ログアウト時に使用）
- * ※ IndexedDB 自体を削除
- */
-export const deleteUserDb = async (userId: string): Promise<void> => {
-  // キャッシュから削除
-  const cached = dbInstances.get(userId);
-  if (cached) {
-    cached.close();
-    dbInstances.delete(userId);
-  }
-
-  // IndexedDBを削除
-  const dbName = getDbName(userId);
+/** ログアウト時にユーザー DB ごと削除する */
+export const deleteUserDb = async (userId: string) => {
+  closeDb(userId);
   await new Promise<void>((resolve, reject) => {
-    const req = indexedDB.deleteDatabase(dbName);
+    const req = indexedDB.deleteDatabase(dbName(userId));
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
-    req.onblocked = () => {
-      console.warn(`[localDb] DB deletion blocked: ${dbName}`);
-      resolve(); // ブロックされてもcontinue
-    };
+    req.onblocked = () => resolve();
   });
-};
-
-/**
- * 匿名DBにデータがあるかチェック
- */
-export const hasAnonymousData = async (): Promise<boolean> => {
-  let anonDb: IDBPDatabase<RakuJotDB>;
-  try {
-    anonDb = await openUserDb(ANONYMOUS_USER_ID);
-  } catch {
-    return false;
-  }
-
-  try {
-    const memoCount = await anonDb.count('memos');
-    return memoCount > 0;
-  } finally {
-    anonDb.close();
-    dbInstances.delete(ANONYMOUS_USER_ID);
-  }
 };

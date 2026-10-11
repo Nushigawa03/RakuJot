@@ -4,7 +4,7 @@ import { Link, redirect, useLoaderData, useNavigate } from 'react-router';
 import type { LoaderFunction, MetaFunction } from 'react-router';
 import { getCurrentUser } from '~/features/auth/utils/authMode.server';
 import { getPublicAuthConfig } from '~/features/auth/config/authEnvironment.server';
-import { BiometricLoginButton } from '~/features/auth/components/BiometricAuthButton';
+import { PasskeyLoginButton } from '~/features/auth/components/PasskeyButtons';
 import { setLoggedIn, performSync } from '~/features/sync/syncService';
 
 type LoaderData = ReturnType<typeof getPublicAuthConfig>;
@@ -36,6 +36,13 @@ export default function LoginRoute() {
         setMounted(true);
     }, []);
 
+    // ログイン成功：匿名データをユーザー DB に移行して同期
+    const onLoggedIn = async (userId: string) => {
+        await setLoggedIn(userId);
+        performSync().catch(console.error);
+        navigate('/app');
+    };
+
     const handleGoogleSuccess = async (response: CredentialResponse) => {
         if (!response.credential) {
             setErrorMessage('Google認証トークンを取得できませんでした。');
@@ -61,13 +68,7 @@ export default function LoginRoute() {
                 throw new Error(data.error || 'ログインに失敗しました。');
             }
 
-            // ログイン成功：匿名データをユーザーDBに移行して同期
-            if (data.user?.id) {
-                await setLoggedIn(data.user.id);
-                performSync().catch(console.error);
-            }
-
-            navigate('/app');
+            await onLoggedIn(data.user.id);
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : 'ログインに失敗しました。');
         } finally {
@@ -147,16 +148,9 @@ export default function LoginRoute() {
                                 <hr className="flex-1 border-white/10" />
                             </div>
                             <div className="mt-3 flex justify-center">
-                                <BiometricLoginButton
-                                    onSuccess={async (user?: any) => {
-                                        // パスキーログイン成功：匿名データを移行して同期
-                                        if (user?.id) {
-                                            await setLoggedIn(user.id);
-                                            performSync().catch(console.error);
-                                        }
-                                        navigate('/app');
-                                    }}
-                                    onError={(error) => setErrorMessage(error)}
+                                <PasskeyLoginButton
+                                    onSuccess={(user) => onLoggedIn(user.id)}
+                                    onError={setErrorMessage}
                                 />
                             </div>
                         </div>

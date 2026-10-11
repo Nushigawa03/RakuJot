@@ -1,14 +1,5 @@
-import React from 'react';
-import TrashPage from '~/features/memos/components/TrashPage/TrashPage';
+import { Loading } from "~/components";
+import TrashPage from "~/features/memos/components/TrashPage/TrashPage";
 
-export function HydrateFallback() {
-    return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-            <p style={{ color: '#888', fontSize: '0.9rem' }}>読み込み中...</p>
-        </div>
-    );
-}
-
-export default function TrashRoute() {
-    return <TrashPage />;
-}
+export const HydrateFallback = () => <Loading />;
+export default TrashPage;

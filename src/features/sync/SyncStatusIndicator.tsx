@@ -1,33 +1,21 @@
-/**
- * 同期状態インジケーター
- * ヘッダーバーに表示するコンパクトなアイコン
- */
+import { useSyncExternalStore } from 'react';
+import { getSyncState, subscribeSyncState, type SyncState } from './syncService';
 
-import React from 'react';
-import { useSyncStatus } from './useSyncStatus';
-import './SyncStatusIndicator.css';
+const LABELS: Record<SyncState, [icon: string, label: string]> = {
+  idle: ['🟢', 'オンライン'],
+  syncing: ['🔄', '同期中...'],
+  offline: ['🔴', 'オフライン'],
+  error: ['⚠️', '同期エラー'],
+  unauthenticated: ['👤', 'ローカルモード'],
+};
 
-export const SyncStatusIndicator: React.FC = () => {
-  const { syncState } = useSyncStatus();
-
-  const configMap: Record<string, { icon: string; label: string; className: string }> = {
-    idle: { icon: '🟢', label: 'オンライン', className: 'sync-idle' },
-    syncing: { icon: '🔄', label: '同期中...', className: 'sync-syncing' },
-    offline: { icon: '🔴', label: 'オフライン', className: 'sync-offline' },
-    error: { icon: '⚠️', label: '同期エラー', className: 'sync-error' },
-    unauthenticated: { icon: '👤', label: 'ローカルモード', className: 'sync-offline' },
-  };
-  const config = configMap[syncState] || configMap.offline;
-
+export const SyncStatusIndicator = () => {
+  const state = useSyncExternalStore(subscribeSyncState, getSyncState, () => 'idle' as SyncState);
+  const [icon, label] = LABELS[state];
   return (
-    <div
-      className={`sync-status-indicator ${config.className}`}
-      title={config.label}
-      role="status"
-      aria-label={config.label}
-    >
-      <span className="sync-status-icon">{config.icon}</span>
-      <span className="sync-status-label">{config.label}</span>
+    <div className={`sync-status sync-status--${state}`} title={label} role="status" aria-label={label}>
+      <span className="sync-status__icon">{icon}</span>
+      <span>{label}</span>
     </div>
   );
 };

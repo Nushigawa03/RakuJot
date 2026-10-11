@@ -1,131 +1,76 @@
-// 日付パースやフィルタ適用のユーティリティ
-export function parseFuzzyDate(input: string, preferEnd: boolean): string | null {
-  if (!input) return null;
-  const s = input
-    .trim()
-    .replace(/^(今年|去年|一昨年|来年)の(春|夏|秋|冬)$/, '$1$2')
-    .replace(/^(今年|去年|一昨年|来年)(春|夏|秋|冬)$/, (_match, yearWord, seasonWord) => {
-      const now = new Date();
-      const cy = now.getFullYear();
-      const year =
-        yearWord === '一昨年' ? cy - 2 :
-          yearWord === '去年' ? cy - 1 :
-            yearWord === '来年' ? cy + 1 :
-              cy;
-      return `${year}年${seasonWord}`;
-    })
-    .replace(/(?:くらい|ぐらい|ごろ|頃|あたり|らへん|前後)$/, '');
-  if (!s) return null;
-  const now = new Date();
-  const cy = now.getFullYear();
-  const pad2 = (n: number) => n.toString().padStart(2, '0');
-  const lastDayOf = (y: number, mZeroBased: number) => new Date(y, mZeroBased + 1, 0).getDate();
+// 日付パース・日付クエリ生成のユーティリティ（日付は YYYY-MM-DD 文字列で扱う）
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const ymd = (y: number, m: number, d: number) => `${y}-${pad2(m)}-${pad2(d)}`;
+const lastDayOf = (y: number, m: number) => new Date(y, m, 0).getDate(); // m は 1 始まり
 
-  // 和暦年月日: 2024年3月15日, 和暦年月: 2024年3月, 和暦年: 2024年
-  const ymd = s.match(/^(\d{4})年(?:\s*(\d{1,2})月(?:\s*(\d{1,2})日?)?)?$/);
-  if (ymd) {
-    const y = parseInt(ymd[1], 10);
-    const m = ymd[2] ? parseInt(ymd[2], 10) : null;
-    const d = ymd[3] ? parseInt(ymd[3], 10) : null;
-    if (m && d) return `${y}-${pad2(m)}-${pad2(d)}`;
-    if (m) {
-      if (preferEnd) {
-        const last = lastDayOf(y, m - 1);
-        return `${y}-${pad2(m)}-${pad2(last)}`;
-      }
-      return `${y}-${pad2(m)}-01`;
-    }
-    return preferEnd ? `${y}-12-31` : `${y}-01-01`;
+export const formatDate = (d: Date) => ymd(d.getFullYear(), d.getMonth() + 1, d.getDate());
+export const todayString = () => formatDate(new Date());
+
+const RELATIVE_YEAR: Record<string, number> = { 一昨年: -2, 去年: -1, 今年: 0, 来年: 1 };
+const RELATIVE_MONTH: Record<string, number> = { 先々月: -2, 先月: -1, 来月: 1 };
+const RELATIVE_DAY: Record<string, number> = { 昨日: -1, 今日: 0, 明日: 1 };
+const SEASON: Record<string, [start: number, end: number]> = { 春: [3, 5], 夏: [6, 8], 秋: [9, 11], 冬: [12, 14] };
+
+const yearRange = (y: number, preferEnd: boolean) => (preferEnd ? ymd(y, 12, 31) : ymd(y, 1, 1));
+const monthRange = (y: number, m: number, preferEnd: boolean) => (preferEnd ? ymd(y, m, lastDayOf(y, m)) : ymd(y, m, 1));
+
+/**
+ * 「2024年3月」「去年の夏」「先月」「昨日」のような曖昧な日付表現を、
+ * 区間の開始日（preferEnd=false）または終了日（preferEnd=true）に変換する。
+ */
+export function parseFuzzyDate(input: string, preferEnd: boolean): string | null {
+  const cy = new Date().getFullYear();
+  const s = (input || '')
+    .trim()
+    .replace(/(?:くらい|ぐらい|ごろ|頃|あたり|らへん|前後)$/, '')
+    .replace(/^(一昨年|去年|今年|来年)の?(春|夏|秋|冬)$/, (_m, year, season) => `${cy + RELATIVE_YEAR[year]}年${season}`);
+  if (!s) return null;
+
+  const jp = s.match(/^(\d{4})年(?:\s*(\d{1,2})月(?:\s*(\d{1,2})日?)?)?$/);
+  if (jp) {
+    const [y, m, d] = [Number(jp[1]), Number(jp[2]), Number(jp[3])];
+    if (m && d) return ymd(y, m, d);
+    return m ? monthRange(y, m, preferEnd) : yearRange(y, preferEnd);
   }
 
   const season = s.match(/^(?:(\d{4})年)?\s*(春|夏|秋|冬)$/);
   if (season) {
-    const y = season[1] ? parseInt(season[1], 10) : cy;
-    const seas = season[2];
-    if (seas === '春') return preferEnd ? `${y}-05-31` : `${y}-03-01`;
-    if (seas === '夏') return preferEnd ? `${y}-08-31` : `${y}-06-01`;
-    if (seas === '秋') return preferEnd ? `${y}-11-30` : `${y}-09-01`;
-    if (seas === '冬') {
-      if (preferEnd) {
-        const y2 = y + 1;
-        const last = lastDayOf(y2, 1);
-        return `${y2}-02-${pad2(last)}`;
-      }
-      return `${y}-12-01`;
-    }
+    const y = season[1] ? Number(season[1]) : cy;
+    const [startMonth, endMonth] = SEASON[season[2]];
+    if (!preferEnd) return ymd(y, startMonth, 1);
+    const end = new Date(y, endMonth, 0); // 冬は翌年2月末
+    return formatDate(end);
   }
 
-  if (/^一昨年$/.test(s)) {
-    const y = cy - 2;
-    return preferEnd ? `${y}-12-31` : `${y}-01-01`;
+  if (s in RELATIVE_YEAR) return yearRange(cy + RELATIVE_YEAR[s], preferEnd);
+  const now = new Date();
+  if (s in RELATIVE_MONTH) {
+    const dt = new Date(now.getFullYear(), now.getMonth() + RELATIVE_MONTH[s], 1);
+    return monthRange(dt.getFullYear(), dt.getMonth() + 1, preferEnd);
   }
-  if (/^去年$/.test(s)) {
-    const y = cy - 1;
-    return preferEnd ? `${y}-12-31` : `${y}-01-01`;
-  }
-  if (/^今年$/.test(s)) {
-    return preferEnd ? `${cy}-12-31` : `${cy}-01-01`;
-  }
-  if (/^来年$/.test(s)) {
-    const y = cy + 1;
-    return preferEnd ? `${y}-12-31` : `${y}-01-01`;
-  }
-  if (/^(先々月|先月|来月)$/.test(s)) {
-    let offset = 0;
-    if (s === '先月') offset = -1;
-    if (s === '先々月') offset = -2;
-    if (s === '来月') offset = 1;
-    const dt = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-    const y = dt.getFullYear();
-    const m = dt.getMonth() + 1;
-    return preferEnd ? `${y}-${pad2(m)}-${pad2(lastDayOf(y, m - 1))}` : `${y}-${pad2(m)}-01`;
-  }
-  if (/^今日$/.test(s)) {
-    const dt = now;
-    return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
-  }
-  if (/^昨日$/.test(s)) {
-    const dt = new Date(now);
-    dt.setDate(dt.getDate() - 1);
-    return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
-  }
-  if (/^明日$/.test(s)) {
-    const dt = new Date(now);
-    dt.setDate(dt.getDate() + 1);
-    return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
-  }
-  const isoDate = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoDate) {
-    return `${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`;
-  }
-  const slashDate = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
-  if (slashDate) {
-    return `${slashDate[1]}-${pad2(parseInt(slashDate[2], 10))}-${pad2(parseInt(slashDate[3], 10))}`;
-  }
-  try {
-    const dt = new Date(s);
-    if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
-  } catch { }
-  return null;
+  if (s in RELATIVE_DAY) return formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + RELATIVE_DAY[s]));
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const slash = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (slash) return ymd(Number(slash[1]), Number(slash[2]), Number(slash[3]));
+
+  const dt = new Date(s);
+  return isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10);
 }
 
+/** 開始・終了の入力から `date:S..E` / `date>=S` / `date<=E` 形式のクエリを作る（逆順なら入れ替え） */
 export function buildDateQuery(startRaw: string, endRaw: string) {
   let start = parseFuzzyDate(startRaw, false) || '';
   let end = parseFuzzyDate(endRaw, true) || '';
-  if (start && end) {
-    try {
-      const s = new Date(start);
-      const e = new Date(end);
-      if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && s.getTime() > e.getTime()) {
-        const tmp = start;
-        start = end;
-        end = tmp;
-      }
-    } catch { }
-  }
-  let query = '';
-  if (start && end) query = `date:${start}..${end}`;
-  else if (start) query = `date>=${start}`;
-  else if (end) query = `date<=${end}`;
+  if (start && end && start > end) [start, end] = [end, start];
+  const query = start && end ? `date:${start}..${end}` : start ? `date>=${start}` : end ? `date<=${end}` : '';
   return { start, end, query };
 }
+
+/** 並び替え用キー（不明な日付は空文字 = 最も古い扱い） */
+export const memoDateSortKey = (date?: string) =>
+  parseFuzzyDate(
+    (date || '').replace(/^(\d{4})-(spring|summer|autumn|winter)$/, (_m, y, s) =>
+      `${y}年${({ spring: '春', summer: '夏', autumn: '秋', winter: '冬' } as Record<string, string>)[s]}`),
+    false,
+  ) || '';

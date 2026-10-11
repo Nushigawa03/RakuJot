@@ -1,126 +1,84 @@
+/**
+ * タグ・分類（TagExpression）のローカル CRUD。書き込みは IndexedDB に即時反映し、同期はバックグラウンドで行う。
+ */
 import {
-  getAllTags as localGetAllTags,
-  putTag as localPutTag,
-  markTagDeleted as localMarkTagDeleted,
+  getAllTags, putTag, markTagDeleted, getAllMemos,
+  getAllTagExpressions, getTagExpression, putTagExpression, deleteTagExpression,
   type LocalTag,
 } from '../../sync/localDb';
-import { performSync } from '../../sync/syncService';
+import { syncInBackground } from '../../sync/syncService';
+import type { Tag } from '../types/tags';
+import type { TagExpression } from '../types/tagExpressions';
+import { normalizeTagName } from '../utils/normalizeTagName';
 
-export type Tag = { id: string; name: string; description?: string };
+const newLocalId = () => `local_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 
-/**
- * ローカルID生成
- */
-const generateLocalId = (): string => {
-  const timestamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).substring(2, 10);
-  return `local_${timestamp}_${randomPart}`;
+const pendingUpdate = (status: LocalTag['_syncStatus']) => (status === 'pending-create' ? 'pending-create' : 'pending-update');
+
+export const tagService = {
+  getTags: async (): Promise<Tag[]> => (await getAllTags()).map(({ id, name, description }) => ({ id, name, description })),
+
+  async createTag(name: string, description?: string): Promise<Tag> {
+    const tag: LocalTag = { id: newLocalId(), name, description, _syncStatus: 'pending-create' };
+    await putTag(tag);
+    syncInBackground();
+    return { id: tag.id, name, description };
+  },
+
+  async updateTag(id: string, data: { name?: string; description?: string }) {
+    const existing = (await getAllTags()).find((t) => t.id === id);
+    if (!existing) return { ok: false, error: 'タグが見つかりません' };
+    await putTag({ ...existing, ...data, _syncStatus: pendingUpdate(existing._syncStatus) });
+    syncInBackground();
+    return { ok: true };
+  },
+
+  /** メモで使われているタグは削除できない（サーバーと同じ制約をローカルで先に確認する） */
+  async deleteTag(id: string) {
+    const used = (await getAllMemos()).filter((m) => m.tags.includes(id)).length;
+    if (used) return { ok: false, error: `このタグは${used}個のメモで使用されているため削除できません` };
+    await markTagDeleted(id);
+    syncInBackground();
+    return { ok: true };
+  },
+
+  /** タグ名をタグ ID に変換する。表記ゆれ（全角半角・大小文字）は既存タグに寄せ、なければ作成する */
+  async resolveTagIds(names: string[]): Promise<string[]> {
+    const available = await tagService.getTags();
+    const ids: string[] = [];
+    for (const name of names.map((n) => n.trim()).filter(Boolean)) {
+      const found = available.find((t) => normalizeTagName(t.name) === normalizeTagName(name));
+      const tag = found || (await tagService.createTag(name));
+      if (!found) available.push(tag);
+      if (!ids.includes(tag.id)) ids.push(tag.id);
+    }
+    return ids;
+  },
 };
 
-export class TagService {
-  private basePath = '/api';
-  private cachedTags: Tag[] | null = null;
+type ExpressionInput = Pick<TagExpression, 'orTerms' | 'name' | 'color' | 'icon'>;
 
-  /**
-   * タグ一覧取得 — ローカルDB優先
-   */
-  async getTags(): Promise<Tag[]> {
-    if (this.cachedTags) return this.cachedTags;
+export const expressionService = {
+  getAll: (): Promise<TagExpression[]> => getAllTagExpressions(),
 
-    try {
-      // ローカルDBから取得
-      const localTags = await localGetAllTags();
-      if (localTags.length > 0) {
-        this.cachedTags = localTags.map(t => ({ id: t.id, name: t.name, description: t.description }));
-        return this.cachedTags;
-      }
+  async create(data: ExpressionInput) {
+    const now = new Date().toISOString();
+    await putTagExpression({ ...data, id: newLocalId(), createdAt: now, updatedAt: now, _syncStatus: 'pending-create' });
+    syncInBackground();
+  },
 
-      // ローカルが空ならサーバーから取得（初回）
-      if (navigator.onLine) {
-        const r = await fetch(`${this.basePath}/tags`);
-        if (!r.ok) return (this.cachedTags = []);
-        const d = await r.json();
-        this.cachedTags = Array.isArray(d) ? d : [];
+  async update(id: string, data: Partial<ExpressionInput>) {
+    const existing = await getTagExpression(id);
+    if (!existing) return;
+    await putTagExpression({ ...existing, ...data, updatedAt: new Date().toISOString(), _syncStatus: pendingUpdate(existing._syncStatus) });
+    syncInBackground();
+  },
 
-        // ローカルDBにキャッシュ
-        for (const tag of this.cachedTags) {
-          await localPutTag({
-            id: tag.id,
-            name: tag.name,
-            description: tag.description,
-            _syncStatus: 'synced',
-          });
-        }
-
-        return this.cachedTags;
-      }
-
-      return (this.cachedTags = []);
-    } catch {
-      return (this.cachedTags = []);
-    }
-  }
-
-  clearCache() {
-    this.cachedTags = null;
-  }
-
-  /**
-   * タグ作成 — ローカルDBに即座に保存
-   */
-  async createTag(name: string, description?: string): Promise<{ ok: boolean; tag?: Tag; error?: string }> {
-    const localTag: LocalTag = {
-      id: generateLocalId(),
-      name,
-      description,
-      _syncStatus: 'pending-create',
-    };
-
-    // ローカルDBに保存
-    await localPutTag(localTag);
-    this.clearCache();
-
-    // オンラインなら同期サービスに任せる。通常API直叩きと二重化しない。
-    if (navigator.onLine) {
-      performSync().catch(console.error);
-    }
-
-    return { ok: true, tag: { id: localTag.id, name: localTag.name, description: localTag.description } };
-  }
-
-  async updateTag(id: string, data: { name?: string; description?: string }): Promise<{ ok: boolean; tag?: Tag; error?: string }> {
-    const existing = (await localGetAllTags()).find((tag) => tag.id === id);
-    if (!existing) {
-      return { ok: false, error: 'タグが見つかりません' };
-    }
-
-    const updated: LocalTag = {
-      ...existing,
-      ...(data.name !== undefined && { name: data.name }),
-      ...(data.description !== undefined && { description: data.description }),
-      _syncStatus: existing._syncStatus === 'pending-create' ? 'pending-create' : 'pending-update',
-    };
-
-    await localPutTag(updated);
-    this.clearCache();
-
-    if (navigator.onLine) {
-      performSync().catch(console.error);
-    }
-
-    return { ok: true, tag: { id: updated.id, name: updated.name, description: updated.description } };
-  }
-
-  async deleteTag(id: string): Promise<{ ok: boolean; error?: string }> {
-    await localMarkTagDeleted(id);
-    this.clearCache();
-
-    if (navigator.onLine) {
-      performSync().catch(console.error);
-    }
-
-    return { ok: true };
-  }
-}
-
-export const tagService = new TagService();
+  async delete(id: string) {
+    const existing = await getTagExpression(id);
+    if (!existing) return;
+    if (existing._syncStatus === 'pending-create') await deleteTagExpression(id);
+    else await putTagExpression({ ...existing, _syncStatus: 'pending-delete' });
+    syncInBackground();
+  },
+};

@@ -1,166 +1,86 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TagService } from './tagService';
-import { performSync } from '../../sync/syncService';
-import { getAllTags, markTagDeleted, putTag } from '../../sync/localDb';
+import { tagService, expressionService } from './tagService';
+import { syncInBackground } from '../../sync/syncService';
+import * as localDb from '../../sync/localDb';
 
-// localDb と syncService をモック（IndexedDB の代替）
 vi.mock('../../sync/localDb', () => ({
   getAllTags: vi.fn().mockResolvedValue([]),
   putTag: vi.fn().mockResolvedValue(undefined),
-  deleteTag: vi.fn().mockResolvedValue(undefined),
   markTagDeleted: vi.fn().mockResolvedValue(undefined),
+  getAllMemos: vi.fn().mockResolvedValue([]),
+  getAllTagExpressions: vi.fn().mockResolvedValue([]),
+  getTagExpression: vi.fn().mockResolvedValue(undefined),
+  putTagExpression: vi.fn().mockResolvedValue(undefined),
+  deleteTagExpression: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../sync/syncService', () => ({
-  performSync: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../../sync/syncService', () => ({ syncInBackground: vi.fn() }));
 
-// fetch をモック
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
+describe('tagService', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-// navigator.onLine をモック (テスト時はオンラインとみなす)
-Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
+  it('タグをローカルに pending-create で保存して同期する', async () => {
+    const tag = await tagService.createTag('新しいタグ', '説明');
 
-describe('TagService', () => {
-    let tagService: TagService;
+    expect(tag.name).toBe('新しいタグ');
+    expect(localDb.putTag).toHaveBeenCalledWith(expect.objectContaining({ name: '新しいタグ', _syncStatus: 'pending-create' }));
+    expect(syncInBackground).toHaveBeenCalled();
+  });
 
-    beforeEach(() => {
-        tagService = new TagService();
-        vi.clearAllMocks();
-    });
+  it('更新はローカルを pending-update にして同期する', async () => {
+    vi.mocked(localDb.getAllTags).mockResolvedValueOnce([{ id: 'tag-1', name: '旧タグ', _syncStatus: 'synced' }]);
 
-    describe('getTags', () => {
-        it('APIからタグ一覧を取得する', async () => {
-            const mockTags = [
-                { id: '1', name: 'タグ1' },
-                { id: '2', name: 'タグ2' },
-            ];
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockTags),
-            });
+    const result = await tagService.updateTag('tag-1', { name: '新タグ', description: '説明' });
 
-            const tags = await tagService.getTags();
+    expect(localDb.putTag).toHaveBeenCalledWith({ id: 'tag-1', name: '新タグ', description: '説明', _syncStatus: 'pending-update' });
+    expect(result.ok).toBe(true);
+  });
 
-            expect(mockFetch).toHaveBeenCalledWith('/api/tags');
-            expect(tags).toEqual(mockTags);
-        });
+  it('未同期のタグは更新しても pending-create のまま', async () => {
+    vi.mocked(localDb.getAllTags).mockResolvedValueOnce([{ id: 'tag-1', name: '旧', _syncStatus: 'pending-create' }]);
+    await tagService.updateTag('tag-1', { name: '新' });
+    expect(localDb.putTag).toHaveBeenCalledWith(expect.objectContaining({ _syncStatus: 'pending-create' }));
+  });
 
-        it('キャッシュされたタグを返す（2回目以降）', async () => {
-            const mockTags = [{ id: '1', name: 'タグ1' }];
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockTags),
-            });
+  it('メモで使われていないタグは削除できる', async () => {
+    const result = await tagService.deleteTag('tag-1');
+    expect(localDb.markTagDeleted).toHaveBeenCalledWith('tag-1');
+    expect(result.ok).toBe(true);
+  });
 
-            await tagService.getTags();
-            const tags = await tagService.getTags();
+  it('メモで使われているタグは削除しない', async () => {
+    vi.mocked(localDb.getAllMemos).mockResolvedValueOnce([
+      { id: 'm1', title: 'a', tags: ['tag-1'], createdAt: '', updatedAt: '', _syncStatus: 'synced' },
+    ]);
+    const result = await tagService.deleteTag('tag-1');
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('1個のメモ');
+    expect(localDb.markTagDeleted).not.toHaveBeenCalled();
+  });
 
-            expect(mockFetch).toHaveBeenCalledTimes(1);
-            expect(tags).toEqual(mockTags);
-        });
+  it('タグ名の表記ゆれは既存タグに寄せ、未知の名前は作成する', async () => {
+    vi.mocked(localDb.getAllTags).mockResolvedValueOnce([{ id: 'work', name: 'Work', _syncStatus: 'synced' }]);
 
-        it('API失敗時は空配列を返す', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-            });
+    const ids = await tagService.resolveTagIds(['ｗｏｒｋ', ' 新規 ', 'work']);
 
-            const tags = await tagService.getTags();
+    expect(ids[0]).toBe('work');
+    expect(ids).toHaveLength(2);
+    expect(localDb.putTag).toHaveBeenCalledWith(expect.objectContaining({ name: '新規' }));
+  });
+});
 
-            expect(tags).toEqual([]);
-        });
+describe('expressionService', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-        it('ネットワークエラー時は空配列を返す', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  it('未同期の分類は削除するとローカルからも消える', async () => {
+    vi.mocked(localDb.getTagExpression).mockResolvedValueOnce({ id: 'e1', orTerms: [], _syncStatus: 'pending-create' });
+    await expressionService.delete('e1');
+    expect(localDb.deleteTagExpression).toHaveBeenCalledWith('e1');
+  });
 
-            const tags = await tagService.getTags();
-
-            expect(tags).toEqual([]);
-        });
-    });
-
-    describe('clearCache', () => {
-        it('キャッシュをクリアして次回はAPIを呼ぶ', async () => {
-            const mockTags = [{ id: '1', name: 'タグ1' }];
-            mockFetch.mockResolvedValue({
-                ok: true,
-                json: () => Promise.resolve(mockTags),
-            });
-
-            await tagService.getTags();
-            tagService.clearCache();
-            await tagService.getTags();
-
-            expect(mockFetch).toHaveBeenCalledTimes(2);
-        });
-    });
-
-    describe('createTag', () => {
-        it('新しいタグを作成する', async () => {
-            const result = await tagService.createTag('新しいタグ', '説明');
-
-            expect(mockFetch).not.toHaveBeenCalledWith('/api/tags', expect.anything());
-            expect(performSync).toHaveBeenCalled();
-            expect(result.ok).toBe(true);
-            expect(result.tag?.name).toBe('新しいタグ');
-        });
-
-        it('サーバー失敗時でもローカル保存は成功する（オフラインファースト）', async () => {
-            const result = await tagService.createTag('タグ');
-
-            // オフラインファースト: ローカルDBには常に保存成功
-            expect(result.ok).toBe(true);
-        });
-
-        it('作成後にキャッシュをクリアする', async () => {
-            const mockTags = [{ id: '1', name: 'タグ1' }];
-            mockFetch
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve(mockTags),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve([...mockTags, { id: '2', name: 'タグ2' }]),
-                });
-
-            await tagService.getTags();
-            await tagService.createTag('タグ2');
-            await tagService.getTags();
-
-            // getTags が2回呼ばれる（キャッシュクリア後）。作成自体は同期経路に任せる。
-            expect(mockFetch).toHaveBeenCalledTimes(2);
-            expect(performSync).toHaveBeenCalled();
-        });
-    });
-
-    describe('updateTag', () => {
-        it('ローカルをpending-updateにして同期する', async () => {
-            vi.mocked(getAllTags).mockResolvedValueOnce([
-                { id: 'tag-1', name: '旧タグ', _syncStatus: 'synced' } as any,
-            ]);
-
-            const result = await tagService.updateTag('tag-1', { name: '新タグ', description: '説明' });
-
-            expect(putTag).toHaveBeenCalledWith({
-                id: 'tag-1',
-                name: '新タグ',
-                description: '説明',
-                _syncStatus: 'pending-update',
-            });
-            expect(performSync).toHaveBeenCalled();
-            expect(result.ok).toBe(true);
-        });
-    });
-
-    describe('deleteTag', () => {
-        it('ローカルをpending-deleteにして同期する', async () => {
-            const result = await tagService.deleteTag('tag-1');
-
-            expect(markTagDeleted).toHaveBeenCalledWith('tag-1');
-            expect(performSync).toHaveBeenCalled();
-            expect(result.ok).toBe(true);
-        });
-    });
+  it('同期済みの分類は pending-delete にする', async () => {
+    vi.mocked(localDb.getTagExpression).mockResolvedValueOnce({ id: 'e1', orTerms: [], _syncStatus: 'synced' });
+    await expressionService.delete('e1');
+    expect(localDb.putTagExpression).toHaveBeenCalledWith(expect.objectContaining({ id: 'e1', _syncStatus: 'pending-delete' }));
+  });
 });

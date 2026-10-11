@@ -1,211 +1,152 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoService } from './memoService';
-import { performSync } from '../../sync/syncService';
-import { hasAnyMemoRecords } from '../../sync/localDb';
+import { performSync, syncInBackground } from '../../sync/syncService';
+import * as localDb from '../../sync/localDb';
+import { getSettings } from '../../settings/useSettings';
 
-// fetch をモック
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
-// localDb と syncService をモック（IndexedDB の代替）
 vi.mock('../../sync/localDb', () => ({
   getAllMemos: vi.fn().mockResolvedValue([]),
-  hasAnyMemoRecords: vi.fn().mockResolvedValue(false),
   getMemo: vi.fn().mockResolvedValue(undefined),
   putMemo: vi.fn().mockResolvedValue(undefined),
-  deleteMemo: vi.fn().mockResolvedValue(undefined),
   markMemoDeleted: vi.fn().mockResolvedValue(undefined),
   getCanonicalMemoId: vi.fn((id: string) => Promise.resolve(id)),
   getAllTrashedMemos: vi.fn().mockResolvedValue([]),
-  putTrashedMemo: vi.fn().mockResolvedValue(undefined),
   deleteTrashedMemo: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../sync/syncService', () => ({
   performSync: vi.fn().mockResolvedValue(undefined),
+  syncInBackground: vi.fn(),
 }));
 
-// tagService と refreshTags をモック
 vi.mock('./tagService', () => ({
-    tagService: {
-        getTags: vi.fn().mockResolvedValue([
-            { id: '1', name: 'タグ1' },
-            { id: '2', name: 'タグ2' },
-        ]),
-    },
+  tagService: {
+    getTags: vi.fn().mockResolvedValue([{ id: '1', name: 'タグ1' }, { id: '2', name: 'Work' }]),
+    resolveTagIds: vi.fn(async (names: string[]) => names.map((n) => `id:${n}`)),
+  },
 }));
 
-vi.mock('../utils/tagUtils', () => ({
-    refreshTags: vi.fn().mockResolvedValue(undefined),
+vi.mock('../../settings/useSettings', () => ({
+  getSettings: vi.fn(() => ({ aiUsageEnabled: true, googleApiKey: '', detailSearchAlwaysVisible: false })),
 }));
 
-// navigator.onLine をモック (テスト時はオンラインとみなす)
-Object.defineProperty(navigator, 'onLine', { value: true, writable: true, configurable: true });
+const jsonResponse = (body: unknown, ok = true) => ({ ok, json: () => Promise.resolve(body) });
 
 describe('MemoService', () => {
-    let memoService: MemoService;
+  let service: MemoService;
 
-    beforeEach(() => {
-        memoService = new MemoService();
-        vi.clearAllMocks();
-        Object.defineProperty(navigator, 'onLine', { value: true, writable: true, configurable: true });
+  beforeEach(() => {
+    service = new MemoService();
+    vi.clearAllMocks();
+    Object.defineProperty(navigator, 'onLine', { value: true, writable: true, configurable: true });
+  });
+
+  it('メモはローカルに pending-create で保存し、サーバーへは同期経由で送る', async () => {
+    const result = await service.createMemo({ title: '新しいメモ', body: '本文', tags: ['タグ1'], date: '2026-01-01' });
+
+    expect(result.ok).toBe(true);
+    expect(localDb.putMemo).toHaveBeenCalledWith(expect.objectContaining({
+      title: '新しいメモ', tags: ['id:タグ1'], date: '2026-01-01', _syncStatus: 'pending-create',
+    }));
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(syncInBackground).toHaveBeenCalled();
+  });
+
+  it('AI の提案でタイトル・日付を補い、タグ名を既存タグの表記に寄せる', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ title: 'AIタイトル', tags: ['work', 'WORK', '新'], date: '2026-02-03' }));
+
+    await service.createMemoWithAiSuggestions('本文です');
+
+    expect(localDb.putMemo).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'AIタイトル', body: '本文です', date: '2026-02-03', tags: ['id:Work', 'id:新'],
+    }));
+  });
+
+  it('AI がオフのときは呼び出さず、1行目をタイトルにする', async () => {
+    vi.mocked(getSettings).mockReturnValueOnce({ aiUsageEnabled: false, googleApiKey: '', detailSearchAlwaysVisible: false });
+
+    await service.createMemoWithAiSuggestions('一行目\n二行目');
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(localDb.putMemo).toHaveBeenCalledWith(expect.objectContaining({ title: '一行目' }));
+  });
+
+  it('AI 編集が失敗したときは提案を返さない（タイトルを書き換えない）', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({}, false));
+    expect(await service.suggestEdit('本文', '明日に変更')).toBeNull();
+  });
+
+  it('更新は同期中の作成を保ちつつ、日付が変わったら埋め込みを捨てる', async () => {
+    vi.mocked(localDb.getMemo).mockResolvedValueOnce({
+      id: '1', title: '旧', date: '2026-01-01', tags: [], embedding: [1], createdAt: 'c', updatedAt: 'u', _syncStatus: 'pending-create',
     });
 
-    describe('getMemos', () => {
-        it('APIからメモ一覧を取得する', async () => {
-            const mockMemos = [
-                { id: '1', title: 'メモ1', body: '本文1', tags: [] },
-                { id: '2', title: 'メモ2', body: '本文2', tags: [] },
-            ];
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(mockMemos),
-            });
+    await service.updateMemo('1', { title: '更新後', body: '更新本文', tags: [], date: '2026-05-05' });
 
-            const memos = await memoService.getMemos();
+    expect(localDb.putMemo).toHaveBeenCalledWith(expect.objectContaining({
+      id: '1', title: '更新後', createdAt: 'c', embedding: undefined, _syncStatus: 'pending-create',
+    }));
+  });
 
-            expect(mockFetch).toHaveBeenCalledWith('/api/memos');
-            // getMemos はサーバーデータに _syncStatus: 'synced' を付与して返す
-            expect(memos).toEqual([
-                { ...mockMemos[0], _syncStatus: 'synced' },
-                { ...mockMemos[1], _syncStatus: 'synced' },
-            ]);
-        });
-
-        it('API失敗時は空配列を返す', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-            });
-
-            const memos = await memoService.getMemos();
-
-            expect(memos).toEqual([]);
-        });
-
-        it('ネットワークエラー時は空配列を返す', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-            const memos = await memoService.getMemos();
-
-            expect(memos).toEqual([]);
-        });
-
-        it('pending-delete だけが残っている場合はサーバー取得で一時復活させない', async () => {
-            vi.mocked(hasAnyMemoRecords).mockResolvedValueOnce(true);
-
-            const memos = await memoService.getMemos();
-
-            expect(memos).toEqual([]);
-            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos');
-        });
+  it('削除済みのメモへの保存では復活させない', async () => {
+    vi.mocked(localDb.getMemo).mockResolvedValueOnce({
+      id: '1', title: '旧', tags: [], createdAt: 'c', updatedAt: 'u', _syncStatus: 'pending-delete',
     });
+    const result = await service.updateMemo('1', { title: '編集', body: '', tags: [] });
+    expect(result.ok).toBe(false);
+    expect(localDb.putMemo).not.toHaveBeenCalled();
+  });
 
-    describe('createMemo', () => {
-        it('新しいメモを作成する', async () => {
-            const result = await memoService.createMemo({
-                title: '新しいメモ',
-                body: '本文',
-                tags: ['タグ1'],
-            });
+  it('削除は pending-delete にして同期する', async () => {
+    const result = await service.deleteMemo('1');
+    expect(localDb.markMemoDeleted).toHaveBeenCalledWith('1');
+    expect(result.ok).toBe(true);
+  });
 
-            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos', expect.anything());
-            expect(performSync).toHaveBeenCalled();
-            expect(result.ok).toBe(true);
-        });
+  it('ゴミ箱は保持期限内のものを新しい順に返す', async () => {
+    const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+    vi.mocked(localDb.getAllTrashedMemos).mockResolvedValueOnce([
+      { id: 'old', deletedAt: daysAgo(40) },
+      { id: 'a', deletedAt: daysAgo(5) },
+      { id: 'b', deletedAt: daysAgo(1) },
+    ] as any);
 
-        it('サーバー失敗時でもローカル保存は成功する（オフラインファースト）', async () => {
-            const result = await memoService.createMemo({
-                title: 'メモ',
-                body: '本文',
-                tags: [],
-            });
+    expect((await service.getTrashedMemos()).map((m) => m.id)).toEqual(['b', 'a']);
+  });
 
-            // オフラインファースト: ローカルDBには常に保存成功
-            expect(result.ok).toBe(true);
-        });
+  it('復元はサーバーで行い、同期してローカルに反映する', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({}));
+
+    const result = await service.restoreMemo('memo-1');
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/memos/trash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ originalId: 'memo-1', action: 'restore' }),
     });
+    expect(performSync).toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+  });
 
-    describe('updateMemo', () => {
-        it('メモを更新する', async () => {
-            const result = await memoService.updateMemo('1', {
-                title: '更新後',
-                body: '更新本文',
-                tags: [],
-            });
+  it('完全削除はサーバーとローカルの両方から消す', async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({}));
 
-            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos', expect.anything());
-            expect(performSync).toHaveBeenCalled();
-            expect(result.ok).toBe(true);
-        });
-    });
+    const result = await service.permanentlyDeleteMemo('trash-1');
 
-    describe('deleteMemo', () => {
-        it('メモを削除する', async () => {
-            const result = await memoService.deleteMemo('1');
+    expect(mockFetch).toHaveBeenCalledWith('/api/memos/trash', expect.objectContaining({
+      body: JSON.stringify({ id: 'trash-1', action: 'permanent-delete' }),
+    }));
+    expect(localDb.deleteTrashedMemo).toHaveBeenCalledWith('trash-1');
+    expect(result.ok).toBe(true);
+  });
 
-            expect(mockFetch).not.toHaveBeenCalledWith('/api/memos', expect.anything());
-            expect(performSync).toHaveBeenCalled();
-            expect(result.ok).toBe(true);
-        });
-
-        it('サーバー失敗時でもローカル削除は成功する（オフラインファースト）', async () => {
-            const result = await memoService.deleteMemo('1');
-
-            // オフラインファースト: ローカルDBでは常にpending-deleteにマーク成功
-            expect(result.ok).toBe(true);
-        });
-    });
-
-    describe('getTrashedMemos', () => {
-        it('ゴミ箱のメモ一覧を取得する', async () => {
-            const trashedMemos = [
-                { id: 'trash-1', originalId: '1', title: '削除済みメモ' },
-            ];
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(trashedMemos),
-            });
-
-            const memos = await memoService.getTrashedMemos();
-
-            expect(mockFetch).toHaveBeenCalledWith('/api/memos/trash');
-            expect(memos).toEqual(trashedMemos);
-        });
-    });
-
-    describe('restoreMemo', () => {
-        it('メモを復元する', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({}),
-            });
-
-            const result = await memoService.restoreMemo('memo-1');
-
-            expect(mockFetch).toHaveBeenCalledWith('/api/memos/trash', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ originalId: 'memo-1', action: 'restore' }),
-            });
-            expect(result.ok).toBe(true);
-        });
-    });
-
-    describe('permanentlyDeleteMemo', () => {
-        it('メモを完全削除する', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({}),
-            });
-
-            const result = await memoService.permanentlyDeleteMemo('trash-1');
-
-            expect(mockFetch).toHaveBeenCalledWith('/api/memos/trash', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: 'trash-1', action: 'permanent-delete' }),
-            });
-            expect(result.ok).toBe(true);
-        });
-    });
+  it('オフライン中はゴミ箱の操作をしない', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, writable: true, configurable: true });
+    const result = await service.restoreMemo('memo-1');
+    expect(result.ok).toBe(false);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
 });

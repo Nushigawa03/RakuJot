@@ -1,137 +1,47 @@
 /**
- * WebAuthn ログイン API エンドポイント
  * POST /api/auth/webauthn/login
- *
- * phase: 'challenge' — 認証チャレンジを生成
- * phase: 'verify'    — アサーション応答を検証しセッション発行
+ * phase: 'challenge' — 認証チャレンジを生成（discoverable credential なのでユーザー指定なし）
+ * phase: 'verify'    — アサーション応答を検証しセッションを発行
  */
-
-import type { ActionFunction } from "react-router";
-import {
-  generateAuthenticationOptions,
-  verifyAuthenticationResponse,
-} from "@simplewebauthn/server";
-import {
-  createUserSession,
-  getSessionCookieHeader,
-} from "~/features/auth/utils/session.server";
+import type { ActionFunctionArgs } from "react-router";
+import { generateAuthenticationOptions, verifyAuthenticationResponse } from "@simplewebauthn/server";
+import { createUserSession, getSessionCookieHeader } from "~/features/auth/utils/session.server";
 import { prisma } from "~/db.server";
 import { getWebAuthnRequestConfig } from "~/features/auth/config/webauthn.server";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const challengeStore = new Map<string, { challenge: string; origin: string; rpID: string; expiresAt: number }>();
 
-// チャレンジの一時保存
-const challengeStore = new Map<string, {
-  challenge: string;
-  userId?: string;
-  origin: string;
-  rpID: string;
-  expiresAt: number;
-}>();
-
-const getStoredChallenge = (sessionKey: string) => {
+const takeChallenge = (sessionKey: string) => {
   const stored = challengeStore.get(sessionKey);
-  if (!stored) return null;
-
-  if (stored.expiresAt < Date.now()) {
-    challengeStore.delete(sessionKey);
-    return null;
-  }
-
-  return stored;
+  challengeStore.delete(sessionKey);
+  return stored && stored.expiresAt >= Date.now() ? stored : null;
 };
 
-export const action: ActionFunction = async ({ request }) => {
-  if (request.method !== "POST") {
-    return Response.json({ error: "Method not allowed" }, { status: 405 });
-  }
+export const action = async ({ request }: ActionFunctionArgs) => {
+  if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405 });
 
   try {
     const body = await request.json();
-    const { phase } = body;
 
-    if (phase === "challenge") {
+    if (body.phase === "challenge") {
       const { rpID, origin } = getWebAuthnRequestConfig(request);
-      // email が指定されている場合、そのユーザーのクレデンシャルのみ
-      const { email } = body;
-
-      let allowCredentials: any[] | undefined;
-      let userId: string | undefined;
-
-      if (email) {
-        const user = await prisma.user.findFirst({
-          where: {
-            email,
-            webauthnCredentials: { some: {} },
-          },
-          include: { webauthnCredentials: true },
-        });
-
-        if (!user || user.webauthnCredentials.length === 0) {
-          return Response.json(
-            { error: "この email に生体認証が登録されていません" },
-            { status: 404 }
-          );
-        }
-
-        userId = user.id;
-        allowCredentials = user.webauthnCredentials.map((cred) => ({
-          id: cred.credentialId,
-          transports: cred.transports as any[],
-        }));
-      }
-
-      const options = await generateAuthenticationOptions({
-        rpID,
-        userVerification: "required",
-        allowCredentials,
-      });
-
-      // チャレンジをセッションIDで保存
+      const options = await generateAuthenticationOptions({ rpID, userVerification: "required" });
       const sessionKey = `auth_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-      challengeStore.set(sessionKey, {
-        challenge: options.challenge,
-        userId,
-        origin,
-        rpID,
-        expiresAt: Date.now() + CHALLENGE_TTL_MS,
-      });
-
+      challengeStore.set(sessionKey, { challenge: options.challenge, origin, rpID, expiresAt: Date.now() + CHALLENGE_TTL_MS });
       return Response.json({ ...options, sessionKey });
     }
 
-    if (phase === "verify") {
+    if (body.phase === "verify") {
       const { assertionResponse, sessionKey } = body;
+      const stored = takeChallenge(sessionKey);
+      if (!stored) return Response.json({ error: "チャレンジが見つかりません" }, { status: 400 });
 
-      const stored = getStoredChallenge(sessionKey);
-      if (!stored) {
-        return Response.json(
-          { error: "チャレンジが見つかりません" },
-          { status: 400 }
-        );
-      }
-
-      // credentialId からクレデンシャルを検索
-      const credentialId = assertionResponse.id;
       const credential = await prisma.webAuthnCredential.findUnique({
-        where: { credentialId },
+        where: { credentialId: assertionResponse.id },
         include: { user: true },
       });
-
-      if (!credential) {
-        return Response.json(
-          { error: "クレデンシャルが見つかりません" },
-          { status: 404 }
-        );
-      }
-
-      // userId が指定されていた場合、一致するか確認
-      if (stored.userId && credential.userId !== stored.userId) {
-        return Response.json(
-          { error: "ユーザーが一致しません" },
-          { status: 403 }
-        );
-      }
+      if (!credential) return Response.json({ error: "クレデンシャルが見つかりません" }, { status: 404 });
 
       const verification = await verifyAuthenticationResponse({
         response: assertionResponse,
@@ -146,40 +56,17 @@ export const action: ActionFunction = async ({ request }) => {
         },
         requireUserVerification: true,
       });
+      if (!verification.verified) return Response.json({ error: "検証に失敗しました" }, { status: 400 });
 
-      if (!verification.verified) {
-        return Response.json({ error: "検証に失敗しました" }, { status: 400 });
-      }
-
-      // カウンター更新
       await prisma.webAuthnCredential.update({
         where: { id: credential.id },
         data: { counter: BigInt(verification.authenticationInfo.newCounter) },
       });
 
-      // チャレンジ削除
-      challengeStore.delete(sessionKey);
-
-      // セッション発行
-      const sessionValue = createUserSession(credential.userId);
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          user: {
-            id: credential.user.id,
-            email: credential.user.email,
-            name: credential.user.name,
-            picture: credential.user.picture,
-          },
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "Set-Cookie": getSessionCookieHeader(sessionValue),
-          },
-        }
+      const { id, email, name, picture } = credential.user;
+      return Response.json(
+        { success: true, user: { id, email, name, picture } },
+        { headers: { "Set-Cookie": getSessionCookieHeader(createUserSession(id)) } },
       );
     }
 

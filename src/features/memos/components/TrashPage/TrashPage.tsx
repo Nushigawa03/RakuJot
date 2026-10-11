@@ -1,204 +1,100 @@
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ConfirmModal } from '../../../../components';
+import { Button, ConfirmModal } from '~/components';
 import { memoService } from '../../services/memoService';
-import type { TrashedMemo } from '../../types/trashedMemo';
-import './TrashPage.css';
+import { useTrashedMemos } from '../../hooks/useLocalData';
 
-const TrashPage: React.FC = () => {
-    const navigate = useNavigate();
-    const [trashedMemos, setTrashedMemos] = useState<TrashedMemo[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+const RETENTION_DAYS = 30;
+const daysRemaining = (deletedAt: string) =>
+  Math.max(0, RETENTION_DAYS - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86_400_000));
 
-    const [modalConfig, setModalConfig] = useState<{
-        isOpen: boolean;
-        title: string;
-        message: string;
-        action: () => Promise<void>;
-    }>({
-        isOpen: false,
-        title: '',
-        message: '',
-        action: async () => { },
-    });
+type Confirm = { title: string; message: string; action: () => Promise<void> } | null;
 
-    const openModal = (title: string, message: string, action: () => Promise<void>) => {
-        setModalConfig({ isOpen: true, title, message, action });
-    };
+const TrashPage = () => {
+  const navigate = useNavigate();
+  const trashed = useTrashedMemos();
+  const [confirm, setConfirm] = useState<Confirm>(null);
+  const [error, setError] = useState<string | null>(null);
 
-    const closeModal = () => {
-        setModalConfig(prev => ({ ...prev, isOpen: false }));
-    };
+  const run = async (action: () => Promise<{ ok: boolean; error?: string }[]>, failure: string) => {
+    const results = await action();
+    const failed = results.find((r) => !r.ok);
+    setError(failed ? `${failure}: ${failed.error ?? ''}` : null);
+  };
 
-    useEffect(() => {
-        loadTrashedMemos();
-    }, []);
+  const ask = (title: string, message: string, action: () => Promise<void>) =>
+    setConfirm({ title, message, action: async () => { setConfirm(null); await action(); } });
 
-    const loadTrashedMemos = async () => {
-        try {
-            setLoading(true);
-            const memos = await memoService.getTrashedMemos();
-            setTrashedMemos(memos);
-        } catch (err) {
-            setError('ゴミ箱のメモ取得に失敗しました');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+  if (!trashed) return <div className="trash"><p className="loading">読み込み中...</p></div>;
 
-    const handleRestore = async (originalId: string) => {
-        const result = await memoService.restoreMemo(originalId);
-        if (result.ok) {
-            loadTrashedMemos();
-        } else {
-            alert(`復元に失敗しました: ${result.error}`);
-        }
-    };
-
-    const confirmPermanentDelete = (id: string) => {
-        openModal(
-            'メモの完全削除',
-            '本当に完全削除しますか？この操作は取り消せません。',
-            async () => {
-                closeModal();
-                const result = await memoService.permanentlyDeleteMemo(id);
-                if (result.ok) {
-                    loadTrashedMemos();
-                } else {
-                    alert(`削除に失敗しました: ${result.error}`);
-                }
-            }
-        );
-    };
-
-    const confirmEmptyTrash = () => {
-        openModal(
-            'ゴミ箱を空にする',
-            'ゴミ箱を空にしますか？この操作は取り消せません。',
-            async () => {
-                closeModal();
-                try {
-                    setLoading(true);
-                    const deletePromises = trashedMemos.map(memo => memoService.permanentlyDeleteMemo(memo.id));
-                    const results = await Promise.all(deletePromises);
-
-                    const hasErrors = results.some(r => !r.ok);
-                    if (hasErrors) {
-                        alert('一部のメモの削除に失敗しました');
-                    }
-                } catch (err) {
-                    alert('一括削除中にエラーが発生しました');
-                    console.error(err);
-                } finally {
-                    loadTrashedMemos();
-                }
-            }
-        );
-    };
-
-    const getDaysRemaining = (deletedAt: string, maxDays: number = 30) => {
-        const deletedDate = new Date(deletedAt);
-        const now = new Date();
-        const diffTime = now.getTime() - deletedDate.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        return Math.max(0, maxDays - diffDays);
-    };
-
-    if (loading) {
-        return <div className="trash-page"><div className="trash-loading">読み込み中...</div></div>;
-    }
-
-    if (error) {
-        return <div className="trash-page"><div className="trash-error">{error}</div></div>;
-    }
-
-    return (
-        <div className="trash-page">
-            <div className="trash-header">
-                <div className="trash-header-top">
-                    <div className="trash-header-title">
-                        <button className="trash-back-btn" onClick={() => navigate(-1)} aria-label="戻る">
-                            <span className="back-icon">←</span>
-                        </button>
-                        <h1>🗑️ ゴミ箱</h1>
-                    </div>
-                    {trashedMemos.length > 0 && (
-                        <button className="trash-empty-btn" onClick={confirmEmptyTrash}>
-                            ゴミ箱を空にする
-                        </button>
-                    )}
-                </div>
-                <p className="trash-description">
-                    削除されたメモは30日後に自動的に完全削除されます
-                </p>
-            </div>
-
-            {trashedMemos.length === 0 ? (
-                <div className="trash-empty">
-                    <p>ゴミ箱は空です</p>
-                </div>
-            ) : (
-                <div className="trash-list">
-                    {trashedMemos.map(memo => (
-                        <div key={memo.id} className="trash-item">
-                            <div className="trash-item-header">
-                                <h3 className="trash-item-title">{memo.title}</h3>
-                                <span className="trash-item-days">
-                                    残り {getDaysRemaining(memo.deletedAt)} 日
-                                </span>
-                            </div>
-
-                            {memo.body && (
-                                <p className="trash-item-body">
-                                    {memo.body.length > 100 ? `${memo.body.substring(0, 100)}...` : memo.body}
-                                </p>
-                            )}
-
-                            <div className="trash-item-meta">
-                                <span className="trash-item-date">
-                                    削除日時: {new Date(memo.deletedAt).toLocaleString('ja-JP')}
-                                </span>
-                                {memo.tagNames.length > 0 && (
-                                    <div className="trash-item-tags">
-                                        {memo.tagNames.map((tag, idx) => (
-                                            <span key={idx} className="trash-tag">{tag}</span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="trash-item-actions">
-                                <button
-                                    className="trash-restore-btn"
-                                    onClick={() => handleRestore(memo.originalId)}
-                                >
-                                    復元
-                                </button>
-                                <button
-                                    className="trash-delete-btn"
-                                    onClick={() => confirmPermanentDelete(memo.id)}
-                                >
-                                    完全削除
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            <ConfirmModal
-                isOpen={modalConfig.isOpen}
-                title={modalConfig.title}
-                message={modalConfig.message}
-                isDangerous={true}
-                confirmLabel="削除する"
-                onConfirm={modalConfig.action}
-                onCancel={closeModal}
-            />
+  return (
+    <div className="trash">
+      <header className="trash__header">
+        <button type="button" className="icon-btn" onClick={() => navigate(-1)} aria-label="戻る">←</button>
+        <div className="grow">
+          <h1>🗑️ ゴミ箱</h1>
+          <p className="muted">削除されたメモは{RETENTION_DAYS}日後に自動的に完全削除されます</p>
         </div>
-    );
+        {trashed.length > 0 && (
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => ask('ゴミ箱を空にする', 'ゴミ箱を空にしますか？この操作は取り消せません。', () =>
+              run(() => Promise.all(trashed.map((m) => memoService.permanentlyDeleteMemo(m.id))), '一部のメモの削除に失敗しました'))}
+          >
+            ゴミ箱を空にする
+          </Button>
+        )}
+      </header>
+
+      {error && <p className="error-text">⚠ {error}</p>}
+
+      {trashed.length === 0 ? (
+        <p className="empty">ゴミ箱は空です</p>
+      ) : (
+        <ul className="trash__list">
+          {trashed.map((memo) => (
+            <li key={memo.id} className="card trash__item">
+              <div className="row row--between">
+                <h3>{memo.title}</h3>
+                <span className="badge">残り {daysRemaining(memo.deletedAt)} 日</span>
+              </div>
+              {memo.body && <p className="trash__body">{memo.body.length > 100 ? `${memo.body.slice(0, 100)}...` : memo.body}</p>}
+              <div className="row row--between muted">
+                <small>削除日時: {new Date(memo.deletedAt).toLocaleString('ja-JP')}</small>
+                {memo.tagNames.length > 0 && (
+                  <span className="tags">{memo.tagNames.map((tag, i) => <span key={i} className="tag">{tag}</span>)}</span>
+                )}
+              </div>
+              <div className="row">
+                <Button size="sm" onClick={() => run(async () => [await memoService.restoreMemo(memo.originalId)], '復元に失敗しました')}>
+                  復元
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => ask('メモの完全削除', '本当に完全削除しますか？この操作は取り消せません。', () =>
+                    run(async () => [await memoService.permanentlyDeleteMemo(memo.id)], '削除に失敗しました'))}
+                >
+                  完全削除
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <ConfirmModal
+        isOpen={Boolean(confirm)}
+        title={confirm?.title ?? ''}
+        message={confirm?.message ?? ''}
+        isDangerous
+        confirmLabel="削除する"
+        onConfirm={() => confirm?.action()}
+        onCancel={() => setConfirm(null)}
+      />
+    </div>
+  );
 };
 
 export default TrashPage;

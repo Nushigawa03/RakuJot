@@ -1,53 +1,28 @@
-import React, { useRef, useEffect } from 'react';
-import './Textarea.css';
+import { useLayoutEffect, useRef, type TextareaHTMLAttributes } from 'react';
 
-interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
+interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
   value: string;
   onChange: (value: string) => void;
   autoResize?: boolean;
-  showLines?: boolean;
+  /** ノート風の罫線を表示する */
+  lined?: boolean;
 }
 
-const Textarea: React.FC<TextareaProps> = ({
-  value,
-  onChange,
-  autoResize = true,
-  showLines = true,
-  className = '',
-  ...props
-}) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-  };
-
-  const handleInput = () => {
-    if (autoResize && textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  };
-
-  useEffect(() => {
-    if (autoResize && textareaRef.current) {
-      handleInput();
-    }
+const Textarea = ({ value, onChange, autoResize = false, lined = false, className = '', ...props }: TextareaProps) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!autoResize || !el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
   }, [value, autoResize]);
-
-  const classes = [
-    'textarea',
-    showLines && 'textarea--lined',
-    className
-  ].filter(Boolean).join(' ');
 
   return (
     <textarea
-      ref={textareaRef}
+      ref={ref}
       value={value}
-      onChange={handleChange}
-      onInput={handleInput}
-      className={classes}
+      onChange={(e) => onChange(e.target.value)}
+      className={`textarea ${lined ? 'textarea--lined' : ''} ${className}`}
       {...props}
     />
   );

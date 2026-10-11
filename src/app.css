@@ -1,135 +1,95 @@
-/* Import Design System */
-@import "./styles/variables.css";
-@import "./styles/animations.css";
-@import "./styles/components.css";
-
 @import "tailwindcss";
+@import "./components/ui.css";
+@import "./features/memos/memos.css";
+@import "./features/memos.edit/edit.css";
+@import "./features/settings/settings.css";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+/* ─── デザイントークン ─────────────────────────────── */
 :root {
-  /* Radii */
+  --bg: #ffffff;
+  --surface: #f8fafc;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --primary-text: #1d4ed8;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+  --success: #16a34a;
+  --warning-soft: #fff7ed;
+  --warning-text: #c2410c;
+  --overlay: rgb(15 23 42 / 0.45);
+  --focus: 0 0 0 3px rgb(37 99 235 / 0.25);
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(15 23 42 / 0.16);
   --radius-sm: 6px;
-  --radius-md: 12px;
-
-  /* Base colors */
-  --color-text: #111827;
-  --color-bg: #ffffff;
-  --color-text-rgb: 17, 24, 39;
-
-  /* Primary */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1e4fd8;
-  --color-primary-contrast: #ffffff;
-  --color-primary-rgb: 37, 99, 235;
-
-  /* Neutral */
-  --color-neutral-bg: #e5e7eb;
-  --color-neutral-fg: #111827;
-
-  /* Danger */
-  --color-danger: #e74c3c;
-  --color-danger-contrast: #ffffff;
-
-  /* Warning */
-  --color-warning: #ff9800;
-  --color-warning-contrast: #ffffff;
-
-  /* Success */
-  --color-success: #4CAF50;
-  --color-success-hover: #45a049;
-  --color-success-contrast: #ffffff;
-  --color-success-bg: #e8f5e9;
-  --color-success-fg: #2e7d32;
-  --color-success-border: #c8e6c9;
-  --color-success-rgb: 76, 175, 80;
-
-  /* Info */
-  --color-info: #007bff;
-  --color-info-hover: #0056b3;
-  --color-info-contrast: #ffffff;
-
-  /* Borders & Surfaces */
-  --color-border: #e6e6e6;
-  --color-border-focus: rgba(76, 175, 80, 0.6);
-  --color-surface: #fafafa;
-  --color-surface-bg: #f0f0f0;
-  /* Muted / subtle */
-  --color-muted: rgba(17, 24, 39, 0.6);
-  /* Danger bg */
-  --color-danger-bg: #fee2e2;
-
-  /* Misc */
+  --radius: 10px;
+  --radius-lg: 14px;
   --kbd-height: 0px;
+  color-scheme: light;
 }
 
-.dark {
-  /* Base colors */
-  --color-text: #f9fafb;
-  --color-bg: #1e293b;
-  --color-text-rgb: 249, 250, 251;
-
-  /* Neutral */
-  --color-neutral-bg: #374151;
-  --color-neutral-fg: #f9fafb;
-
-  /* Borders & Surfaces */
-  --color-border: #374151;
-  --color-surface: #1f2937;
-  --color-surface-bg: #374151;
-  --color-muted: rgba(249, 250, 251, 0.65);
-  --color-danger-bg: #4c1111;
-  /* subtle dark danger background */
-}
-
-/* Ensure CSS variables also follow system preference when JS hasn't run yet */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-text: #f9fafb;
-    --color-bg: #1e293b;
-    --color-text-rgb: 249, 250, 251;
-
-    --color-neutral-bg: #374151;
-    --color-neutral-fg: #f9fafb;
-
-    --color-border: #374151;
-    --color-surface: #1f2937;
-    --color-surface-bg: #374151;
-  }
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-html,
-body {
-  @apply bg-white dark:bg-slate-800;
-  color: var(--color-text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-normal);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (prefers-color-scheme: dark) {
+    --bg: #0f172a;
+    --surface: #111c33;
+    --surface-2: #1e293b;
+    --border: #273449;
+    --border-strong: #3b4a63;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-soft: #172554;
+    --primary-text: #93c5fd;
+    --danger: #ef4444;
+    --danger-hover: #f87171;
+    --danger-soft: #3b1219;
+    --warning-soft: #3a2310;
+    --warning-text: #fdba74;
+    --overlay: rgb(2 6 23 / 0.65);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5);
     color-scheme: dark;
   }
 }
 
-/* Better default focus styles */
-*:focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: 2px;
+/* ─── ベース ──────────────────────────────────────── */
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Improve button and input defaults */
 button,
 input,
 textarea,
 select {
-  font-family: inherit;
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 枠付きのコンテナ側でフォーカスを示す入力 */
+.search__field input:focus-visible,
+.tag-input__field input:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible {
+  outline: none;
 }

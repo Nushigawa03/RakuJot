@@ -1,187 +1,89 @@
-import React, { useEffect, useState } from "react";
-import "./MemoList.css";
-import { useNavigate } from "react-router";
-import { useMemoSearch } from "../hooks/useMemoSearch";
-import { useSortedMemos } from "../hooks/useSortedMemos";
-import { Memo, MemoListProps } from "../types/memo";
-import { memoService } from "../services/memoService";
-import { getTagNameById, initializeTags } from "../utils/tagUtils";
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { useExpressions, useMemos, useQueryEmbedding, useTagNameOf } from '../hooks/useLocalData';
+import { useSearch } from '../searchStore';
+import { filterMemos } from '../utils/search';
+import { memoDateSortKey } from '../utils/dateUtils';
+import type { LocalMemo } from '~/features/sync/localDb';
 
-const MemoList: React.FC<MemoListProps> = ({ filterQuery, dateQuery, queryEmbedding, textQuery, tagQuery }) => {
-  // デバッグ用: タグを常に表示するかどうか
-  const DEBUG_ALWAYS_SHOW_TAGS = false;
-  // 非同期（未同期）メモの見た目差分を有効化
-  const ENABLE_ASYNC_MEMO_VISUAL = true;
+type SortKey = 'date' | 'title';
+
+interface MemoListProps {
+  /** PC: ホバー中のメモをプレビューに表示する */
+  onHover?: (memo: LocalMemo | null) => void;
+}
+
+const MemoList = ({ onHover }: MemoListProps) => {
   const navigate = useNavigate();
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [sortKey, setSortKey] = useState<"date" | "title">("date");
-  const [memos, setMemos] = useState<Memo[]>([]);
-  const [, setTagCacheVersion] = useState(0);
+  const memos = useMemos();
+  const expressions = useExpressions();
+  const nameOf = useTagNameOf();
+  const search = useSearch();
+  const queryEmbedding = useQueryEmbedding(search.semanticDateQuery);
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'date', desc: true });
 
-  // 全データを一括で取得
-  useEffect(() => {
-    const loadTagsInBackground = async () => {
-      try {
-        await initializeTags();
-        setTagCacheVersion((prev) => prev + 1);
-      } catch (error) {
-        console.error('タグの読み込みエラー:', error);
-      }
-    };
+  const expression = expressions.find((e) => e.id === search.expressionId);
+  const visible = useMemo(() => {
+    // 先に基本の並び順を決め、絞り込み後のスコア順で同点のものはこの順を保つ
+    const sorted = [...memos].sort((a, b) => {
+      const cmp = sort.key === 'date'
+        ? memoDateSortKey(a.date).localeCompare(memoDateSortKey(b.date))
+        : (a.title || '').localeCompare(b.title || '', 'ja');
+      return sort.desc ? -cmp : cmp;
+    });
+    return filterMemos(sorted, { expression, dateQuery: search.dateQuery, textQuery: search.textQuery, tags: search.tags, queryEmbedding, tagName: nameOf });
+  }, [memos, sort, expression, search, queryEmbedding, nameOf]);
 
-    const loadAllData = async () => {
-      try {
-        // メモ一覧を先に表示したいので、タグ初期化は待たずに並列で開始
-        loadTagsInBackground();
+  // 絞り込みの根拠になったタグを強調する
+  const highlighted = new Set([
+    ...search.tags.filter((t) => !t.isExclude).map((t) => t.id),
+    ...(expression?.orTerms.flatMap((t) => t.include) ?? []),
+  ]);
+  const showTags = Boolean(expression || search.tags.length);
 
-        const memosData = await memoService.getMemos();
-
-        console.log("Number of memos:", memosData.length);
-        setMemos(memosData);
-      } catch (error) {
-        console.error('データの読み込みエラー:', error);
-      }
-    };
-
-    loadAllData();
-
-    // 新規メモ作成時のイベントリスナー
-    const handleMemoSaved = async (event: any) => {
-      const newMemo = event.detail;
-      if (newMemo) {
-        // 新しいタグが追加されている可能性があるので、タグ一覧を更新
-        await loadTagsInBackground();
-        setMemos((prevMemos) => {
-          // 既に存在するメモなら更新、なければ追加
-          const existingIndex = prevMemos.findIndex((m) => m.id === newMemo.id);
-          if (existingIndex >= 0) {
-            const updated = [...prevMemos];
-            updated[existingIndex] = newMemo;
-            return updated;
-          }
-          return [newMemo, ...prevMemos];
-        });
-      }
-    };
-
-    window.addEventListener('memoSaved', handleMemoSaved);
-    // 同期完了時にメモ一覧を再読み込み（ローカルID→サーバーID置換を反映）
-    const handleSyncComplete = async () => {
-      try {
-        await loadTagsInBackground();
-        const memosData = await memoService.getMemos();
-        setMemos(memosData);
-      } catch (e) {
-        console.error('同期後のリロードエラー:', e);
-      }
-    };
-    window.addEventListener('syncComplete', handleSyncComplete);
-    const handleMemoEmbeddingUpdated = (event: any) => {
-      const updatedMemo = event.detail;
-      if (!updatedMemo?.id) return;
-
-      setMemos((prevMemos) => prevMemos.map((memo) => (
-        memo.id === updatedMemo.id ? { ...memo, embedding: updatedMemo.embedding } : memo
-      )));
-    };
-
-    window.addEventListener('memoEmbeddingUpdated', handleMemoEmbeddingUpdated);
-    return () => {
-      window.removeEventListener('memoSaved', handleMemoSaved);
-      window.removeEventListener('syncComplete', handleSyncComplete);
-      window.removeEventListener('memoEmbeddingUpdated', handleMemoEmbeddingUpdated);
-    };
-  }, []);
-
-  // 1. まず全メモに対して指定のソート（日付順やタイトル順など）を先に適用する
-  const baseSortedMemos = useSortedMemos(memos, sortKey, sortOrder);
-
-  // 2. その後でフィルタリングとあいまい検索（スコア順）を適用する
-  // Javascriptのsortは安定ソートのため、スコアが同点のメモ（すべてスコア0のメモ等）は
-  // ここで適用した「ベースのソート順」を維持したまま一覧に残る
-  const sortedMemos = useMemoSearch(baseSortedMemos, filterQuery, dateQuery, textQuery, tagQuery, queryEmbedding);
+  const sortButton = (key: SortKey, label: string) => (
+    <button
+      type="button"
+      className={`memo-list__sort ${sort.key === key ? 'is-active' : ''}`}
+      onClick={() => setSort((s) => ({ key, desc: s.key === key ? !s.desc : true }))}
+    >
+      {label} {sort.key === key && (sort.desc ? '▼' : '▲')}
+    </button>
+  );
 
   return (
     <div className="memo-list">
-      <div className="memo-list-header">
-        <div className="memo-list-sort">
-          <span
-            className={`sortable ${sortOrder === "asc" && sortKey === "date" ? "active" : ""}`}
-            onClick={() => {
-              setSortKey("date");
-              setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-            }}
-          >
-            日付 {sortKey === "date" && (sortOrder === "asc" ? "▲" : "▼")}
-          </span>
-          <span
-            className={`sortable ${sortOrder === "asc" && sortKey === "title" ? "active" : ""}`}
-            onClick={() => {
-              setSortKey("title");
-              setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-            }}
-          >
-            タイトル {sortKey === "title" && (sortOrder === "asc" ? "▲" : "▼")}
-          </span>
-        </div>
+      <div className="memo-list__header">
+        {sortButton('date', '日付')}
+        {sortButton('title', 'タイトル')}
+        <span className="memo-list__count">{visible.length}件</span>
       </div>
-      <ul>
-        {sortedMemos.map((memo) => (
-          <li
-            key={memo.id}
-            className={ENABLE_ASYNC_MEMO_VISUAL && memo._syncStatus && memo._syncStatus !== 'synced' ? 'memo-item-async' : ''}
-            onClick={() => navigate(`/app/edit/${memo.id}`)}
-            onMouseEnter={() => {
-              window.dispatchEvent(
-                new CustomEvent('memoHover', {
-                  detail: {
-                    memo: {
-                      id: memo.id,
-                      title: memo.title,
-                      body: memo.body,
-                      date: memo.date,
-                      tags: memo.tags?.map((tag: any) => ({
-                        id: typeof tag === 'string' ? tag : tag.id,
-                        name: getTagNameById(typeof tag === 'string' ? tag : tag.id)
-                      }))
-                    }
-                  }
-                })
-              );
-            }}
-            onMouseLeave={() => {
-              window.dispatchEvent(
-                new CustomEvent('memoHover', {
-                  detail: { memo: null }
-                })
-              );
-            }}
-          >
-            <span className="memo-date">{memo.date || "不明"}</span>
-            <span className="memo-title">{memo.title}</span>
-            {(DEBUG_ALWAYS_SHOW_TAGS || filterQuery || (tagQuery && tagQuery.length > 0)) && (
-              <span className="memo-tags">
-                {(memo.tags || []).slice(0, 3).map((tag: any) => {
-                  // tagがオブジェクト(Tag)ならidを、文字列ならそのまま
-                  const tagId = typeof tag === 'string' ? tag : tag.id;
-                  const isHighlighted = Array.isArray(memo.matchedTagIds) && memo.matchedTagIds.includes(tagId);
-                  return (
-                    <span
-                      key={tagId}
-                      className={`tag ${isHighlighted ? "highlight" : ""}`}
-                    >
-                      {getTagNameById(tagId)}
-                    </span>
-                  );
-                })}
-                {memo.tags && memo.tags.length > 3 && (
-                  <span className="tag tag-overflow">+{memo.tags.length - 3}</span>
-                )}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+      {visible.length === 0 ? (
+        <p className="empty">{memos.length ? '条件に一致するメモはありません' : 'メモはまだありません'}</p>
+      ) : (
+        <ul>
+          {visible.map((memo) => (
+            <li
+              key={memo.id}
+              className={`memo-row ${memo._syncStatus !== 'synced' ? 'is-pending' : ''}`}
+              onClick={() => navigate(`/app/edit/${memo.id}`)}
+              onMouseEnter={() => onHover?.(memo)}
+              onMouseLeave={() => onHover?.(null)}
+            >
+              <span className="memo-row__date">{memo.date || '不明'}</span>
+              <span className="memo-row__title">{memo.title}</span>
+              {showTags && memo.tags.length > 0 && (
+                <span className="memo-row__tags">
+                  {memo.tags.slice(0, 3).map((id) => (
+                    <span key={id} className={`tag ${highlighted.has(id) ? 'tag--highlight' : ''}`}>{nameOf(id)}</span>
+                  ))}
+                  {memo.tags.length > 3 && <span className="tag">+{memo.tags.length - 3}</span>}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

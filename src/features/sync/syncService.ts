@@ -1,54 +1,28 @@
 /**
- * 同期サービス
- * ローカル IndexedDB ↔ クラウド PostgreSQL 間の双方向同期
- *
- * 戦略:
- * - オフライン時: ローカルDBに pending-* で書き込み
- * - オンライン復帰時: pending changes をサーバーに送信 → サーバーの全データで上書き
- * - 競合解決: Last-Write-Wins (updatedAt ベース)
- * - 未ログイン時: 同期をスキップ（ローカルのみで動作）
+ * ローカル IndexedDB ↔ サーバー間の双方向同期。
+ * pending な変更を送信し、返ってきたサーバーの全データでローカルを置き換える（未同期分は保護）。
+ * 未ログイン時は同期せずローカルのみで動作する。
  */
-
 import {
-  getPendingMemos,
-  getPendingTags,
-  getPendingTagExpressions,
-  getAllTags,
-  bulkReplaceMemos,
-  bulkReplaceTags,
-  bulkReplaceTagExpressions,
-  bulkReplaceTrashedMemos,
-  getLastSyncAt,
-  setLastSyncAt,
-  setCurrentUserId,
-  getCurrentUserId,
-  forgetStoredUserId,
-  deleteUserDb,
-  replaceMemoId,
-  migrateAnonymousToUser,
-  clearAnonymousData,
-  type LocalMemo,
-  type LocalTag,
-  type LocalTagExpression,
-  type LocalTrashedMemo,
+  getPendingMemos, getPendingTags, getPendingTagExpressions, getAllTags,
+  bulkReplaceMemos, bulkReplaceTags, bulkReplaceTagExpressions, bulkReplaceTrashedMemos,
+  getLastSyncAt, setLastSyncAt, setCurrentUserId, forgetStoredUserId, deleteUserDb,
+  replaceMemoId, migrateAnonymousToUser, type LocalMemo,
 } from './localDb';
 
-// ─── 同期状態 ────────────────────────────────────────
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error' | 'unauthenticated';
 
-type SyncListener = (state: SyncState) => void;
+const isOnline = () => typeof navigator === 'undefined' || navigator.onLine;
 
-let currentState: SyncState = navigator.onLine ? 'idle' : 'offline';
-const listeners = new Set<SyncListener>();
-
-const setState = (newState: SyncState) => {
-  currentState = newState;
-  listeners.forEach((fn) => fn(newState));
+let state: SyncState = isOnline() ? 'idle' : 'offline';
+const listeners = new Set<(s: SyncState) => void>();
+const setState = (next: SyncState) => {
+  state = next;
+  listeners.forEach((fn) => fn(next));
 };
 
-export const getSyncState = (): SyncState => currentState;
-
-export const subscribeSyncState = (fn: SyncListener): (() => void) => {
+export const getSyncState = () => state;
+export const subscribeSyncState = (fn: (s: SyncState) => void) => {
   listeners.add(fn);
   return () => listeners.delete(fn);
 };
@@ -56,269 +30,150 @@ export const subscribeSyncState = (fn: SyncListener): (() => void) => {
 // ─── 認証状態 ────────────────────────────────────────
 let loggedInUserId: string | null = null;
 
-/**
- * ログイン状態の設定
- * ログイン後に呼び出して、ユーザーDBを使う
- */
-export const setLoggedIn = async (userId: string): Promise<void> => {
-  loggedInUserId = userId;
-  setCurrentUserId(userId);
+// 同時に呼ばれても匿名データの移行は1回だけ行う
+let loginPromise: { userId: string; done: Promise<void> } | null = null;
 
-  // 匿名DBからデータを移行
-  const migrated = await migrateAnonymousToUser(userId);
-  if (migrated) {
-    console.log('[sync] Migrated anonymous data to user DB');
+export const setLoggedIn = (userId: string) => {
+  if (loginPromise?.userId !== userId) {
+    loggedInUserId = userId;
+    setCurrentUserId(userId);
+    loginPromise = {
+      userId,
+      done: migrateAnonymousToUser(userId)
+        .catch((error) => console.error('Anonymous data migration failed:', error))
+        .then(() => setState(isOnline() ? 'idle' : 'offline')),
+    };
   }
-
-  // DBがユーザーのものに切り替わったので状態リセット
-  setState(navigator.onLine ? 'idle' : 'offline');
+  return loginPromise.done;
 };
 
-/**
- * ログアウト状態の設定
- * ユーザーDBを削除して匿名DBに戻す
- */
-export const setLoggedOut = async (): Promise<void> => {
-  const prevUserId = loggedInUserId;
+export const setLoggedOut = async () => {
+  const prev = loggedInUserId;
   loggedInUserId = null;
-
-  // ユーザーDBを削除
-  if (prevUserId) {
-    await deleteUserDb(prevUserId);
-  }
-
-  // 匿名DBに切り替え
+  loginPromise = null;
+  if (prev) await deleteUserDb(prev);
   setCurrentUserId(null);
   forgetStoredUserId();
   setState('unauthenticated');
 };
 
-export const isLoggedIn = (): boolean => loggedInUserId !== null;
-
-// ─── ネットワーク監視 ────────────────────────────────
-let initialized = false;
-
-export const initSyncListeners = () => {
-  if (initialized) return;
-  initialized = true;
-
-  window.addEventListener('online', () => {
-    if (loggedInUserId) {
-      setState('idle');
-      // オンライン復帰時に自動同期
-      performSync().catch(console.error);
-    } else {
-      // 未ログインでもofflineからは脱出
-      setState('unauthenticated');
-    }
-  });
-
-  window.addEventListener('offline', () => {
-    setState('offline');
-  });
+const ensureLoggedIn = async () => {
+  if (loggedInUserId) return true;
+  try {
+    const res = await fetch('/api/auth/me');
+    const userId = res.ok ? (await res.json()).user?.id : null;
+    // オンラインで未ログインと確認できたときだけ匿名 DB に戻す（オフライン起動では前回ユーザーの DB を使う）
+    if (userId) await setLoggedIn(userId);
+    else if (res.ok) setCurrentUserId(null);
+    return Boolean(userId);
+  } catch {
+    return false;
+  }
 };
 
-// ─── 同期ロック ──────────────────────────────────────────────────
-let syncing = false;
-let syncQueued = false; // 同期中に新たな変更があった場合のリトライフラグ
+let listening = false;
+const listenNetwork = () => {
+  if (listening || typeof window === 'undefined') return;
+  listening = true;
+  // オフライン起動後の復帰でも performSync がログイン状態を確認して同期する
+  window.addEventListener('online', () => performSync().catch(console.error));
+  window.addEventListener('offline', () => setState('offline'));
+};
+
+// ─── サーバーデータ → ローカル形式 ────────────────────
+const toLocalMemo = (m: any): LocalMemo => ({
+  id: m.id,
+  title: m.title,
+  date: m.date ?? undefined,
+  tags: (m.tags || []).map((t: any) => (typeof t === 'string' ? t : t.id)),
+  body: m.body ?? undefined,
+  embedding: m.embedding,
+  createdAt: m.createdAt,
+  updatedAt: m.updatedAt,
+  _syncStatus: 'synced',
+});
+
+const applyServerData = async (data: any, idMapping: Array<{ localId: string; serverId: string }>) => {
+  const memos: LocalMemo[] = (data.memos || []).map(toLocalMemo);
+  await Promise.all([
+    bulkReplaceMemos(memos, idMapping),
+    bulkReplaceTags((data.tags || []).map((t: any) => ({ ...t, _syncStatus: 'synced' }))),
+    bulkReplaceTagExpressions((data.tagExpressions || []).map((te: any) => ({ ...te, _syncStatus: 'synced' }))),
+    bulkReplaceTrashedMemos(data.trashedMemos || []),
+  ]);
+  const byId = new Map(memos.map((m) => [m.id, m]));
+  for (const { localId, serverId } of idMapping) {
+    const serverMemo = byId.get(serverId);
+    if (serverMemo) await replaceMemoId(localId, serverMemo);
+  }
+};
 
 // ─── メイン同期処理 ──────────────────────────────────
+let syncing: Promise<void> | null = null;
+let queued = false;
+
 export const performSync = async (): Promise<void> => {
-  if (!navigator.onLine) {
-    setState('offline');
-    return;
-  }
-
-  // loggedInUserId が未設定の場合、サーバーに問い合わせて自動検出を試みる
-  // （entry.client.tsx の非同期auth完了前にsyncが呼ばれた場合のフォールバック）
-  if (!loggedInUserId) {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user?.id) {
-          await setLoggedIn(data.user.id);
-        } else {
-          setState('unauthenticated');
-          return;
-        }
-      } else {
-        setState('unauthenticated');
-        return;
-      }
-    } catch {
-      setState('unauthenticated');
-      return;
-    }
-  }
-
+  listenNetwork();
+  if (!isOnline()) return setState('offline');
+  if (!(await ensureLoggedIn())) return setState('unauthenticated');
   if (syncing) {
-    // 同期中に呼ばれた場合、現在の同期完了後に再実行を予約
-    syncQueued = true;
-    return;
+    queued = true;
+    return syncing;
   }
-  syncing = true;
 
   setState('syncing');
-
-  try {
-    // 1. ローカルの pending changes を収集
-    const [pendingMemos, pendingTags, pendingTagExpressions] = await Promise.all([
-      getPendingMemos(),
-      getPendingTags(),
-      getPendingTagExpressions(),
-    ]);
-
-    const lastSyncAt = await getLastSyncAt();
-
-    // pendingMemos のタグIDをタグ名に変換（サーバーの ensureTags は名前を期待する）
-    const allTags = await getAllTags();
-    const tagIdToName = new Map(allTags.map(t => [t.id, t.name]));
-
-    const memosForSync = pendingMemos.map(m => ({
-      ...m,
-      tags: (m.tags || []).map(tagId => tagIdToName.get(tagId) || tagId),
-    }));
-
-    // 2. サーバーに同期リクエスト送信
-    const resp = await fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        lastSyncAt,
-        pendingChanges: {
-          memos: memosForSync,
-          tags: pendingTags,
-          tagExpressions: pendingTagExpressions,
-          trashedMemos: [], // トラッシュはサーバーが管理
-        },
-      }),
-    });
-
-    // 401 = セッション切れ
-    if (resp.status === 401) {
-      loggedInUserId = null;
-      setState('unauthenticated');
-      return;
-    }
-
-    if (!resp.ok) {
-      throw new Error(`Sync failed: ${resp.status}`);
-    }
-
-    const result = await resp.json();
-    if (Array.isArray(result.errors) && result.errors.length > 0) {
-      throw new Error(`Sync partially failed: ${result.errors.map((e: any) => `${e.type}:${e.id}`).join(', ')}`);
-    }
-
-    // 3. サーバーの全データでローカルを上書き（pending保護あり）
-    if (result.serverData) {
-      const { memos, tags, tagExpressions, trashedMemos } = result.serverData;
-
-      const idMapping: Array<{ localId: string; serverId: string }> = result.idMapping || [];
-      const serverMemos: LocalMemo[] = (memos || []).map((m: any): LocalMemo => ({
-        id: m.id,
-        title: m.title,
-        date: m.date,
-        tags: Array.isArray(m.tags) ? m.tags.map((t: any) => typeof t === 'string' ? t : t.id) : [],
-        body: m.body,
-        embedding: m.embedding,
-        createdAt: m.createdAt,
-        updatedAt: m.updatedAt,
-        _syncStatus: 'synced',
-      }));
-
-      await Promise.all([
-        bulkReplaceMemos(serverMemos, idMapping),
-        bulkReplaceTags(
-          (tags || []).map((t: any): LocalTag => ({
-            id: t.id,
-            name: t.name,
-            description: t.description,
-            _syncStatus: 'synced',
-          }))
-        ),
-        bulkReplaceTagExpressions(
-          (tagExpressions || []).map((te: any): LocalTagExpression => ({
-            id: te.id,
-            orTerms: te.orTerms,
-            name: te.name,
-            color: te.color,
-            icon: te.icon,
-            createdAt: te.createdAt,
-            updatedAt: te.updatedAt,
-            _syncStatus: 'synced',
-          }))
-        ),
-        bulkReplaceTrashedMemos(
-          (trashedMemos || []).map((tm: any): LocalTrashedMemo => ({
-            id: tm.id,
-            originalId: tm.originalId,
-            title: tm.title,
-            date: tm.date,
-            tagNames: tm.tagNames || [],
-            body: tm.body,
-            embedding: tm.embedding,
-            createdAt: tm.createdAt,
-            updatedAt: tm.updatedAt,
-            deletedAt: tm.deletedAt,
-            _syncStatus: 'synced',
-          }))
-        ),
+  syncing = (async () => {
+    try {
+      const [memos, tags, tagExpressions, lastSyncAt, allTags] = await Promise.all([
+        getPendingMemos(), getPendingTags(), getPendingTagExpressions(), getLastSyncAt(), getAllTags(),
       ]);
+      // サーバーの ensureTags はタグ名を期待する
+      const tagName = new Map(allTags.map((t) => [t.id, t.name]));
+      const resp = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lastSyncAt,
+          pendingChanges: {
+            memos: memos.map((m) => ({ ...m, tags: m.tags.map((id) => tagName.get(id) || id) })),
+            tags,
+            tagExpressions,
+          },
+        }),
+      });
 
-      const serverMemoMap = new Map(serverMemos.map((m) => [m.id, m]));
-      for (const mapping of idMapping) {
-        const serverMemo = serverMemoMap.get(mapping.serverId);
-        if (serverMemo) {
-          await replaceMemoId(mapping.localId, serverMemo);
-        }
+      if (resp.status === 401) {
+        loggedInUserId = null;
+        loginPromise = null;
+        return setState('unauthenticated');
       }
+      if (!resp.ok) throw new Error(`Sync failed: ${resp.status}`);
 
-      // 4. 最終同期日時を更新
+      const result = await resp.json();
+      // 一部失敗してもサーバーの最新状態は反映する（失敗した変更はサーバー版に戻る）
+      await applyServerData(result.serverData || {}, result.idMapping || []);
       await setLastSyncAt(result.syncedAt);
-
-      // 5. IDマッピングがあれば UI に通知（MemoList がリフレッシュできるように）
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('syncComplete', { detail: { idMapping } })
-        );
+      if (result.errors?.length) {
+        console.warn('Sync partially failed:', result.errors);
+        setState('error');
+      } else {
+        setState('idle');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      setState('error');
+    } finally {
+      syncing = null;
+      if (queued) {
+        queued = false;
+        setTimeout(() => performSync().catch(console.error), 500);
       }
     }
-
-    setState('idle');
-  } catch (error) {
-    console.error('Sync error:', error);
-    setState('error');
-  } finally {
-    syncing = false;
-
-    // 同期中に新たな変更があった場合、再同期を実行
-    if (syncQueued) {
-      syncQueued = false;
-      // 少し待ってから再同期（連続呼び出しを防止）
-      setTimeout(() => {
-        performSync().catch(console.error);
-      }, 500);
-    }
-  }
+  })();
+  return syncing;
 };
 
-/**
- * 初期同期（アプリ起動時）
- * 必ず認証確認後に呼ぶこと
- */
-export const initialSync = async (): Promise<void> => {
-  initSyncListeners();
-
-  if (!loggedInUserId) {
-    setState(navigator.onLine ? 'unauthenticated' : 'offline');
-    return;
-  }
-
-  if (navigator.onLine) {
-    await performSync();
-  } else {
-    setState('offline');
-  }
+/** 変更後にバックグラウンド同期を走らせる（オフラインなら何もしない） */
+export const syncInBackground = () => {
+  if (isOnline()) performSync().catch(console.error);
 };

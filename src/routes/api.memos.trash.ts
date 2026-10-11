@@ -1,70 +1,25 @@
-import type { LoaderFunction, ActionFunction } from "react-router";
-import { getTrashedMemos, restoreMemo, permanentlyDeleteMemo } from "~/features/memos/models/memo.server";
-import { runTrashCleanup } from "~/features/memos/services/trashCleanup";
+import type { ActionFunctionArgs } from "react-router";
+import { permanentlyDeleteMemo, restoreMemo } from "~/features/memos/models/memo.server";
 import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.server";
 
-export const loader: LoaderFunction = async ({ request }) => {
-    try {
-        const userId = await requireAuthenticatedUserId(request);
+/** POST /api/memos/trash — { action: 'restore', originalId } | { action: 'permanent-delete', id } */
+export const action = async ({ request }: ActionFunctionArgs) => {
+  try {
+    const userId = await requireAuthenticatedUserId(request);
+    const { id, originalId, action } = await request.json();
 
-        // Lazy Deletion: Return the list only after cleaning up mathematically expired memos
-        await runTrashCleanup(30, userId);
-
-        const trashedMemos = await getTrashedMemos(userId);
-
-        if (trashedMemos && typeof trashedMemos === 'object' && 'error' in trashedMemos) {
-            console.error("API loader error:", trashedMemos.error);
-            return Response.json({ error: trashedMemos.error }, { status: 500 });
-        }
-
-        return Response.json(trashedMemos);
-    } catch (error) {
-        if (error instanceof Response) {
-            return error;
-        }
-        console.error("API loader error:", error);
-        return Response.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
+    if (action === "restore" || action === "permanent-delete") {
+      const target = action === "restore" ? originalId : id;
+      if (!target) return Response.json({ error: "IDが必要です" }, { status: 400 });
+      const result = action === "restore" ? await restoreMemo(target, userId) : await permanentlyDeleteMemo(target, userId);
+      if ("error" in result) return Response.json({ error: result.error }, { status: 500 });
+      return Response.json({ message: action === "restore" ? "メモを復元しました" : "メモを完全削除しました" });
     }
-};
-
-export const action: ActionFunction = async ({ request }) => {
-    try {
-        const userId = await requireAuthenticatedUserId(request);
-        const data = await request.json();
-        const { id, originalId, action: actionType } = data;
-
-        switch (actionType) {
-            case 'restore':
-                if (!originalId) {
-                    return Response.json({ error: 'originalIDが必要です' }, { status: 400 });
-                }
-                const restoreResult = await restoreMemo(originalId, userId);
-                if (restoreResult && typeof restoreResult === 'object' && 'error' in restoreResult) {
-                    return Response.json({ error: restoreResult.error }, { status: 500 });
-                }
-                return Response.json({ message: 'メモを復元しました' });
-
-            case 'permanent-delete':
-                if (!id) {
-                    return Response.json({ error: 'IDが必要です' }, { status: 400 });
-                }
-                const deleteResult = await permanentlyDeleteMemo(id, userId);
-                if (deleteResult && typeof deleteResult === 'object' && 'error' in deleteResult) {
-                    return Response.json({ error: deleteResult.error }, { status: 500 });
-                }
-                return Response.json({ message: 'メモを完全削除しました' });
-
-            default:
-                return Response.json({ error: 'アクションがサポートされていません' }, { status: 405 });
-        }
-    } catch (error) {
-        if (error instanceof Response) {
-            return error;
-        }
-        console.error("API action error:", error);
-        if (error instanceof SyntaxError) {
-            return Response.json({ error: "無効なJSONデータです" }, { status: 400 });
-        }
-        return Response.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
-    }
+    return Response.json({ error: "アクションがサポートされていません" }, { status: 405 });
+  } catch (error) {
+    if (error instanceof Response) return error;
+    if (error instanceof SyntaxError) return Response.json({ error: "無効なJSONデータです" }, { status: 400 });
+    console.error("API action error:", error);
+    return Response.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
+  }
 };

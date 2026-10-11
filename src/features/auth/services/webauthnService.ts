@@ -1,20 +1,12 @@
 /**
- * WebAuthn クライアントサービス
- * ブラウザの Credential Management API を使った生体認証
+ * WebAuthn（パスキー）クライアント
  */
-
 import {
   browserSupportsWebAuthn,
   platformAuthenticatorIsAvailable,
-  startRegistration,
   startAuthentication,
-} from "@simplewebauthn/browser";
-
-type WebAuthnStatus = {
-  supported: boolean;
-  registered: boolean;
-  credentialCount: number;
-};
+  startRegistration,
+} from '@simplewebauthn/browser';
 
 export type WebAuthnCredentialSummary = {
   id: string;
@@ -22,172 +14,76 @@ export type WebAuthnCredentialSummary = {
   createdAt: string;
 };
 
-/**
- * ブラウザが WebAuthn をサポートしているか
- */
-export const isWebAuthnSupported = (): boolean => {
-  return typeof window !== "undefined" && browserSupportsWebAuthn();
-};
+type Result<T = object> = { success: boolean; error?: string } & Partial<T>;
 
-/**
- * プラットフォーム認証器（Touch ID, Face ID, Windows Hello 等）が使用可能か
- */
-export const isPlatformAuthenticatorAvailable = async (): Promise<boolean> => {
-  if (!isWebAuthnSupported()) return false;
+export const isWebAuthnSupported = () => typeof window !== 'undefined' && browserSupportsWebAuthn();
+
+/** Touch ID / Face ID / Windows Hello などが使えるか */
+export const isPlatformAuthenticatorAvailable = async () => {
   try {
-    return await platformAuthenticatorIsAvailable();
+    return isWebAuthnSupported() && (await platformAuthenticatorIsAvailable());
   } catch {
     return false;
   }
 };
 
-export const getWebAuthnStatus = async (): Promise<WebAuthnStatus> => {
-  if (!isWebAuthnSupported()) {
-    return { supported: false, registered: false, credentialCount: 0 };
-  }
-
-  const resp = await fetch("/api/auth/webauthn/register", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ phase: "status" }),
+const post = async (url: string, body: unknown, failure: string) => {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
   });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data?.error || failure);
+  return data;
+};
 
-  if (!resp.ok) {
-    return { supported: true, registered: false, credentialCount: 0 };
-  }
-
-  return await resp.json();
+const toResult = (error: any, failure: string): Result => {
+  if (error?.name === 'NotAllowedError') return { success: false, error: '認証がキャンセルされました' };
+  console.error('WebAuthn error:', error);
+  return { success: false, error: error?.message || failure };
 };
 
 export const listCredentials = async (): Promise<WebAuthnCredentialSummary[]> => {
-  const resp = await fetch("/api/auth/webauthn/credentials", {
-    credentials: "include",
-  });
-
-  if (!resp.ok) {
-    return [];
-  }
-
-  const data = await resp.json();
+  const resp = await fetch('/api/auth/webauthn/credentials', { credentials: 'include' });
+  const data = resp.ok ? await resp.json() : null;
   return Array.isArray(data?.credentials) ? data.credentials : [];
 };
 
-export const deleteCredential = async (id: string): Promise<{ success: boolean; error?: string }> => {
-  const resp = await fetch("/api/auth/webauthn/credentials", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
+export const deleteCredential = async (id: string): Promise<Result> => {
+  const resp = await fetch('/api/auth/webauthn/credentials', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ id }),
   });
-
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    return { success: false, error: err?.error || "パスキーの削除に失敗しました" };
-  }
-
-  return { success: true };
+  if (resp.ok) return { success: true };
+  return { success: false, error: (await resp.json().catch(() => ({})))?.error || 'パスキーの削除に失敗しました' };
 };
 
-/**
- * 生体認証を登録（ログイン済みユーザーが呼び出す）
- */
-export const registerCredential = async (): Promise<{ success: boolean; error?: string }> => {
+/** ログイン済みユーザーのパスキーを登録する */
+export const registerCredential = async (): Promise<Result> => {
+  const url = '/api/auth/webauthn/register';
   try {
-    // 1. サーバーからチャレンジを取得
-    const challengeResp = await fetch("/api/auth/webauthn/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ phase: "challenge" }),
-    });
-
-    if (!challengeResp.ok) {
-      const err = await challengeResp.json().catch(() => ({}));
-      return { success: false, error: err?.error || "チャレンジの取得に失敗しました" };
-    }
-
-    const options = await challengeResp.json();
-
-    // 2. ブラウザの認証器で登録
+    const options = await post(url, { phase: 'challenge' }, 'チャレンジの取得に失敗しました');
     const attestationResponse = await startRegistration({ optionsJSON: options });
-
-    // 3. サーバーに検証結果を送信
-    const verifyResp = await fetch("/api/auth/webauthn/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        phase: "verify",
-        attestationResponse,
-      }),
-    });
-
-    if (!verifyResp.ok) {
-      const err = await verifyResp.json().catch(() => ({}));
-      return { success: false, error: err?.error || "検証に失敗しました" };
-    }
-
+    await post(url, { phase: 'verify', attestationResponse }, '検証に失敗しました');
     return { success: true };
-  } catch (error: any) {
-    if (error.name === "NotAllowedError") {
-      return { success: false, error: "認証がキャンセルされました" };
-    }
-    console.error("WebAuthn registration error:", error);
-    return { success: false, error: error?.message || "登録に失敗しました" };
+  } catch (error) {
+    return toResult(error, '登録に失敗しました');
   }
 };
 
-/**
- * 生体認証でログイン
- */
-export const authenticateWithBiometric = async (
-  email?: string
-): Promise<{ success: boolean; user?: any; error?: string }> => {
+/** パスキーでログインする */
+export const authenticateWithPasskey = async (): Promise<Result<{ user: { id: string } }>> => {
+  const url = '/api/auth/webauthn/login';
   try {
-    // 1. サーバーからチャレンジを取得
-    const challengeResp = await fetch("/api/auth/webauthn/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ phase: "challenge", email }),
-    });
-
-    if (!challengeResp.ok) {
-      const err = await challengeResp.json().catch(() => ({}));
-      return { success: false, error: err?.error || "チャレンジの取得に失敗しました" };
-    }
-
-    const options = await challengeResp.json();
-    const { sessionKey, ...authOptions } = options;
-
-    // 2. ブラウザの認証器で認証
-    const assertionResponse = await startAuthentication({ optionsJSON: authOptions });
-
-    // 3. サーバーに検証結果を送信
-    const verifyResp = await fetch("/api/auth/webauthn/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        phase: "verify",
-        assertionResponse,
-        sessionKey,
-      }),
-    });
-
-    if (!verifyResp.ok) {
-      const err = await verifyResp.json().catch(() => ({}));
-      return { success: false, error: err?.error || "認証に失敗しました" };
-    }
-
-    const result = await verifyResp.json();
+    const { sessionKey, ...optionsJSON } = await post(url, { phase: 'challenge' }, 'チャレンジの取得に失敗しました');
+    const assertionResponse = await startAuthentication({ optionsJSON });
+    const result = await post(url, { phase: 'verify', assertionResponse, sessionKey }, '認証に失敗しました');
     return { success: true, user: result.user };
-  } catch (error: any) {
-    if (error.name === "NotAllowedError") {
-      return { success: false, error: "認証がキャンセルされました" };
-    }
-    console.error("WebAuthn authentication error:", error);
-    return { success: false, error: error?.message || "認証に失敗しました" };
+  } catch (error) {
+    return toResult(error, '認証に失敗しました');
   }
 };

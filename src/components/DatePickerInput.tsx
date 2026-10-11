@@ -1,5 +1,4 @@
-import React, { useRef } from 'react';
-import './DatePickerInput.css';
+import { useRef } from 'react';
 
 interface DatePickerInputProps {
   label: string;
@@ -8,38 +7,34 @@ interface DatePickerInputProps {
   placeholder?: string;
 }
 
-const DatePickerInput: React.FC<DatePickerInputProps> = ({ label, value, onChange, placeholder = "日付やキーワード（空欄でもOK）" }) => {
-  const hiddenRef = useRef<HTMLInputElement | null>(null);
-  const handleCalendarClick = () => {
-    if (hiddenRef.current) {
-      try {
-        // @ts-ignore
-        if (typeof hiddenRef.current.showPicker === 'function') {
-          // @ts-ignore
-          hiddenRef.current.showPicker();
-          return;
-        }
-      } catch {}
-      hiddenRef.current.click();
+/** 自由記述（「去年の夏」など）とカレンダー選択の両方に対応した日付入力 */
+const DatePickerInput = ({ label, value, onChange, placeholder = '日付やキーワード（空欄でもOK）' }: DatePickerInputProps) => {
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const openPicker = () => {
+    const picker = pickerRef.current;
+    try {
+      picker?.showPicker();
+    } catch {
+      picker?.click();
     }
   };
 
   return (
-    <label>
-      {label}:
-      <div className="date-with-picker">
-        <input className="date" type="text" placeholder={placeholder} value={value || ''} onChange={(e) => onChange(e.target.value)} />
-        <button type="button" className="date-picker-btn" onClick={handleCalendarClick}>📅</button>
+    <label className="field">
+      <span className="field__label">{label}</span>
+      <span className="date-input">
+        <input className="input" type="text" placeholder={placeholder} value={value || ''} onChange={(e) => onChange(e.target.value)} />
+        <button type="button" className="icon-btn" onClick={openPicker} aria-label="カレンダーから選ぶ">📅</button>
         <input
-          ref={hiddenRef}
-          className="date-picker-hidden"
+          ref={pickerRef}
+          className="date-input__picker"
           type="date"
-          value={value || ''}
+          value={/^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value! : ''}
           onChange={(e) => onChange(e.target.value)}
           tabIndex={-1}
           aria-hidden="true"
         />
-      </div>
+      </span>
     </label>
   );
 };

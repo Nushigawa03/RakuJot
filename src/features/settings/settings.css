@@ -1,0 +1,26 @@
+/* ─── 設定画面 ────────────────────────────────────── */
+.settings { min-height: 100dvh; background: var(--surface); }
+.settings__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.settings__header h1 { font-size: 1.1rem; font-weight: 700; }
+.settings__content { display: flex; flex-direction: column; gap: 1rem; max-width: 40rem; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+.settings__content h2 { margin-bottom: 0.25rem; font-size: 0.8rem; font-weight: 700; color: var(--primary-text); }
+
+.setting { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.9rem 0; }
+.setting + .setting { border-top: 1px solid var(--border); }
+.setting--inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; }
+.setting__label { font-weight: 600; }
+.setting__control { display: flex; flex-direction: column; gap: 0.6rem; }
+.setting--inline .setting__control { flex-shrink: 0; }
+
+.passkeys { display: flex; flex-direction: column; }
+.passkeys li { padding: 0.5rem 0; border-top: 1px solid var(--border); font-size: 0.9rem; }
