@@ -53,6 +53,8 @@ const EditPage = ({ memo }: { memo: EditableMemo }) => {
     <div className="edit">
       <header className="edit__header">
         <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>← <span className="hide-sm">戻る</span></Button>
+        {/* 履歴操作はヘッダーに置き、本文の位置を閲覧表示と揃える */}
+        {editMode && history}
         <span className={`edit__status ${error ? 'is-error' : ''}`} role="status">
           {form.isSaving ? '💾 保存中...' : error ? `⚠ ${error}` : form.lastSaved
             ? `✓ ${form.lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み` : ''}
@@ -66,7 +68,7 @@ const EditPage = ({ memo }: { memo: EditableMemo }) => {
         </Button>
       </header>
 
-      {editMode ? <MemoEditor form={form} toolbar={history} /> : (
+      {editMode ? <MemoEditor form={form} /> : (
         <div className="edit__view">
           <article className="edit__display">
             <h1>{form.data.title || '(タイトルなし)'}</h1>
@@ -87,33 +89,43 @@ export default EditPage;
 
 type Form = ReturnType<typeof useMemoForm>;
 
-const MemoEditor = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode }) => {
+const MemoEditor = ({ form }: { form: Form }) => {
   const allTags = useTags();
   const { data, update } = form;
   const addTag = (name: string) => !data.tags.includes(name) && update({ tags: [...data.tags, name] });
   return (
-    <div className="edit__form">
-      <div className="row">{toolbar}</div>
-      <label className="field">
-        <span className="field__label">タイトル</span>
-        <input className="input" value={data.title} onChange={(e) => update({ title: e.target.value })} />
-      </label>
-      <DatePickerInput label="日付" value={data.date} onChange={(date) => update({ date })} />
-      <div className="field">
-        <span className="field__label">タグ</span>
-        <TagInput
-          chips={data.tags.map((t) => ({ key: t, label: t }))}
-          onRemove={(t) => update({ tags: data.tags.filter((x) => x !== t) })}
-          suggestions={allTags.filter((t) => !data.tags.includes(t.name))}
-          onSelect={(t) => addTag(t.name)}
-          onCreate={addTag}
-        />
+    // 閲覧表示と同じレイアウトのまま、各要素をその場で編集できるようにする
+    <article className="edit__display edit__display--editing">
+      <Textarea
+        autoResize
+        rows={1}
+        className="edit__inline edit__inline--title"
+        placeholder="タイトル"
+        aria-label="タイトル"
+        value={data.title}
+        onChange={(title) => update({ title: title.replace(/\n/g, ' ') })}
+        onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+      />
+      <div className="edit__inline-meta">
+        <DatePickerInput label="日付" placeholder="日付を追加" value={data.date} onChange={(date) => update({ date })} />
       </div>
-      <label className="field grow">
-        <span className="field__label">本文</span>
-        <Textarea className="edit__textarea" value={data.body} onChange={(body) => update({ body })} />
-      </label>
-    </div>
+      <TagInput
+        chips={data.tags.map((t) => ({ key: t, label: t }))}
+        onRemove={(t) => update({ tags: data.tags.filter((x) => x !== t) })}
+        suggestions={allTags.filter((t) => !data.tags.includes(t.name))}
+        onSelect={(t) => addTag(t.name)}
+        onCreate={addTag}
+        placeholder="+ タグ"
+      />
+      <Textarea
+        autoResize
+        className="edit__inline edit__inline--body"
+        placeholder="本文を入力…"
+        aria-label="本文"
+        value={data.body}
+        onChange={(body) => update({ body })}
+      />
+    </article>
   );
 };
 
