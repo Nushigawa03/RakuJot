@@ -8,8 +8,8 @@ import type { TagExpression } from '../types/tagExpressions';
 
 type Tab = 'tags' | 'expressions';
 
-const TagSettingsModal = ({ onClose }: { onClose: () => void }) => {
-  const [tab, setTab] = useState<Tab>('tags');
+const TagSettingsModal = ({ onClose, initialTab = 'tags' }: { onClose: () => void; initialTab?: Tab }) => {
+  const [tab, setTab] = useState<Tab>(initialTab);
   return (
     <Modal title="タグ設定" onClose={onClose} wide>
       <div className="tabs" role="tablist">
@@ -57,33 +57,27 @@ const TagEditor = () => {
   return (
     <section className="editor">
       <div className="editor__head">
-        <div>
-          <h3>タグ <span className="muted">{tags.length}個</span></h3>
-          <p className="muted">名前と説明を整理します。説明は AI のタグ付けに使われます。</p>
-        </div>
-        <Button size="sm" onClick={() => open('new')}>＋ 新規</Button>
+        <span className="muted">{tags.length}個</span>
+        <Button size="sm" onClick={() => open('new')}>＋ タグを追加</Button>
       </div>
       {error && <p className="error-text">⚠ {error}</p>}
       {editing && (
         <div className="card editor__form">
-          <h4>{editing === 'new' ? '新規タグ作成' : 'タグ編集'}</h4>
           <label className="field">
             <span className="field__label">タグ名 *</span>
-            <input className="input" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="タグ名を入力..." />
+            <input className="input" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </label>
           <label className="field">
             <span className="field__label">説明</span>
-            <Textarea value={form.description} onChange={(description) => setForm({ ...form, description })} placeholder="タグの説明を入力..." rows={3} />
+            <Textarea value={form.description} onChange={(description) => setForm({ ...form, description })} rows={3} />
           </label>
           <div className="row">
-            <Button onClick={save} disabled={!form.name.trim()}>{editing === 'new' ? '作成' : '更新'}</Button>
+            <Button onClick={save} disabled={!form.name.trim()}>{editing === 'new' ? 'タグを追加' : '保存'}</Button>
             <Button variant="secondary" onClick={() => setEditing(null)}>キャンセル</Button>
           </div>
         </div>
       )}
-      {tags.length === 0 ? (
-        <p className="empty">タグがありません</p>
-      ) : (
+      {tags.length > 0 && (
         <ul className="editor__grid">
           {tags.map((tag) => (
             <li key={tag.id} className="card editor__item">
@@ -168,21 +162,17 @@ const ExpressionEditor = () => {
   return (
     <section className="editor">
       <div className="editor__head">
-        <div>
-          <h3>分類</h3>
-          <p className="muted">タグの組み合わせでメモを分類・フィルタリングできます。</p>
-        </div>
-        <Button size="sm" onClick={() => open('new')}>＋ 新しい分類</Button>
+        <span />
+        <Button size="sm" onClick={() => open('new')}>＋ 分類を作成</Button>
       </div>
       {error && <p className="error-text">⚠ {error}</p>}
 
       {editing && (
         <div className="card editor__form">
-          <h4>{editing === 'new' ? '新しい分類を作成' : '分類を編集'}</h4>
           <div className="row">
             <label className="field grow">
-              <span className="field__label">分類名（任意・付けるとサイドバー上部に表示）</span>
-              <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="例: 仕事関連、個人メモ" />
+              <span className="field__label">分類名</span>
+              <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="仕事、個人など" />
             </label>
             <label className="field">
               <span className="field__label">色</span>
@@ -191,7 +181,7 @@ const ExpressionEditor = () => {
           </div>
 
           <div className="field">
-            <span className="field__label">✅ 必須タグ（グループ内はいずれか・グループ同士はすべて）</span>
+            <span className="field__label">✅ 含む</span>
             {form.must.map((group, i) => (
               <TagInput
                 key={i}
@@ -199,7 +189,7 @@ const ExpressionEditor = () => {
                 onRemove={(id) => updateGroup(i, group.filter((x) => x !== id))}
                 suggestions={available}
                 onSelect={(t) => updateGroup(i, [...group, t.id])}
-                placeholder="代替タグ（OR）を追加..."
+                placeholder="OR でタグを追加"
               />
             ))}
             <TagInput
@@ -207,25 +197,25 @@ const ExpressionEditor = () => {
               onRemove={() => {}}
               suggestions={available}
               onSelect={(t) => setForm((f) => ({ ...f, must: [...f.must, [t.id]] }))}
-              placeholder="必須タグ（AND）を追加..."
+              placeholder="AND でタグを追加"
             />
           </div>
 
           <div className="field">
-            <span className="field__label">❌ 除外タグ（これらを含まない）</span>
+            <span className="field__label">❌ 除外</span>
             <TagInput
               chips={form.mustNot.map((id) => ({ key: id, label: nameOf(id), className: 'chip--exclude' }))}
               onRemove={(id) => setForm((f) => ({ ...f, mustNot: f.mustNot.filter((x) => x !== id) }))}
               suggestions={available}
               onSelect={(t) => setForm((f) => ({ ...f, mustNot: [...f.mustNot, t.id] }))}
-              placeholder="除外タグを追加..."
+              placeholder="除外するタグを追加"
             />
           </div>
 
           {(hasConditions || legacyTerms) && (
             <p className="editor__preview">
               👁️ <LogicText text={hasConditions ? preview : describeExpression(legacyTerms!, nameOf)} /> のメモ
-              {!hasConditions && <small className="muted">（この条件はエディタで表現できない形のため、タグを追加すると置き換わります）</small>}
+              {!hasConditions && <small className="muted">⚠ タグを追加すると今の条件は置き換わります</small>}
             </p>
           )}
 
@@ -236,9 +226,7 @@ const ExpressionEditor = () => {
         </div>
       )}
 
-      {sorted.length === 0 ? (
-        <p className="empty">まだ分類が作成されていません</p>
-      ) : (
+      {sorted.length > 0 && (
         <ul className="editor__list">
           {sorted.map((expr) => (
             <li key={expr.id} className="card editor__item">

@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  authenticateWithPasskey,
-  isPlatformAuthenticatorAvailable,
-  isWebAuthnSupported,
-  registerCredential,
-} from '../services/webauthnService';
+import { authenticateWithPasskey, isWebAuthnSupported, registerCredential } from '../services/webauthnService';
 
 const PasskeyIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -44,14 +39,12 @@ export const PasskeyLoginButton = ({ onSuccess, onError }: { onSuccess: (user: {
 };
 
 /** 設定画面: パスキーを登録 */
-export const PasskeyRegisterButton = ({ count, onSuccess, onError }: { count: number; onSuccess: () => void; onError: (error: string) => void }) => {
+export const PasskeyRegisterButton = ({ onSuccess, onError }: { onSuccess: () => void; onError: (error: string) => void }) => {
   const supported = useSupported();
-  const [platform, setPlatform] = useState(false);
   const [loading, setLoading] = useState(false);
-  useEffect(() => { isPlatformAuthenticatorAvailable().then(setPlatform); }, []);
 
   if (supported === null) return <div className="passkey-skeleton" />;
-  if (!supported) return <p className="muted">このブラウザではパスキーを使用できません。</p>;
+  if (!supported) return <p className="muted">⚠ このブラウザはパスキー非対応</p>;
 
   const register = async () => {
     setLoading(true);
@@ -62,14 +55,9 @@ export const PasskeyRegisterButton = ({ count, onSuccess, onError }: { count: nu
   };
 
   return (
-    <div className="stack">
-      <button type="button" className="btn btn--primary btn--full" onClick={register} disabled={loading}>
-        <PasskeyIcon />
-        {loading ? '登録中...' : count ? 'パスキーを追加登録' : 'パスキーを登録'}
-      </button>
-      <small className="muted">
-        {count ? `登録済み: ${count}件` : platform ? 'Windows Hello / 端末の生体認証を利用できます' : 'スマホやセキュリティキーのパスキーを利用できます'}
-      </small>
-    </div>
+    <button type="button" className="btn btn--primary btn--full" onClick={register} disabled={loading}>
+      <PasskeyIcon />
+      {loading ? '登録中...' : 'パスキーを追加'}
+    </button>
   );
 };

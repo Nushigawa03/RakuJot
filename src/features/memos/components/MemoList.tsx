@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useExpressions, useMemos, useQueryEmbedding, useTagNameOf } from '../hooks/useLocalData';
-import { useSearch } from '../searchStore';
+import { searchActions, useSearch } from '../searchStore';
 import { filterMemos } from '../utils/search';
 import { memoDateSortKey } from '../utils/dateUtils';
 import type { LocalMemo } from '~/features/sync/localDb';
@@ -59,7 +59,11 @@ const MemoList = ({ onHover }: MemoListProps) => {
         <span className="memo-list__count">{visible.length}件</span>
       </div>
       {visible.length === 0 ? (
-        <p className="empty">{memos.length ? '条件に一致するメモはありません' : 'メモはまだありません'}</p>
+        memos.length > 0 && (
+          <div className="empty">
+            <button type="button" className="btn btn--secondary btn--sm" onClick={searchActions.clear}>× 検索をクリア</button>
+          </div>
+        )
       ) : (
         <ul>
           {visible.map((memo) => (

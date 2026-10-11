@@ -42,7 +42,7 @@ const PagePC = () => {
 const MemoPreview = ({ memo }: { memo: LocalMemo | null }) => {
   const nameOf = useTagNameOf();
   if (!memo) {
-    return <div className="preview preview--empty">📝<p>メモにカーソルを合わせると<br />内容がここに表示されます</p></div>;
+    return <div className="preview preview--empty" aria-hidden="true">📝</div>;
   }
   return (
     <div className="preview">
@@ -152,7 +152,7 @@ const PageMobile = () => {
           onTouchStart={(e) => { if (e.cancelable) e.preventDefault(); if (e.touches.length === 1) startDrag(e.touches[0].clientY); }}
         >
           <span className="page-mobile__grip" />
-          タップでメモ一覧を表示
+          メモ一覧
         </div>
         <QuickMemoInput fullScreen />
       </div>

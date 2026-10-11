@@ -17,11 +17,11 @@ const passkeyLabel = ({ transports = [] }: WebAuthnCredentialSummary, index: num
   return `パスキー ${index + 1}`;
 };
 
-const Item = ({ label, htmlFor, description, children, inline }: { label: string; htmlFor?: string; description: string; children: ReactNode; inline?: boolean }) => (
+const Item = ({ label, htmlFor, description, children, inline }: { label: string; htmlFor?: string; description?: string; children: ReactNode; inline?: boolean }) => (
   <div className={`setting ${inline ? 'setting--inline' : ''}`}>
     <div>
       <label className="setting__label" htmlFor={htmlFor}>{label}</label>
-      <p className="muted">{description}</p>
+      {description && <p className="muted">{description}</p>}
     </div>
     <div className="setting__control">{children}</div>
   </div>
@@ -58,20 +58,13 @@ const SettingsPage = () => {
       <main className="settings__content">
         <section className="card">
           <h2>ログイン</h2>
-          <Item label="パスキー" description="Windows Hello、PIN、スマホの生体認証などをログインに使います。">
+          <Item label="パスキー">
             <PasskeyRegisterButton
-              count={passkeys?.length ?? 0}
               onSuccess={() => { setFeedback({ ok: true, text: 'パスキーを登録しました。' }); loadPasskeys(); }}
               onError={(text) => setFeedback({ ok: false, text })}
             />
             {feedback && <p className={feedback.ok ? 'success-text' : 'error-text'}>{feedback.text}</p>}
-            <div className="row row--between">
-              <strong>デバイス管理</strong>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={loadPasskeys}>更新</button>
-            </div>
-            {passkeys === null ? <p className="muted">読み込み中...</p> : passkeys.length === 0 ? (
-              <p className="muted">登録済みのパスキーはありません。</p>
-            ) : (
+            {passkeys === null ? <p className="muted">読み込み中...</p> : passkeys.length > 0 && (
               <ul className="passkeys">
                 {passkeys.map((p, i) => (
                   <li key={p.id} className="row row--between">
@@ -88,10 +81,10 @@ const SettingsPage = () => {
 
         <section className="card">
           <h2>AI機能</h2>
-          <Item inline label="AIを使用する" htmlFor="ai-toggle" description="メモ作成時のタイトル・タグ・日付の推定と、AIによる編集を使います。オフにすると通信量を節約できます。">
+          <Item inline label="AIを使う" htmlFor="ai-toggle">
             <Switch id="ai-toggle" checked={settings.aiUsageEnabled} onChange={(v) => updateSetting('aiUsageEnabled', v)} />
           </Item>
-          <Item label="Google AI APIキー" htmlFor="google-api-key" description="自身のGemini APIキーを利用することで制限を回避できます。空欄の場合はデフォルト動作になります。">
+          <Item label="Gemini APIキー" htmlFor="google-api-key">
             <div className="input-with-button">
               <input
                 id="google-api-key"
@@ -110,8 +103,8 @@ const SettingsPage = () => {
         </section>
 
         <section className="card">
-          <h2>検索表示</h2>
-          <Item inline label="詳細検索を常時表示" htmlFor="detail-search-toggle" description="オフの場合は「詳細」を押したときだけ開始日・終了日などの詳細条件を表示します。">
+          <h2>検索</h2>
+          <Item inline label="詳細検索を常に開く" htmlFor="detail-search-toggle">
             <Switch id="detail-search-toggle" checked={settings.detailSearchAlwaysVisible} onChange={(v) => updateSetting('detailSearchAlwaysVisible', v)} />
           </Item>
         </section>

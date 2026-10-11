@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import TrashPage from './TrashPage';
 import { memoService } from '../../services/memoService';
 
@@ -51,14 +51,15 @@ describe('TrashPage', () => {
         expect(screen.getByText('trash')).toBeInTheDocument();
     });
 
-    it('ゴミ箱が空の場合、空メッセージを表示する', async () => {
+    it('ゴミ箱が空の場合、空にするボタンを表示しない', async () => {
         (memoService.getTrashedMemos as any).mockResolvedValue([]);
 
         render(<TrashPage />);
 
         await waitFor(() => {
-            expect(screen.getByText('ゴミ箱は空です')).toBeInTheDocument();
+            expect(screen.getByText('🗑️ ゴミ箱')).toBeInTheDocument();
         });
+        expect(screen.queryByText('ゴミ箱を空にする')).not.toBeInTheDocument();
     });
 
     it('復元ボタンをクリックするとメモが復元される', async () => {
@@ -104,8 +105,8 @@ describe('TrashPage', () => {
             expect(screen.getByText('メモの完全削除')).toBeInTheDocument();
         });
 
-        // モーダル内の「削除する」ボタンをクリック
-        const confirmButton = screen.getByRole('button', { name: '削除する' });
+        // モーダル内の「完全削除」ボタンをクリック
+        const confirmButton = within(screen.getByRole('dialog')).getByRole('button', { name: '完全削除' });
         fireEvent.click(confirmButton);
 
         await waitFor(() => {
@@ -165,8 +166,8 @@ describe('TrashPage', () => {
             expect(screen.getByText('ゴミ箱を空にする', { selector: 'h2' })).toBeInTheDocument();
         });
 
-        // モーダル内の「削除する」ボタンをクリック
-        const confirmButton = screen.getByRole('button', { name: '削除する' });
+        // モーダル内の「空にする」ボタンをクリック
+        const confirmButton = screen.getByRole('button', { name: '空にする' });
         fireEvent.click(confirmButton);
 
         await waitFor(() => {

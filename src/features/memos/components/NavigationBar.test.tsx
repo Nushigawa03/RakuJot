@@ -40,8 +40,8 @@ describe('NavigationBar', () => {
     render(<NavigationBar />);
     const input = screen.getByPlaceholderText('さがす...');
     fireEvent.keyDown(input, { key: 'n' });
-    expect(screen.queryByText('新規メモ作成')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('タイトル')).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'n' });
-    expect(screen.getByText('新規メモ作成')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('タイトル')).toBeInTheDocument();
   });
 });

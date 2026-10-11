@@ -87,32 +87,18 @@ export default function LoginRoute() {
                     <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
                         RakuJot にログイン
                     </h1>
-                    <p className="mt-6 text-lg leading-8 text-slate-300">
-                        RakuJot は ID とパスワードを独自に保持しません。初回は Google で入り、設定からパスキーを追加すると次回から Windows Hello やスマホの認証で入れます。
-                    </p>
-                    <ul className="mt-8 space-y-4 text-sm text-slate-300">
-                        <li>• パスワード入力フォームなし</li>
-                        <li>• Google ID トークンをサーバー側で検証</li>
-                        <li>• 登録済みパスキーで再ログイン</li>
-                    </ul>
                 </section>
 
                 <section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-                    <div className="mb-6">
-                        <p className="text-sm uppercase tracking-[0.3em] text-indigo-200">Sign in</p>
-                        <h2 className="mt-2 text-2xl font-semibold">RakuJot に入る</h2>
-                    </div>
-
                     {isDevMode ? (
                         <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-                            現在は開発モードです。.env.local の `AUTH_MODE` を `google` にすると Google ログイン画面を確認できます。
+                            🛠 開発モード（AUTH_MODE=google で切替）
                         </div>
                     ) : !googleAuthAvailable ? (
                         <div className="rounded-2xl border border-rose-300/30 bg-rose-400/10 p-4 text-sm text-rose-100">
-                            Google ログインを表示するには [.env.local](.env.local) の `GOOGLE_CLIENT_ID` と `VITE_GOOGLE_CLIENT_ID` を設定してください。
+                            ⚠ GOOGLE_CLIENT_ID と VITE_GOOGLE_CLIENT_ID が未設定
                         </div>
                     ) : (
-                        <>
                             <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
                                 {mounted ? (
                                     <GoogleOAuthProvider clientId={googleClientId}>
@@ -132,21 +118,18 @@ export default function LoginRoute() {
                                     <div className="h-11 animate-pulse rounded-full bg-white/10" />
                                 )}
                             </div>
-
-                            <p className="mt-4 text-xs text-slate-400">
-                                Google 側の同意が完了すると、そのまま RakuJot に戻ります。
-                            </p>
-                        </>
                     )}
 
                     {/* パスキーログイン */}
                     {!isDevMode && (
                         <div className="mt-4">
-                            <div className="flex items-center gap-2 text-xs text-slate-400">
-                                <hr className="flex-1 border-white/10" />
-                                <span>{googleAuthAvailable ? 'または' : '登録済みの場合'}</span>
-                                <hr className="flex-1 border-white/10" />
-                            </div>
+                            {googleAuthAvailable && (
+                                <div className="flex items-center gap-2 text-xs text-slate-400">
+                                    <hr className="flex-1 border-white/10" />
+                                    <span>または</span>
+                                    <hr className="flex-1 border-white/10" />
+                                </div>
+                            )}
                             <div className="mt-3 flex justify-center">
                                 <PasskeyLoginButton
                                     onSuccess={(user) => onLoggedIn(user.id)}

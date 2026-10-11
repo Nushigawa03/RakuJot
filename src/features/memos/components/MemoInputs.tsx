@@ -43,7 +43,7 @@ export const QuickMemoInput = ({ fullScreen = false }: { fullScreen?: boolean })
       />
       {error && <p className="error-text">⚠ {error}</p>}
       <Button full onClick={save} disabled={isSaving || !content.trim()}>
-        {isSaving ? '保存中...' : fullScreen ? '保存' : <>作成<span className="hide-sm">（Ctrl+Enter）</span></>}
+        {isSaving ? '保存中...' : fullScreen ? '保存' : <>保存<span className="hide-sm">（Ctrl+Enter）</span></>}
       </Button>
     </div>
   );
@@ -78,8 +78,7 @@ export const NewMemoForm = ({ onDone }: { onDone: () => void }) => {
 
   return (
     <div className="new-memo">
-      <h2>新規メモ作成</h2>
-      <input className="input" autoFocus placeholder="タイトルを入力" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <input className="input" autoFocus placeholder="タイトル" aria-label="タイトル" value={title} onChange={(e) => setTitle(e.target.value)} />
       <DatePickerInput label="日付" value={date} onChange={setDate} />
       <div className="field">
         <span className="field__label">タグ</span>
@@ -91,7 +90,7 @@ export const NewMemoForm = ({ onDone }: { onDone: () => void }) => {
           onCreate={addTag}
         />
       </div>
-      <Textarea placeholder="本文を入力" value={body} onChange={setBody} autoResize lined rows={4} />
+      <Textarea placeholder="本文" aria-label="本文" value={body} onChange={setBody} autoResize lined rows={4} />
       {error && <p className="error-text">⚠ {error}</p>}
       <div className="row">
         <Button onClick={save} disabled={isSaving}>保存</Button>

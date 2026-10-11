@@ -8,7 +8,7 @@ interface DatePickerInputProps {
 }
 
 /** 自由記述（「去年の夏」など）とカレンダー選択の両方に対応した日付入力 */
-const DatePickerInput = ({ label, value, onChange, placeholder = '日付やキーワード（空欄でもOK）' }: DatePickerInputProps) => {
+const DatePickerInput = ({ label, value, onChange, placeholder = '日付やキーワード' }: DatePickerInputProps) => {
   const pickerRef = useRef<HTMLInputElement>(null);
   const openPicker = () => {
     const picker = pickerRef.current;

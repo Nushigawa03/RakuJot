@@ -49,7 +49,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       <h1>{notFound ? "404" : "エラー"}</h1>
       <p>{details}</p>
       {import.meta.env.DEV && error instanceof Error && <pre className="error-stack">{error.stack}</pre>}
-      <a className="btn btn--secondary" href="/app">ホームへ戻る</a>
+      <a className="btn btn--secondary" href="/app">メモ一覧へ</a>
     </main>
   );
 }

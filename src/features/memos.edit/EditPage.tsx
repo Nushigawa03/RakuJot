@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, DatePickerInput, TagInput, Textarea } from '~/components';
+import { Button, DatePickerInput, Switch, TagInput, Textarea } from '~/components';
 import { memoService } from '~/features/memos/services/memoService';
 import { useTags } from '~/features/memos/hooks/useLocalData';
 import { useSettings } from '~/features/settings/useSettings';
@@ -54,7 +54,7 @@ const EditPage = ({ memo }: { memo: EditableMemo }) => {
       <header className="edit__header">
         <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>← <span className="hide-sm">戻る</span></Button>
         <span className={`edit__status ${error ? 'is-error' : ''}`} role="status">
-          {form.isSaving ? '💾 保存中...' : error ? `! ${error}` : form.lastSaved
+          {form.isSaving ? '💾 保存中...' : error ? `⚠ ${error}` : form.lastSaved
             ? `✓ ${form.lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み` : ''}
         </span>
         <Button variant="secondary" size="sm" onClick={form.discard} disabled={!form.canDiscard} title="変更を破棄">
@@ -93,10 +93,10 @@ const MemoEditor = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode })
   const addTag = (name: string) => !data.tags.includes(name) && update({ tags: [...data.tags, name] });
   return (
     <div className="edit__form">
-      <div className="row row--between">{toolbar}<span className="muted">編集モード</span></div>
+      <div className="row">{toolbar}</div>
       <label className="field">
         <span className="field__label">タイトル</span>
-        <input className="input" value={data.title} onChange={(e) => update({ title: e.target.value })} placeholder="タイトルを入力" />
+        <input className="input" value={data.title} onChange={(e) => update({ title: e.target.value })} />
       </label>
       <DatePickerInput label="日付" value={data.date} onChange={(date) => update({ date })} />
       <div className="field">
@@ -111,7 +111,7 @@ const MemoEditor = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode })
       </div>
       <label className="field grow">
         <span className="field__label">本文</span>
-        <Textarea className="edit__textarea" value={data.body} onChange={(body) => update({ body })} placeholder="メモの内容を入力..." />
+        <Textarea className="edit__textarea" value={data.body} onChange={(body) => update({ body })} />
       </label>
     </div>
   );
@@ -119,7 +119,7 @@ const MemoEditor = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode })
 
 /** 「明後日に変更」のような指示を AI に渡してメモを書き換える */
 const QuickAiEdit = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode }) => {
-  const { settings } = useSettings();
+  const { settings, updateSetting } = useSettings();
   const [instruction, setInstruction] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,7 +137,7 @@ const QuickAiEdit = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode }
     }))) {
       setInstruction('');
     } else {
-      setError('AI の処理に失敗しました。時間をおいて再度お試しください。');
+      setError('AI の処理に失敗しました');
     }
     setIsProcessing(false);
   };
@@ -145,17 +145,20 @@ const QuickAiEdit = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode }
   return (
     <section className="quick-edit">
       <div className="row row--between">
-        <h3>✨ 手軽に編集</h3>
+        <h3>✨ AI で編集</h3>
         {toolbar}
       </div>
       {settings.aiUsageEnabled ? (
         <>
-          <Textarea placeholder="改善したい点を教えてください（例: 明後日に変更）" value={instruction} onChange={setInstruction} rows={4} disabled={isProcessing} />
+          <Textarea placeholder="「明後日に変更」など" value={instruction} onChange={setInstruction} rows={4} disabled={isProcessing} />
           {error && <p className="error-text">⚠ {error}</p>}
-          <Button full onClick={submit} disabled={!instruction.trim() || isProcessing}>{isProcessing ? '処理中...' : 'OK'}</Button>
+          <Button full onClick={submit} disabled={!instruction.trim() || isProcessing}>{isProcessing ? '書き換え中...' : '書き換える'}</Button>
         </>
       ) : (
-        <p className="muted">AI 機能はオフになっています（設定から変更できます）。</p>
+        <label className="row row--between" htmlFor="quick-ai-toggle">
+          AI を使う
+          <Switch id="quick-ai-toggle" checked={false} onChange={(v) => updateSetting('aiUsageEnabled', v)} />
+        </label>
       )}
     </section>
   );

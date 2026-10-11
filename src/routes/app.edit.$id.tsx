@@ -36,7 +36,7 @@ export const HydrateFallback = () => <Loading message="メモを読み込み中.
 export function ErrorBoundary() {
   const error = useRouteError();
   const message = isRouteErrorResponse(error) && error.status === 404
-    ? typeof navigator === "undefined" || navigator.onLine ? "メモが見つかりません。" : "オフラインです。このメモはまだこの端末に保存されていません。"
+    ? typeof navigator === "undefined" || navigator.onLine ? "メモが見つかりません。" : "📴 オフラインのため開けません。"
     : "メモの読み込みに失敗しました。";
   return (
     <div className="loading">

@@ -26,13 +26,13 @@ function useExpressionItems() {
 /** PC 左カラム: 分類リスト・設定・ユーザー・ゴミ箱 */
 export const Sidebar = () => {
   const { items, active, nameOf } = useExpressionItems();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState<'tags' | 'expressions' | null>(null);
 
   return (
     <>
       <div className="sidebar__header">
         <h3>分類</h3>
-        <button type="button" className="icon-btn" onClick={() => setSettingsOpen(true)} title="分類を編集" aria-label="分類を編集">⚙️</button>
+        <button type="button" className="icon-btn" onClick={() => setSettingsOpen('tags')} title="分類を編集" aria-label="分類を編集">⚙️</button>
       </div>
       <ul className="sidebar__list">
         {items.map(({ expression: e, label, active }) => (
@@ -58,7 +58,9 @@ export const Sidebar = () => {
             )}
           </li>
         ))}
-        {items.length === 0 && <li className="muted">⚙️ から分類を作成できます</li>}
+        {items.length === 0 && (
+          <li><button type="button" className="btn btn--ghost btn--sm" onClick={() => setSettingsOpen('expressions')}>＋ 分類を作成</button></li>
+        )}
       </ul>
       {active?.expression.name && (
         <div className="sidebar__detail">
@@ -70,7 +72,7 @@ export const Sidebar = () => {
         <UserMenu />
         <Link to="/memos/trash" className="sidebar__trash">🗑️ ゴミ箱</Link>
       </div>
-      {settingsOpen && <TagSettingsModal onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <TagSettingsModal initialTab={settingsOpen} onClose={() => setSettingsOpen(null)} />}
     </>
   );
 };

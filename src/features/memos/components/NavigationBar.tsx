@@ -172,7 +172,7 @@ const NavigationBar = ({ variant = 'pc', onBack }: NavigationBarProps) => {
         )}
         <button type="button" className="icon-btn" onClick={runSearch} aria-label="検索" title="検索">🔍</button>
         {isPc && (search.tags.length > 0 || query.trim()) && (
-          <button type="button" className="icon-btn" onClick={() => setSavingFilter(true)} title="この検索をフィルタとして保存" aria-label="フィルタとして保存">📌</button>
+          <button type="button" className="icon-btn" onClick={() => setSavingFilter(true)} title="フィルタとして保存" aria-label="フィルタとして保存">📌</button>
         )}
 
         {focused && !suggestions.length && (
@@ -184,7 +184,7 @@ const NavigationBar = ({ variant = 'pc', onBack }: NavigationBarProps) => {
               <div className="search__dates">
                 <DatePickerInput label="開始日" value={search.startDate} onChange={(v) => searchActions.setDates(v || null, search.endDate)} />
                 <DatePickerInput label="終了日" value={search.endDate} onChange={(v) => searchActions.setDates(search.startDate, v || null)} />
-                <Button variant="primary" size="sm" onClick={runSearch}>この条件で検索</Button>
+                <Button variant="primary" size="sm" onClick={runSearch}>検索</Button>
               </div>
             )}
           </div>
@@ -194,7 +194,7 @@ const NavigationBar = ({ variant = 'pc', onBack }: NavigationBarProps) => {
       {isPc ? (
         <>
           <SyncStatusIndicator />
-          <Button onClick={() => setCreatingMemo(true)}>新規メモ (N)</Button>
+          <Button onClick={() => setCreatingMemo(true)}>メモを書く (N)</Button>
         </>
       ) : (
         <UserAvatarButton />
@@ -207,12 +207,11 @@ const NavigationBar = ({ variant = 'pc', onBack }: NavigationBarProps) => {
           footer={
             <>
               <Button variant="secondary" onClick={() => setSavingFilter(false)}>キャンセル</Button>
-              <Button onClick={saveFilter}>保存</Button>
+              <Button onClick={saveFilter}>フィルタを保存</Button>
             </>
           }
         >
-          <p className="muted">保存する検索: {[...search.tags.map(chipLabel), ...(query.trim() ? [query.trim()] : [])].join(' AND ')}</p>
-          <p>この検索条件をクイックアクセス用のフィルタとして保存しますか？</p>
+          <p>🔍 {[...search.tags.map(chipLabel), ...(query.trim() ? [query.trim()] : [])].join(' AND ')}</p>
         </Modal>
       )}
     </div>
