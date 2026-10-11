@@ -145,12 +145,17 @@
 .pill--tag { border-left-width: 1px; background: var(--primary-soft); color: var(--primary-text); border-color: transparent; }
 
 /* ─── スマホレイアウト（前面の入力画面 / 背面の一覧） ───── */
-.page-mobile { position: relative; height: calc(100dvh - var(--kbd-height)); overflow: hidden; }
+.page-mobile {
+  --memo-input-padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  position: relative;
+  height: calc(100dvh - var(--kbd-height));
+  overflow: hidden;
+}
 .page-mobile__list { display: flex; height: 100%; flex-direction: column; }
 .page-mobile__list > header { position: relative; z-index: 20; border-bottom: 1px solid var(--border); }
 .page-mobile__list > main { flex: 1; min-height: 0; overflow-y: auto; }
 .page-mobile__list > main .memo-list { padding: 0 0.75rem; }
-.page-mobile__list > footer { padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
+.page-mobile__list > footer { padding: var(--memo-input-padding); border-top: 1px solid var(--border); }
 .page-mobile__overlay {
   position: absolute;
   inset: 0;
@@ -178,13 +183,15 @@
   user-select: none;
 }
 .page-mobile__grip { width: 3.5rem; height: 0.3rem; border-radius: 999px; background: var(--border-strong); }
-.page-mobile__overlay.is-dragging .page-mobile__grip { background: var(--primary); }
+.page-mobile__overlay.is-active .page-mobile__grip { background: var(--primary); }
 
 /* ─── メモ入力 ────────────────────────────────────── */
 .quick-input { display: flex; flex-direction: column; gap: 0.5rem; }
 .quick-input .textarea { max-height: 30dvh; resize: none; }
-.quick-input--full { flex: 1; min-height: 0; padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom)); }
+.quick-input--full { flex: 1; min-height: 0; padding: var(--memo-input-padding); }
 .quick-input--full .textarea { flex: 1; max-height: none; }
+.page-mobile .quick-input > .btn { flex: 0 0 2.5rem; height: 2.5rem; }
+.page-mobile .quick-input .hide-sm { display: none; }
 
 .new-memo { display: flex; flex-direction: column; gap: 0.75rem; max-width: 48rem; margin: 0 auto; padding: 0.5rem 0; }
 .new-memo h2 { font-size: 1.1rem; font-weight: 700; }

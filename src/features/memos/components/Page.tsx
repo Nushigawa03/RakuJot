@@ -65,6 +65,7 @@ const PageMobile = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(lastOffset);
   const drag = useRef<{ startY: number; startOffset: number; moved: number } | null>(null);
+  const [tracking, setTracking] = useState(false);
   const [dragging, setDragging] = useState(false);
   const { revision } = useSearch();
 
@@ -91,17 +92,22 @@ const PageMobile = () => {
   }, []);
 
   useEffect(() => {
-    if (!dragging) return;
+    if (!tracking) return;
     const move = (y: number) => {
       const d = drag.current;
       const height = containerRef.current?.clientHeight;
       if (!d || !height) return;
       const next = Math.min(1, Math.max(0, d.startOffset + (y - d.startY) / height));
       d.moved = Math.max(d.moved, Math.abs(next - d.startOffset));
+      // タップや指の小さな揺れでは transition を無効にしない。
+      if (d.moved < 0.01) return;
+      setDragging(true);
       setOffset(next);
     };
     const end = () => {
       const d = drag.current;
+      drag.current = null;
+      setTracking(false);
       setDragging(false);
       // ほとんど動いていなければタップとして一覧を開く。ドラッグなら 20% 以上で下に吸着
       setOffset((current) => (d && d.moved < 0.01 ? (d.startOffset < 0.5 ? 1 : current) : current > 0.2 ? 1 : 0));
@@ -118,11 +124,11 @@ const PageMobile = () => {
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', end);
     };
-  }, [dragging]);
+  }, [tracking]);
 
   const startDrag = (y: number) => {
     drag.current = { startY: y, startOffset: offset, moved: 0 };
-    setDragging(true);
+    setTracking(true);
   };
 
   const backToInput = () => {
@@ -142,7 +148,7 @@ const PageMobile = () => {
       </div>
 
       <div
-        className={`page-mobile__overlay ${dragging ? 'is-dragging' : ''}`}
+        className={`page-mobile__overlay ${dragging ? 'is-dragging' : ''} ${tracking || offset > 0 ? 'is-active' : ''}`}
         style={{ '--offset': offset } as CSSProperties}
         aria-hidden={offset === 1}
       >
