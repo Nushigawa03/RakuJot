@@ -6,6 +6,8 @@ export interface Chip {
   key: string;
   label: string;
   className?: string;
+  /** 指定するとラベルの前に NOT の切り替えボタンを置く */
+  not?: { on: boolean; onToggle: () => void };
 }
 
 interface TagInputProps {
@@ -14,22 +16,27 @@ interface TagInputProps {
   /** 候補（選択済みを除いたもの）。入力文字列で絞り込んで表示する */
   suggestions: Tag[];
   onSelect: (tag: Tag) => void;
+  /** 指定すると「-タグ名」の入力で NOT として追加できる */
+  onSelectExclude?: (tag: Tag) => void;
   /** 指定すると、候補にない文字列も Enter で追加できる */
   onCreate?: (name: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  className?: string;
 }
 
 /** チップ表示 + 候補付きの入力欄（↑↓で選択 / Enterで決定 / Escで閉じる） */
-export const TagInput = ({ chips, onRemove, suggestions, onSelect, onCreate, placeholder = 'タグを追加', disabled }: TagInputProps) => {
+export const TagInput = ({ chips, onRemove, suggestions, onSelect, onSelectExclude, onCreate, placeholder = 'タグを追加', disabled, className = '' }: TagInputProps) => {
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const query = text.trim().toLowerCase();
+  const trimmed = text.trim();
+  const excludeMode = Boolean(onSelectExclude) && /^[-−]/.test(trimmed);
+  const query = (excludeMode ? trimmed.slice(1) : trimmed).toLowerCase();
   const matches = suggestions.filter((t) => t.name.toLowerCase().includes(query)).slice(0, 6);
 
   const commit = (tag?: Tag) => {
-    if (tag) onSelect(tag);
+    if (tag) (excludeMode && onSelectExclude ? onSelectExclude : onSelect)(tag);
     else if (onCreate && text.trim()) onCreate(text.trim());
     else return;
     setText('');
@@ -53,9 +60,22 @@ export const TagInput = ({ chips, onRemove, suggestions, onSelect, onCreate, pla
   };
 
   return (
-    <div className={`tag-input ${disabled ? 'is-disabled' : ''}`}>
+    <div className={`tag-input ${disabled ? 'is-disabled' : ''} ${className}`}>
       {chips.map((chip) => (
-        <span key={chip.key} className={`chip ${chip.className ?? ''}`}>
+        <span key={chip.key} className={`chip ${chip.not?.on ? 'chip--exclude' : ''} ${chip.className ?? ''}`}>
+          {chip.not && (
+            <button
+              type="button"
+              className="chip__not"
+              aria-pressed={chip.not.on}
+              onClick={chip.not.onToggle}
+              title={chip.not.on ? 'NOT を外す' : 'NOT にする'}
+              aria-label={`${chip.label}を NOT にする`}
+              disabled={disabled}
+            >
+              <Icon name="ban" />
+            </button>
+          )}
           {chip.label}
           <button type="button" onClick={() => onRemove(chip.key)} aria-label={`${chip.label}を削除`} disabled={disabled}><Icon name="x" /></button>
         </span>
@@ -82,7 +102,7 @@ export const TagInput = ({ chips, onRemove, suggestions, onSelect, onCreate, pla
                 onMouseDown={(e) => { e.preventDefault(); commit(tag); }}
                 onMouseEnter={() => setActive(i)}
               >
-                <span>{tag.name}</span>
+                <span>{excludeMode ? `NOT ${tag.name}` : tag.name}</span>
                 {tag.description && <small>{tag.description}</small>}
               </li>
             ))}

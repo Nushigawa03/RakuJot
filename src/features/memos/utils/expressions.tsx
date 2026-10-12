@@ -22,36 +22,14 @@ export const LogicText = ({ text }: { text: string }) => (
   </>
 );
 
-/**
- * エディタ用の表現: must = OR グループの AND（各グループからいずれか1つ）、mustNot = すべて含まない。
- * orTerms はグループの直積として保存する。
- */
-export interface ExpressionDraft {
-  must: string[][];
-  mustNot: string[];
-}
+/** エディタ用の表現: 1行 = AND で並んだタグ（not で除外）、行どうしは OR */
+export type ConditionRow = { id: string; not: boolean }[];
 
-const cartesian = (groups: string[][]): string[][] =>
-  groups.reduce<string[][]>((acc, group) => acc.flatMap((combo) => group.map((id) => [...combo, id])), [[]]);
+export const orTermsToRows = (orTerms: TagExpressionTerm[]): ConditionRow[] =>
+  orTerms.map((t) => [...t.include.map((id) => ({ id, not: false })), ...t.exclude.map((id) => ({ id, not: true }))]);
 
-export function draftToOrTerms({ must, mustNot }: ExpressionDraft, maxTerms = 200): TagExpressionTerm[] {
-  const groups = must.filter((g) => g.length);
-  const combos = cartesian(groups);
-  if (combos.length > maxTerms) {
-    throw new Error(`条件の組み合わせが多すぎます（${combos.length} > ${maxTerms}）。グループ/タグ数を減らしてください。`);
-  }
-  return combos.map((include) => ({ include, exclude: [...mustNot] }));
-}
-
-/** draftToOrTerms の逆変換。エディタで表現できない式なら null */
-export function orTermsToDraft(orTerms: TagExpressionTerm[]): ExpressionDraft | null {
-  if (!orTerms.length) return { must: [], mustNot: [] };
-  const mustNot = orTerms[0].exclude;
-  const width = orTerms[0].include.length;
-  const sameShape = orTerms.every((t) => t.include.length === width && t.exclude.join() === mustNot.join());
-  if (!sameShape) return null;
-  const must = Array.from({ length: width }, (_, i) => [...new Set(orTerms.map((t) => t.include[i]))]);
-  const rebuilt = draftToOrTerms({ must, mustNot }, Infinity).map((t) => t.include.join());
-  const original = orTerms.map((t) => t.include.join());
-  return rebuilt.length === original.length && rebuilt.every((k) => original.includes(k)) ? { must, mustNot } : null;
-}
+/** 空の行は捨てる */
+export const rowsToOrTerms = (rows: ConditionRow[]): TagExpressionTerm[] =>
+  rows
+    .filter((row) => row.length)
+    .map((row) => ({ include: row.filter((c) => !c.not).map((c) => c.id), exclude: row.filter((c) => c.not).map((c) => c.id) }));

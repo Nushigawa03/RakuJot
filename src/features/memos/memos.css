@@ -197,19 +197,41 @@
 .new-memo h2 { font-size: 1.1rem; font-weight: 700; }
 
 /* ─── タグ・分類の設定 ────────────────────────────── */
-.editor { display: flex; flex-direction: column; gap: 1rem; }
-.editor__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.editor__head h3 { font-weight: 700; }
-.editor__form { display: flex; flex-direction: column; gap: 0.9rem; background: var(--surface); }
-.editor__form h4 { font-weight: 700; }
-.editor__form .tag-input + .tag-input { margin-top: 0.4rem; }
-.editor__preview { padding: 0.6rem 0.8rem; border-radius: var(--radius); background: var(--bg); font-size: 0.875rem; }
-.editor__preview small { display: block; margin-top: 0.25rem; }
-.editor__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; }
-.editor__list { display: flex; flex-direction: column; gap: 0.6rem; }
-.editor__item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.editor__grid .editor__item { flex-direction: column; align-items: stretch; }
-.editor__name { display: inline-flex; align-items: center; }
+.editor { display: flex; flex-direction: column; gap: 0.75rem; }
+.editor > .btn { align-self: flex-start; }
+.editor__add { display: flex; gap: 0.5rem; }
+.editor__add .input { flex: 1; min-width: 0; }
+.editor__list { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.editor__list > li { border-bottom: 1px solid var(--border); }
+.editor__list > li > .editor__form { margin: 0.5rem 0; }
+.editor__item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.25rem; }
+.editor__body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 0.3rem; }
+.editor__body .muted { overflow-wrap: anywhere; }
+.editor__name { display: inline-flex; align-items: center; gap: 0.45rem; }
+.editor__name .color-dot { margin: 0; }
+.editor__actions { display: flex; flex-shrink: 0; gap: 0.15rem; }
+.icon-btn--danger:hover { background: var(--danger-soft); color: var(--danger); }
+.editor__form { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.editor__title-row { display: flex; gap: 0.5rem; }
+.editor__title-row .input { flex: 1; min-width: 0; }
+
+/* 分類の条件: 行 = AND、行の間 = または */
+.conditions { display: flex; flex-direction: column; }
+.conditions__row { display: flex; align-items: center; gap: 0.25rem; }
+.conditions__row .tag-input { flex: 1; min-width: 0; }
+.tag-input--condition .tag-input__field { flex-basis: 5rem; min-width: 5rem; }
+.condition-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.35rem 0; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
+.condition-divider::before,
+.condition-divider::after { content: ""; flex: 1; border-top: 1px solid var(--border-strong); }
+.condition-divider span { display: inline-flex; align-items: center; gap: 0.25rem; }
+.condition-divider--add { width: 100%; margin-top: 0.5rem; padding: 0.3rem 0; border-radius: var(--radius-sm); cursor: pointer; }
+.condition-divider--add::before,
+.condition-divider--add::after { border-top-style: dashed; }
+.condition-divider--add:hover:not(:disabled) { color: var(--primary-text); }
+.condition-divider--add:disabled { opacity: 0.4; cursor: not-allowed; }
+.condition-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+.condition-summary__row { display: contents; }
+.condition-or { margin: 0 0.15rem; color: var(--text-muted); font-size: 0.7rem; font-weight: 700; }
 
 /* ─── ゴミ箱 ──────────────────────────────────────── */
 .trash { max-width: 56rem; margin: 0 auto; padding: 1.5rem 1rem; }

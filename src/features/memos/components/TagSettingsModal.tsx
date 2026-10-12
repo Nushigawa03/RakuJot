@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Button, Icon, Modal, TagInput, Textarea } from '~/components';
 import { useExpressions, useTagNameOf, useTags } from '../hooks/useLocalData';
 import { expressionService, tagService } from '../services/tagService';
-import { describeExpression, draftToOrTerms, LogicText, orTermsToDraft, type ExpressionDraft } from '../utils/expressions';
+import { orTermsToRows, rowsToOrTerms, type ConditionRow } from '../utils/expressions';
 import type { Tag } from '../types/tags';
-import type { TagExpression } from '../types/tagExpressions';
+import type { TagExpression, TagExpressionTerm } from '../types/tagExpressions';
 
 type Tab = 'tags' | 'expressions';
 
@@ -26,26 +26,30 @@ const TagSettingsModal = ({ onClose, initialTab = 'tags' }: { onClose: () => voi
 
 export default TagSettingsModal;
 
+const ItemActions = ({ label, onEdit, onRemove }: { label: string; onEdit: () => void; onRemove: () => void }) => (
+  <div className="editor__actions">
+    <button type="button" className="icon-btn" onClick={onEdit} title="編集" aria-label={`${label}を編集`}><Icon name="pencil" /></button>
+    <button type="button" className="icon-btn icon-btn--danger" onClick={onRemove} title="削除" aria-label={`${label}を削除`}><Icon name="trash" /></button>
+  </div>
+);
+
 // ─── タグ ─────────────────────────────────────────────
 const TagEditor = () => {
   const tags = useTags();
-  const [editing, setEditing] = useState<Tag | 'new' | null>(null);
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const open = (tag: Tag | 'new') => {
-    setEditing(tag);
-    setForm(tag === 'new' ? { name: '', description: '' } : { name: tag.name, description: tag.description || '' });
-    setError(null);
-  };
+  const duplicated = (name: string, selfId?: string) => tags.some((t) => t.name === name && t.id !== selfId);
 
-  const save = async () => {
-    const name = form.name.trim();
-    if (!name) return setError('タグ名は必須です');
-    if (tags.some((t) => t.name === name && (editing === 'new' || t.id !== editing?.id))) return setError('同じ名前のタグがあります');
-    if (editing === 'new') await tagService.createTag(name, form.description);
-    else if (editing) await tagService.updateTag(editing.id, { name, description: form.description });
-    setEditing(null);
+  const add = async (e: FormEvent) => {
+    e.preventDefault();
+    const name = newName.trim();
+    if (!name) return;
+    if (duplicated(name)) return setError('同じ名前のタグがあります');
+    await tagService.createTag(name, '');
+    setNewName('');
+    setError(null);
   };
 
   const remove = async (tag: Tag) => {
@@ -56,195 +60,196 @@ const TagEditor = () => {
 
   return (
     <section className="editor">
-      <div className="editor__head">
-        <span className="muted">{tags.length}個</span>
-        <Button size="sm" onClick={() => open('new')}><Icon name="plus" /> タグを追加</Button>
-      </div>
+      <form className="editor__add" onSubmit={add}>
+        <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="タグ名" aria-label="タグ名" />
+        <Button type="submit" disabled={!newName.trim()}><Icon name="plus" /> タグを追加</Button>
+      </form>
       {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
-      {editing && (
-        <div className="card editor__form">
-          <label className="field">
-            <span className="field__label">タグ名 *</span>
-            <input className="input" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </label>
-          <label className="field">
-            <span className="field__label">説明</span>
-            <Textarea value={form.description} onChange={(description) => setForm({ ...form, description })} rows={3} />
-          </label>
-          <div className="row">
-            <Button onClick={save} disabled={!form.name.trim()}>{editing === 'new' ? 'タグを追加' : '保存'}</Button>
-            <Button variant="secondary" onClick={() => setEditing(null)}>キャンセル</Button>
-          </div>
-        </div>
-      )}
       {tags.length > 0 && (
-        <ul className="editor__grid">
-          {tags.map((tag) => (
-            <li key={tag.id} className="card editor__item">
-              <div>
-                <strong>{tag.name}</strong>
-                {tag.description && <p className="muted">{tag.description}</p>}
-              </div>
-              <div className="row row--end">
-                <Button variant="secondary" size="sm" onClick={() => open(tag)}>編集</Button>
-                <Button variant="danger" size="sm" onClick={() => remove(tag)}>削除</Button>
-              </div>
-            </li>
-          ))}
+        <ul className="editor__list">
+          {tags.map((tag) =>
+            editingId === tag.id ? (
+              <li key={tag.id}>
+                <TagForm
+                  tag={tag}
+                  onCancel={() => setEditingId(null)}
+                  onSave={async (name, description) => {
+                    if (duplicated(name, tag.id)) return setError('同じ名前のタグがあります');
+                    await tagService.updateTag(tag.id, { name, description });
+                    setEditingId(null);
+                    setError(null);
+                  }}
+                />
+              </li>
+            ) : (
+              <li key={tag.id} className="editor__item">
+                <div className="editor__body">
+                  <strong>{tag.name}</strong>
+                  {tag.description && <p className="muted">{tag.description}</p>}
+                </div>
+                <ItemActions label={tag.name} onEdit={() => setEditingId(tag.id)} onRemove={() => remove(tag)} />
+              </li>
+            ),
+          )}
         </ul>
       )}
     </section>
   );
 };
 
-// ─── 分類 ─────────────────────────────────────────────
-interface ExpressionForm extends ExpressionDraft {
-  name: string;
-  color: string;
-}
+const TagForm = ({ tag, onSave, onCancel }: { tag: Tag; onSave: (name: string, description: string) => void; onCancel: () => void }) => {
+  const [name, setName] = useState(tag.name);
+  const [description, setDescription] = useState(tag.description || '');
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) onSave(name.trim(), description);
+  };
+  return (
+    <form className="editor__form" onSubmit={submit}>
+      <input className="input" autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label="タグ名" />
+      <Textarea value={description} onChange={setDescription} rows={2} placeholder="説明" />
+      <div className="row row--end">
+        <Button variant="ghost" size="sm" onClick={onCancel}>キャンセル</Button>
+        <Button type="submit" size="sm" disabled={!name.trim()}>保存</Button>
+      </div>
+    </form>
+  );
+};
 
-const EMPTY_FORM: ExpressionForm = { name: '', color: '', must: [], mustNot: [] };
+// ─── 分類 ─────────────────────────────────────────────
+type ExpressionData = Pick<TagExpression, 'name' | 'color' | 'orTerms'>;
 
 const ExpressionEditor = () => {
   const expressions = useExpressions();
-  const tags = useTags();
-  const nameOf = useTagNameOf();
-  const [editing, setEditing] = useState<TagExpression | 'new' | null>(null);
-  const [form, setForm] = useState<ExpressionForm>(EMPTY_FORM);
-  /** 編集中の式がエディタで表現できない形（例: A OR (B AND NOT C)）なら元の条件を保持する */
-  const [legacyTerms, setLegacyTerms] = useState<TagExpression['orTerms'] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | 'new' | null>(null);
 
-  const used = new Set([...form.must.flat(), ...form.mustNot]);
-  const available = tags.filter((t) => !used.has(t.id));
-  const hasConditions = form.must.length > 0 || form.mustNot.length > 0;
-
-  const open = (expr: TagExpression | 'new') => {
-    setEditing(expr);
-    setError(null);
-    if (expr === 'new') {
-      setForm(EMPTY_FORM);
-      setLegacyTerms(null);
-      return;
-    }
-    const draft = orTermsToDraft(expr.orTerms);
-    setForm({ name: expr.name || '', color: expr.color || '', ...(draft ?? { must: [], mustNot: [] }) });
-    setLegacyTerms(draft ? null : expr.orTerms);
-  };
-
-  const updateGroup = (index: number, ids: string[]) =>
-    setForm((f) => ({ ...f, must: ids.length ? f.must.map((g, i) => (i === index ? ids : g)) : f.must.filter((_, i) => i !== index) }));
-
-  const save = async () => {
-    if (!hasConditions && !legacyTerms) return setError('最低1つの条件を設定してください');
-    try {
-      const data = {
-        orTerms: hasConditions ? draftToOrTerms(form) : legacyTerms!,
-        name: form.name.trim() || null,
-        color: form.color || null,
-      };
-      if (editing === 'new') await expressionService.create(data);
-      else if (editing) await expressionService.update(editing.id, data);
-      setEditing(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'エラーが発生しました');
-    }
+  const save = async (id: string | 'new', data: ExpressionData) => {
+    if (id === 'new') await expressionService.create(data);
+    else await expressionService.update(id, data);
+    setEditing(null);
   };
 
   const remove = async (expr: TagExpression) => {
-    if (confirm('この分類を削除しますか？')) await expressionService.delete(expr.id);
+    if (confirm(expr.name ? `分類「${expr.name}」を削除しますか？` : 'この分類を削除しますか？')) await expressionService.delete(expr.id);
   };
 
-  const groupText = (ids: string[]) => (ids.length > 1 ? `(${ids.map(nameOf).join(' OR ')})` : nameOf(ids[0]));
-  const preview = [...form.must.map(groupText), ...form.mustNot.map((id) => `NOT ${nameOf(id)}`)].join(' AND ');
   const sorted = [...expressions.filter((e) => e.name?.trim()), ...expressions.filter((e) => !e.name?.trim())];
 
   return (
     <section className="editor">
-      <div className="editor__head">
-        <span />
-        <Button size="sm" onClick={() => open('new')}><Icon name="plus" /> 分類を作成</Button>
-      </div>
-      {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
-
-      {editing && (
-        <div className="card editor__form">
-          <div className="row">
-            <label className="field grow">
-              <span className="field__label">分類名</span>
-              <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="仕事、個人など" />
-            </label>
-            <label className="field">
-              <span className="field__label">色</span>
-              <input type="color" className="color-input" value={form.color || '#2563eb'} onChange={(e) => setForm({ ...form, color: e.target.value })} />
-            </label>
-          </div>
-
-          <div className="field">
-            <span className="field__label"><Icon name="circle-plus" /> 含む</span>
-            {form.must.map((group, i) => (
-              <TagInput
-                key={i}
-                chips={group.map((id) => ({ key: id, label: nameOf(id) }))}
-                onRemove={(id) => updateGroup(i, group.filter((x) => x !== id))}
-                suggestions={available}
-                onSelect={(t) => updateGroup(i, [...group, t.id])}
-                placeholder="OR でタグを追加"
-              />
-            ))}
-            <TagInput
-              chips={[]}
-              onRemove={() => {}}
-              suggestions={available}
-              onSelect={(t) => setForm((f) => ({ ...f, must: [...f.must, [t.id]] }))}
-              placeholder="AND でタグを追加"
-            />
-          </div>
-
-          <div className="field">
-            <span className="field__label"><Icon name="circle-minus" /> 除外</span>
-            <TagInput
-              chips={form.mustNot.map((id) => ({ key: id, label: nameOf(id), className: 'chip--exclude' }))}
-              onRemove={(id) => setForm((f) => ({ ...f, mustNot: f.mustNot.filter((x) => x !== id) }))}
-              suggestions={available}
-              onSelect={(t) => setForm((f) => ({ ...f, mustNot: [...f.mustNot, t.id] }))}
-              placeholder="除外するタグを追加"
-            />
-          </div>
-
-          {(hasConditions || legacyTerms) && (
-            <p className="editor__preview">
-              <Icon name="eye" /> <LogicText text={hasConditions ? preview : describeExpression(legacyTerms!, nameOf)} /> のメモ
-              {!hasConditions && <small className="muted"><Icon name="alert" /> タグを追加すると今の条件は置き換わります</small>}
-            </p>
-          )}
-
-          <div className="row">
-            <Button onClick={save} disabled={!hasConditions && !legacyTerms}>分類を保存</Button>
-            <Button variant="secondary" onClick={() => setEditing(null)}>キャンセル</Button>
-          </div>
-        </div>
+      {editing === 'new' ? (
+        <ExpressionForm onSave={(data) => save('new', data)} onCancel={() => setEditing(null)} />
+      ) : (
+        <Button variant="secondary" onClick={() => setEditing('new')}><Icon name="plus" /> 分類を作成</Button>
       )}
-
       {sorted.length > 0 && (
         <ul className="editor__list">
-          {sorted.map((expr) => (
-            <li key={expr.id} className="card editor__item">
-              <div>
-                <strong className="editor__name">
-                  {expr.name || '（名前なし）'}
-                  {expr.color && <span className="color-dot" style={{ background: expr.color }} />}
-                </strong>
-                <p className="muted"><LogicText text={describeExpression(expr.orTerms, nameOf)} /></p>
-              </div>
-              <div className="row row--end">
-                <Button variant="secondary" size="sm" onClick={() => open(expr)}>編集</Button>
-                <Button variant="danger" size="sm" onClick={() => remove(expr)}>削除</Button>
-              </div>
-            </li>
-          ))}
+          {sorted.map((expr) =>
+            editing === expr.id ? (
+              <li key={expr.id}>
+                <ExpressionForm expr={expr} onSave={(data) => save(expr.id, data)} onCancel={() => setEditing(null)} />
+              </li>
+            ) : (
+              <li key={expr.id} className="editor__item">
+                <div className="editor__body">
+                  <strong className="editor__name">
+                    {expr.color && <span className="color-dot" style={{ background: expr.color }} />}
+                    {expr.name}
+                  </strong>
+                  <ConditionSummary orTerms={expr.orTerms} />
+                </div>
+                <ItemActions label={expr.name || '分類'} onEdit={() => setEditing(expr.id)} onRemove={() => remove(expr)} />
+              </li>
+            ),
+          )}
         </ul>
       )}
     </section>
+  );
+};
+
+/** 一覧用: 行ごとのタグを並べ、行の間に「または」 */
+const ConditionSummary = ({ orTerms }: { orTerms: TagExpressionTerm[] }) => {
+  const nameOf = useTagNameOf();
+  return (
+    <div className="condition-summary">
+      {orTermsToRows(orTerms).map((row, i) => (
+        <span key={i} className="condition-summary__row">
+          {i > 0 && <span className="condition-or">または</span>}
+          {row.map((c) => (
+            <span key={c.id} className={`chip chip--sm ${c.not ? 'chip--exclude' : ''}`}>{c.not && <Icon name="ban" />}{nameOf(c.id)}</span>
+          ))}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const ExpressionForm = ({ expr, onSave, onCancel }: { expr?: TagExpression; onSave: (data: ExpressionData) => Promise<void>; onCancel: () => void }) => {
+  const tags = useTags();
+  const nameOf = useTagNameOf();
+  const [name, setName] = useState(expr?.name || '');
+  const [color, setColor] = useState(expr?.color || '');
+  const [rows, setRows] = useState<ConditionRow[]>(() => (expr?.orTerms.length ? orTermsToRows(expr.orTerms) : [[]]));
+  const [error, setError] = useState<string | null>(null);
+
+  const hasConditions = rows.some((row) => row.length);
+  const canAddRow = rows[rows.length - 1].length > 0;
+
+  const updateRow = (index: number, fn: (row: ConditionRow) => ConditionRow) => setRows((rs) => rs.map((r, i) => (i === index ? fn(r) : r)));
+  const removeRow = (index: number) => setRows((rs) => (rs.length > 1 ? rs.filter((_, i) => i !== index) : [[]]));
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!hasConditions) return;
+    try {
+      await onSave({ name: name.trim() || null, color: color || null, orTerms: rowsToOrTerms(rows) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'エラーが発生しました');
+    }
+  };
+
+  return (
+    <form className="editor__form" onSubmit={submit}>
+      <div className="editor__title-row">
+        <input type="color" className="color-input" value={color || '#2563eb'} onChange={(e) => setColor(e.target.value)} title="色" aria-label="色" />
+        <input className="input" autoFocus={!expr} value={name} onChange={(e) => setName(e.target.value)} placeholder="分類名" aria-label="分類名" />
+      </div>
+
+      <div className="conditions">
+        {rows.map((row, i) => (
+          <div key={i} className="conditions__item">
+            {i > 0 && <div className="condition-divider"><span>または</span></div>}
+            <div className="conditions__row">
+              <TagInput
+                className="tag-input--condition"
+                chips={row.map((c) => ({
+                  key: c.id,
+                  label: nameOf(c.id),
+                  not: { on: c.not, onToggle: () => updateRow(i, (r) => r.map((x) => (x.id === c.id ? { ...x, not: !x.not } : x))) },
+                }))}
+                onRemove={(id) => updateRow(i, (r) => r.filter((x) => x.id !== id))}
+                suggestions={tags.filter((t) => !row.some((c) => c.id === t.id))}
+                onSelect={(t) => updateRow(i, (r) => [...r, { id: t.id, not: false }])}
+                onSelectExclude={(t) => updateRow(i, (r) => [...r, { id: t.id, not: true }])}
+                placeholder="タグを追加"
+              />
+              {rows.length > 1 && (
+                <button type="button" className="icon-btn icon-btn--sm" onClick={() => removeRow(i)} title="この行を削除" aria-label="この行を削除"><Icon name="x" /></button>
+              )}
+            </div>
+          </div>
+        ))}
+        <button type="button" className="condition-divider condition-divider--add" onClick={() => setRows((rs) => [...rs, []])} disabled={!canAddRow}>
+          <span><Icon name="plus" /> または</span>
+        </button>
+      </div>
+
+      {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
+      <div className="row row--end">
+        <Button variant="ghost" size="sm" onClick={onCancel}>キャンセル</Button>
+        <Button type="submit" size="sm" disabled={!hasConditions}>保存</Button>
+      </div>
+    </form>
   );
 };

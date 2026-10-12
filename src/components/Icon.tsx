@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react';
 const urls = import.meta.glob<string>('./icons/*.svg', { eager: true, query: '?url', import: 'default' });
 
 export type IconName =
-  | 'alert' | 'arrow-left' | 'book-open' | 'calendar' | 'check' | 'chevron-down' | 'chevron-up'
+  | 'alert' | 'arrow-left' | 'ban' | 'book-open' | 'calendar' | 'check' | 'chevron-down' | 'chevron-up'
   | 'circle-minus' | 'circle-plus' | 'cloud' | 'cloud-off' | 'eye' | 'eye-off' | 'key' | 'lightbulb'
   | 'note' | 'pen-tool' | 'pencil' | 'pin' | 'plus' | 'redo' | 'refresh' | 'reset' | 'save' | 'search'
   | 'settings' | 'sparkles' | 'tag' | 'trash' | 'undo' | 'user' | 'wrench' | 'x' | 'zap';
