@@ -3,14 +3,24 @@
  * phase: 'challenge' — 認証チャレンジを生成（discoverable credential なのでユーザー指定なし）
  * phase: 'verify'    — アサーション応答を検証しセッションを発行
  */
+import { randomUUID } from "node:crypto";
 import type { ActionFunctionArgs } from "react-router";
 import { generateAuthenticationOptions, verifyAuthenticationResponse } from "@simplewebauthn/server";
 import { createUserSession, getSessionCookieHeader } from "~/features/auth/utils/session.server";
 import { prisma } from "~/db.server";
 import { getWebAuthnRequestConfig } from "~/features/auth/config/webauthn.server";
+import { assertSameOrigin } from "~/features/auth/utils/requestGuard.server";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const MAX_PENDING_CHALLENGES = 1000;
 const challengeStore = new Map<string, { challenge: string; origin: string; rpID: string; expiresAt: number }>();
+
+/** 期限切れを掃除し、未ログインでも叩けるエンドポイントでメモリが増え続けないよう上限を設ける */
+const pruneChallenges = () => {
+  const now = Date.now();
+  for (const [key, value] of challengeStore) if (value.expiresAt < now) challengeStore.delete(key);
+  while (challengeStore.size >= MAX_PENDING_CHALLENGES) challengeStore.delete(challengeStore.keys().next().value!);
+};
 
 const takeChallenge = (sessionKey: string) => {
   const stored = challengeStore.get(sessionKey);
@@ -22,20 +32,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405 });
 
   try {
+    assertSameOrigin(request);
     const body = await request.json();
 
     if (body.phase === "challenge") {
       const { rpID, origin } = getWebAuthnRequestConfig(request);
       const options = await generateAuthenticationOptions({ rpID, userVerification: "required" });
-      const sessionKey = `auth_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      const sessionKey = randomUUID();
+      pruneChallenges();
       challengeStore.set(sessionKey, { challenge: options.challenge, origin, rpID, expiresAt: Date.now() + CHALLENGE_TTL_MS });
       return Response.json({ ...options, sessionKey });
     }
 
     if (body.phase === "verify") {
       const { assertionResponse, sessionKey } = body;
-      const stored = takeChallenge(sessionKey);
+      const stored = typeof sessionKey === "string" ? takeChallenge(sessionKey) : null;
       if (!stored) return Response.json({ error: "チャレンジが見つかりません" }, { status: 400 });
+      if (typeof assertionResponse?.id !== "string") return Response.json({ error: "無効なリクエストです" }, { status: 400 });
 
       const credential = await prisma.webAuthnCredential.findUnique({
         where: { credentialId: assertionResponse.id },

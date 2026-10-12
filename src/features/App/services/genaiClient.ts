@@ -1,14 +1,16 @@
 import { GoogleGenAI, type GenerateContentParameters } from "@google/genai";
 
-// すべての AI 呼び出しはここを経由する（API キーごとにクライアントを使い回す）
-const clients = new Map<string, GoogleGenAI>();
+// すべての AI 呼び出しはここを経由する
+// サーバーの API キーのクライアントだけ使い回す（ユーザーの API キーはメモリに残さない）
+let serverClient: { apiKey: string; client: GoogleGenAI } | null = null;
 
 const getClient = (apiKeyOverride?: string) => {
-  const apiKey = (apiKeyOverride || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "").trim();
+  const userKey = apiKeyOverride?.trim();
+  if (userKey) return new GoogleGenAI({ apiKey: userKey });
+  const apiKey = (process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "").trim();
   if (!apiKey) throw new Error("[genaiClient] No API key available");
-  let client = clients.get(apiKey);
-  if (!client) clients.set(apiKey, (client = new GoogleGenAI({ apiKey })));
-  return client;
+  if (serverClient?.apiKey !== apiKey) serverClient = { apiKey, client: new GoogleGenAI({ apiKey }) };
+  return serverClient.client;
 };
 
 // 429（クォータ超過）のときは次のモデルで再試行する

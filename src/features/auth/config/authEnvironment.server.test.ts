@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getDevUserProfile } from './authEnvironment.server';
+import { getAuthMode, getDevUserProfile } from './authEnvironment.server';
 
 const envKeys = [
     'AUTH_DEV_USER_EMAIL',
@@ -57,5 +57,28 @@ describe('getDevUserProfile', () => {
         process.env.AUTH_DEV_USER_GOOGLE_ID = 'legacy-dev-id';
 
         expect(getDevUserProfile().accountId).toBe('legacy-dev-id');
+    });
+});
+
+describe('getAuthMode', () => {
+    const original = { AUTH_MODE: process.env.AUTH_MODE, VERCEL_ENV: process.env.VERCEL_ENV };
+
+    afterEach(() => {
+        for (const [key, value] of Object.entries(original)) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+        }
+    });
+
+    it('enables dev mode outside the production deployment', () => {
+        process.env.AUTH_MODE = 'dev';
+        process.env.VERCEL_ENV = 'preview';
+        expect(getAuthMode()).toBe('dev');
+    });
+
+    it('never enables dev mode in the production deployment', () => {
+        process.env.AUTH_MODE = 'dev';
+        process.env.VERCEL_ENV = 'production';
+        expect(getAuthMode()).toBe('google');
     });
 });

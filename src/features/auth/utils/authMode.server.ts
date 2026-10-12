@@ -7,6 +7,7 @@ import { redirect } from "react-router";
 import { getDevUserProfile, getPublicAuthConfig } from "~/features/auth/config/authEnvironment.server";
 import { getUserIdFromSession } from "./session.server";
 import { getDevUserId } from "./devUser.server";
+import { assertSameOrigin } from "./requestGuard.server";
 
 /**
  * 開発モードかどうかを判定
@@ -41,11 +42,12 @@ export const getAuthenticatedUserId = async (
 
 /**
  * 認証必須のルート用ヘルパー
- * 認証されていなければ 401 を返す
+ * 別サイトからの書き込みリクエストは 403、認証されていなければ 401 を返す
  */
 export const requireAuthenticatedUserId = async (
     request: Request
 ): Promise<string> => {
+    assertSameOrigin(request);
     const userId = await getAuthenticatedUserId(request);
 
     if (!userId) {

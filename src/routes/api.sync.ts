@@ -4,14 +4,16 @@
 import type { ActionFunctionArgs } from "react-router";
 import { requireAuthenticatedUserId } from "~/features/auth/utils/authMode.server";
 import { getRefreshSessionCookieHeader } from "~/features/auth/utils/session.server";
-import { applyPendingChanges, loadServerData } from "~/features/sync/sync.server";
+import { applyPendingChanges, loadServerData, parsePendingChanges } from "~/features/sync/sync.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405 });
 
   try {
     const userId = await requireAuthenticatedUserId(request);
-    const { pendingChanges = {} } = await request.json();
+    const body = await request.json().catch(() => null);
+    const pendingChanges = parsePendingChanges(body?.pendingChanges);
+    if (!pendingChanges) return Response.json({ error: "同期データの形式が正しくありません" }, { status: 400 });
     const { errors, idMapping } = await applyPendingChanges(pendingChanges, userId);
     const syncedAt = new Date().toISOString();
     const serverData = await loadServerData(userId);

@@ -35,7 +35,13 @@ const getRequiredEnv = (key: string): string => {
 
 export const getAuthMode = (): AuthMode => {
     const mode = getEnv('AUTH_MODE').toLowerCase();
-    return mode === 'dev' ? 'dev' : 'google';
+    if (mode !== 'dev') return 'google';
+    // 開発モードは誰でも認証なしでログインできるため、本番デプロイでは環境変数の設定ミスがあっても有効にしない
+    if (getEnv('VERCEL_ENV') === 'production') {
+        console.error('AUTH_MODE=dev is ignored in the production deployment');
+        return 'google';
+    }
+    return 'dev';
 };
 
 export const isGoogleAuthAvailable = (): boolean => {

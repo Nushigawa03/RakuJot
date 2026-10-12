@@ -76,28 +76,18 @@ registerRoute(
   })
 );
 
-// ─── API リクエスト — ネットワーク優先 ─────────────────
-registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/'),
-  new NetworkFirst({
-    cacheName: 'api-cache',
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 5,
-      }),
-    ],
-  })
-);
+// ─── API リクエスト ─────────────────────────────────
+// ユーザー情報や設定を端末に残さないよう、API の応答はキャッシュしない
+// （オフライン時のデータは IndexedDB で扱う）
 
 // ─── Service Worker ライフサイクル ────────────────────
 self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', () => {
-  self.clients.claim();
+self.addEventListener('activate', (event) => {
+  // 以前のバージョンが保存した API 応答（ユーザー情報など）を消す
+  event.waitUntil(Promise.all([caches.delete('api-cache'), self.clients.claim()]));
 });
 
 // ─── メッセージハンドラー ─────────────────────────────

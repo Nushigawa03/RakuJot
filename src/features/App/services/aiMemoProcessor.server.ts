@@ -23,7 +23,7 @@ async function runJsonPrompt(systemInstruction: string, contents: string, prefer
     return {};
   }
   try {
-    const response = await generateContent({ apiKey, contents, config: { systemInstruction, temperature: 0.1 } });
+    const response = await generateContent({ apiKey: preferredApiKey, contents, config: { systemInstruction, temperature: 0.1 } });
     const parsed = parseJsonResponse(response.text ?? "");
     if (!parsed) {
       console.warn("Failed to parse Gemini JSON response");

@@ -9,6 +9,7 @@ import {
 } from "~/features/auth/models/user.server";
 import { getGoogleClientId } from "~/features/auth/config/authEnvironment.server";
 import { isDevMode } from "~/features/auth/utils/authMode.server";
+import { assertSameOrigin } from "~/features/auth/utils/requestGuard.server";
 
 /**
  * Google OAuth Token を検証してセッション作成
@@ -16,6 +17,8 @@ import { isDevMode } from "~/features/auth/utils/authMode.server";
  * Body: { credential: string } (Google ID Token)
  */
 export const action: ActionFunction = async ({ request }) => {
+    assertSameOrigin(request);
+
     // 開発モードでは Google Token 不要
     if (isDevMode()) {
         return Response.json(
