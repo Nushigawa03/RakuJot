@@ -1,5 +1,6 @@
 export { default as Button } from './Button';
 export { default as DatePickerInput } from './DatePickerInput';
+export { default as Icon, type IconName } from './Icon';
 export { default as Textarea } from './Textarea';
 export { Modal, ConfirmModal } from './Modal';
 export { TagInput, type Chip } from './TagInput';

@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
-import { Button, DatePickerInput, TagInput, Textarea } from '~/components';
+import { Button, DatePickerInput, Icon, TagInput, Textarea } from '~/components';
 import { memoService } from '../services/memoService';
 import { useTags } from '../hooks/useLocalData';
 
@@ -41,7 +41,7 @@ export const QuickMemoInput = ({ fullScreen = false }: { fullScreen?: boolean })
         lined={fullScreen}
         rows={fullScreen ? undefined : 2}
       />
-      {error && <p className="error-text">⚠ {error}</p>}
+      {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
       <Button full onClick={save} disabled={isSaving || !content.trim()}>
         {isSaving ? '保存中...' : fullScreen ? '保存' : <>保存<span className="hide-sm">（Ctrl+Enter）</span></>}
       </Button>
@@ -91,7 +91,7 @@ export const NewMemoForm = ({ onDone }: { onDone: () => void }) => {
         />
       </div>
       <Textarea placeholder="本文" aria-label="本文" value={body} onChange={setBody} autoResize lined rows={4} />
-      {error && <p className="error-text">⚠ {error}</p>}
+      {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
       <div className="row">
         <Button onClick={save} disabled={isSaving}>保存</Button>
         <Button variant="secondary" onClick={onDone} disabled={isSaving}>キャンセル (Esc)</Button>

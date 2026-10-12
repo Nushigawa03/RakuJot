@@ -1,5 +1,5 @@
 import { isRouteErrorResponse, useLoaderData, useRouteError, type ClientLoaderFunctionArgs } from "react-router";
-import { Loading } from "~/components";
+import { Icon, Loading } from "~/components";
 import EditPage, { type EditableMemo } from "~/features/memos.edit/EditPage";
 import { requirePageUser } from "~/features/auth/routeAuth.server";
 
@@ -36,12 +36,12 @@ export const HydrateFallback = () => <Loading message="メモを読み込み中.
 export function ErrorBoundary() {
   const error = useRouteError();
   const message = isRouteErrorResponse(error) && error.status === 404
-    ? typeof navigator === "undefined" || navigator.onLine ? "メモが見つかりません。" : "📴 オフラインのため開けません。"
+    ? typeof navigator === "undefined" || navigator.onLine ? "メモが見つかりません。" : "オフラインのため開けません。"
     : "メモの読み込みに失敗しました。";
   return (
     <div className="loading">
-      <p>⚠️ {message}</p>
-      <button type="button" className="btn btn--secondary" onClick={() => window.history.back()}>← 戻る</button>
+      <p><Icon name="alert" /> {message}</p>
+      <button type="button" className="btn btn--secondary" onClick={() => window.history.back()}><Icon name="arrow-left" /> 戻る</button>
     </div>
   );
 }

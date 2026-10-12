@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import Icon from './Icon';
 
 interface DatePickerInputProps {
   label: string;
@@ -24,7 +25,7 @@ const DatePickerInput = ({ label, value, onChange, placeholder = '日付やキ�
       <span className="field__label">{label}</span>
       <span className="date-input">
         <input className="input" type="text" placeholder={placeholder} value={value || ''} onChange={(e) => onChange(e.target.value)} />
-        <button type="button" className="icon-btn" onClick={openPicker} aria-label="カレンダーから選ぶ">📅</button>
+        <button type="button" className="icon-btn" onClick={openPicker} aria-label="カレンダーから選ぶ"><Icon name="calendar" /></button>
         <input
           ref={pickerRef}
           className="date-input__picker"

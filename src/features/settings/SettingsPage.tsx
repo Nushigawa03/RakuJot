@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { Switch } from '~/components';
+import { Icon, Switch } from '~/components';
 import { useSettings } from './useSettings';
 import { PasskeyRegisterButton } from '~/features/auth/components/PasskeyButtons';
 import { deleteCredential, listCredentials, type WebAuthnCredentialSummary } from '~/features/auth/services/webauthnService';
@@ -51,7 +51,7 @@ const SettingsPage = () => {
   return (
     <div className="settings">
       <header className="settings__header">
-        <button type="button" className="icon-btn" onClick={() => navigate('/app')} aria-label="戻る">←</button>
+        <button type="button" className="icon-btn" onClick={() => navigate('/app')} aria-label="戻る"><Icon name="arrow-left" /></button>
         <h1>設定</h1>
       </header>
 
@@ -96,7 +96,7 @@ const SettingsPage = () => {
                 autoComplete="off"
               />
               <button type="button" className="icon-btn" onClick={() => setShowApiKey((v) => !v)} aria-label={showApiKey ? 'APIキーを隠す' : 'APIキーを表示する'}>
-                {showApiKey ? '🙈' : '👁️'}
+                <Icon name={showApiKey ? 'eye-off' : 'eye'} />
               </button>
             </div>
           </Item>

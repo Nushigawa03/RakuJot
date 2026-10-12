@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Modal, TagInput, Textarea } from '~/components';
+import { Button, Icon, Modal, TagInput, Textarea } from '~/components';
 import { useExpressions, useTagNameOf, useTags } from '../hooks/useLocalData';
 import { expressionService, tagService } from '../services/tagService';
 import { describeExpression, draftToOrTerms, LogicText, orTermsToDraft, type ExpressionDraft } from '../utils/expressions';
@@ -58,9 +58,9 @@ const TagEditor = () => {
     <section className="editor">
       <div className="editor__head">
         <span className="muted">{tags.length}個</span>
-        <Button size="sm" onClick={() => open('new')}>＋ タグを追加</Button>
+        <Button size="sm" onClick={() => open('new')}><Icon name="plus" /> タグを追加</Button>
       </div>
-      {error && <p className="error-text">⚠ {error}</p>}
+      {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
       {editing && (
         <div className="card editor__form">
           <label className="field">
@@ -163,9 +163,9 @@ const ExpressionEditor = () => {
     <section className="editor">
       <div className="editor__head">
         <span />
-        <Button size="sm" onClick={() => open('new')}>＋ 分類を作成</Button>
+        <Button size="sm" onClick={() => open('new')}><Icon name="plus" /> 分類を作成</Button>
       </div>
-      {error && <p className="error-text">⚠ {error}</p>}
+      {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
 
       {editing && (
         <div className="card editor__form">
@@ -181,7 +181,7 @@ const ExpressionEditor = () => {
           </div>
 
           <div className="field">
-            <span className="field__label">✅ 含む</span>
+            <span className="field__label"><Icon name="circle-plus" /> 含む</span>
             {form.must.map((group, i) => (
               <TagInput
                 key={i}
@@ -202,7 +202,7 @@ const ExpressionEditor = () => {
           </div>
 
           <div className="field">
-            <span className="field__label">❌ 除外</span>
+            <span className="field__label"><Icon name="circle-minus" /> 除外</span>
             <TagInput
               chips={form.mustNot.map((id) => ({ key: id, label: nameOf(id), className: 'chip--exclude' }))}
               onRemove={(id) => setForm((f) => ({ ...f, mustNot: f.mustNot.filter((x) => x !== id) }))}
@@ -214,8 +214,8 @@ const ExpressionEditor = () => {
 
           {(hasConditions || legacyTerms) && (
             <p className="editor__preview">
-              👁️ <LogicText text={hasConditions ? preview : describeExpression(legacyTerms!, nameOf)} /> のメモ
-              {!hasConditions && <small className="muted">⚠ タグを追加すると今の条件は置き換わります</small>}
+              <Icon name="eye" /> <LogicText text={hasConditions ? preview : describeExpression(legacyTerms!, nameOf)} /> のメモ
+              {!hasConditions && <small className="muted"><Icon name="alert" /> タグを追加すると今の条件は置き換わります</small>}
             </p>
           )}
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Button, DatePickerInput, Modal } from '~/components';
+import { Button, DatePickerInput, Icon, Modal } from '~/components';
 import { SyncStatusIndicator } from '~/features/sync/SyncStatusIndicator';
 import { useSettings } from '~/features/settings/useSettings';
 import { UserAvatarButton } from '~/features/auth/components/UserMenu';
@@ -131,13 +131,13 @@ const NavigationBar = ({ variant = 'pc', onBack }: NavigationBarProps) => {
 
   return (
     <div className={`nav nav--${variant}`} ref={containerRef}>
-      {!isPc && <button type="button" className="icon-btn" onClick={onBack} aria-label="戻る">←</button>}
+      {!isPc && <button type="button" className="icon-btn" onClick={onBack} aria-label="戻る"><Icon name="arrow-left" /></button>}
 
       <div className={`search ${focused ? 'is-focused' : ''}`}>
         {search.tags.map((tag, i) => (
           <span key={`${tag.id}-${tag.isExclude}`} className={`chip chip--sm ${tag.isExclude ? 'chip--exclude' : ''} ${selectedChip === i ? 'is-selected' : ''}`}>
             {chipLabel(tag)}
-            <button type="button" onClick={() => removeChip(tag)} aria-label={`${tag.name}を削除`}>×</button>
+            <button type="button" onClick={() => removeChip(tag)} aria-label={`${tag.name}を削除`}><Icon name="x" /></button>
           </span>
         ))}
         <div className="search__field">
@@ -161,24 +161,24 @@ const NavigationBar = ({ variant = 'pc', onBack }: NavigationBarProps) => {
                   onMouseDown={(e) => { e.preventDefault(); selectSuggestion(tag); }}
                   onMouseEnter={() => setActiveSuggestion(i)}
                 >
-                  🏷️ {isExclude ? `NOT ${tag.name}` : tag.name}
+                  <span><Icon name="tag" /> {isExclude ? `NOT ${tag.name}` : tag.name}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
         {hasConditions && (
-          <button type="button" className="icon-btn" onClick={() => { searchActions.clear(); setQuery(''); }} aria-label="検索をクリア" title="検索をクリア">×</button>
+          <button type="button" className="icon-btn" onClick={() => { searchActions.clear(); setQuery(''); }} aria-label="検索をクリア" title="検索をクリア"><Icon name="x" /></button>
         )}
-        <button type="button" className="icon-btn" onClick={runSearch} aria-label="検索" title="検索">🔍</button>
+        <button type="button" className="icon-btn" onClick={runSearch} aria-label="検索" title="検索"><Icon name="search" /></button>
         {isPc && (search.tags.length > 0 || query.trim()) && (
-          <button type="button" className="icon-btn" onClick={() => setSavingFilter(true)} title="フィルタとして保存" aria-label="フィルタとして保存">📌</button>
+          <button type="button" className="icon-btn" onClick={() => setSavingFilter(true)} title="フィルタとして保存" aria-label="フィルタとして保存"><Icon name="pin" /></button>
         )}
 
         {focused && !suggestions.length && (
           <div className="search__detail">
             <button type="button" className="btn btn--ghost btn--sm" aria-expanded={detailOpen} onClick={() => setDetailOpen((v) => !v)}>
-              詳細 {detailOpen ? '▲' : '▼'}
+              詳細 <Icon name={detailOpen ? 'chevron-up' : 'chevron-down'} />
             </button>
             {detailOpen && (
               <div className="search__dates">
@@ -211,7 +211,7 @@ const NavigationBar = ({ variant = 'pc', onBack }: NavigationBarProps) => {
             </>
           }
         >
-          <p>🔍 {[...search.tags.map(chipLabel), ...(query.trim() ? [query.trim()] : [])].join(' AND ')}</p>
+          <p><Icon name="search" /> {[...search.tags.map(chipLabel), ...(query.trim() ? [query.trim()] : [])].join(' AND ')}</p>
         </Modal>
       )}
     </div>

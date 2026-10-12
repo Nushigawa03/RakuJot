@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, ConfirmModal } from '~/components';
+import { Button, ConfirmModal, Icon } from '~/components';
 import { memoService } from '../../services/memoService';
 import { useTrashedMemos } from '../../hooks/useLocalData';
 
@@ -30,8 +30,8 @@ const TrashPage = () => {
   return (
     <div className="trash">
       <header className="trash__header">
-        <button type="button" className="icon-btn" onClick={() => navigate(-1)} aria-label="戻る">←</button>
-        <h1 className="grow">🗑️ ゴミ箱</h1>
+        <button type="button" className="icon-btn" onClick={() => navigate(-1)} aria-label="戻る"><Icon name="arrow-left" /></button>
+        <h1 className="grow">ゴミ箱</h1>
         {trashed.length > 0 && (
           <Button
             variant="danger"
@@ -44,7 +44,7 @@ const TrashPage = () => {
         )}
       </header>
 
-      {error && <p className="error-text">⚠ {error}</p>}
+      {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
 
       {trashed.length > 0 && (
         <ul className="trash__list">
@@ -56,7 +56,7 @@ const TrashPage = () => {
               </div>
               {memo.body && <p className="trash__body">{memo.body.length > 100 ? `${memo.body.slice(0, 100)}...` : memo.body}</p>}
               <div className="row row--between muted">
-                <small>🗑️ {new Date(memo.deletedAt).toLocaleString('ja-JP')}</small>
+                <small><Icon name="trash" /> {new Date(memo.deletedAt).toLocaleString('ja-JP')}</small>
                 {memo.tagNames.length > 0 && (
                   <span className="tags">{memo.tagNames.map((tag, i) => <span key={i} className="tag">{tag}</span>)}</span>
                 )}
@@ -82,7 +82,7 @@ const TrashPage = () => {
       <ConfirmModal
         isOpen={Boolean(confirm)}
         title={confirm?.title ?? ''}
-        message="⚠ 取り消せません"
+        message={<><Icon name="alert" /> 取り消せません</>}
         isDangerous
         confirmLabel={confirm?.confirmLabel ?? ''}
         onConfirm={() => confirm?.action()}

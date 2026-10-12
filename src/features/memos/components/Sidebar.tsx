@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
+import { Icon } from '~/components';
 import UserMenu from '~/features/auth/components/UserMenu';
 import { useExpressions, useTagNameOf } from '../hooks/useLocalData';
 import { searchActions, useSearch } from '../searchStore';
@@ -32,7 +33,7 @@ export const Sidebar = () => {
     <>
       <div className="sidebar__header">
         <h3>分類</h3>
-        <button type="button" className="icon-btn" onClick={() => setSettingsOpen('tags')} title="分類を編集" aria-label="分類を編集">⚙️</button>
+        <button type="button" className="icon-btn" onClick={() => setSettingsOpen('tags')} title="分類を編集" aria-label="分類を編集"><Icon name="settings" /></button>
       </div>
       <ul className="sidebar__list">
         {items.map(({ expression: e, label, active }) => (
@@ -54,12 +55,12 @@ export const Sidebar = () => {
                   if (active) searchActions.toggleExpression(e.id);
                   expressionService.delete(e.id);
                 }}
-              >×</button>
+              ><Icon name="x" /></button>
             )}
           </li>
         ))}
         {items.length === 0 && (
-          <li><button type="button" className="btn btn--ghost btn--sm" onClick={() => setSettingsOpen('expressions')}>＋ 分類を作成</button></li>
+          <li><button type="button" className="btn btn--ghost btn--sm" onClick={() => setSettingsOpen('expressions')}><Icon name="plus" /> 分類を作成</button></li>
         )}
       </ul>
       {active?.expression.name && (
@@ -70,7 +71,7 @@ export const Sidebar = () => {
       )}
       <div className="sidebar__footer">
         <UserMenu />
-        <Link to="/memos/trash" className="sidebar__trash">🗑️ ゴミ箱</Link>
+        <Link to="/memos/trash" className="sidebar__trash"><Icon name="trash" /> ゴミ箱</Link>
       </div>
       {settingsOpen && <TagSettingsModal initialTab={settingsOpen} onClose={() => setSettingsOpen(null)} />}
     </>
@@ -88,12 +89,12 @@ export const FilterPills = () => {
       <div className="pills__scroll">
         {search.dateQuery && (
           <button type="button" className="pill pill--date" onClick={searchActions.clearDate} title="日付検索をクリア">
-            📅 {search.dateQuery.replace(/^date:?/, '')} ✕
+            <Icon name="calendar" /> {search.dateQuery.replace(/^date:?/, '')} <Icon name="x" />
           </button>
         )}
         {search.tags.map((tag) => (
           <button key={`${tag.id}-${tag.isExclude}`} type="button" className="pill pill--tag" onClick={() => searchActions.removeTag(tag)} title="タグ検索をクリア">
-            🏷️ {tag.isExclude ? `NOT ${tag.name}` : tag.name} ✕
+            <Icon name="tag" /> {tag.isExclude ? `NOT ${tag.name}` : tag.name} <Icon name="x" />
           </button>
         ))}
         {items.map(({ expression: e, label, active }) => (
@@ -108,7 +109,7 @@ export const FilterPills = () => {
           </button>
         ))}
       </div>
-      <button type="button" className="icon-btn pills__add" onClick={() => setSettingsOpen(true)} aria-label="タグ設定を開く" title="タグ設定">＋</button>
+      <button type="button" className="icon-btn pills__add" onClick={() => setSettingsOpen(true)} aria-label="タグ設定を開く" title="タグ設定"><Icon name="plus" /></button>
       {settingsOpen && <TagSettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );

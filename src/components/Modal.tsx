@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import Button from './Button';
+import Icon from './Icon';
 
 interface ModalProps {
   title: string;
@@ -28,7 +29,7 @@ export const Modal = ({ title, onClose, children, footer, wide }: ModalProps) =>
       >
         <header className="modal__header">
           <h2>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="閉じる">×</button>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="閉じる"><Icon name="x" /></button>
         </header>
         <div className="modal__body">{children}</div>
         {footer && <footer className="modal__footer">{footer}</footer>}
@@ -40,7 +41,7 @@ export const Modal = ({ title, onClose, children, footer, wide }: ModalProps) =>
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: ReactNode;
   confirmLabel?: string;
   isDangerous?: boolean;
   onConfirm: () => void;

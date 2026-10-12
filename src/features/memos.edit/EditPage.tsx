@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, DatePickerInput, Switch, TagInput, Textarea } from '~/components';
+import { Button, DatePickerInput, Icon, Switch, TagInput, Textarea } from '~/components';
 import { memoService } from '~/features/memos/services/memoService';
 import { useTags } from '~/features/memos/hooks/useLocalData';
 import { useSettings } from '~/features/settings/useSettings';
@@ -44,27 +44,27 @@ const EditPage = ({ memo }: { memo: EditableMemo }) => {
 
   const history = (
     <div className="row">
-      <Button variant="ghost" size="sm" onClick={form.undo} disabled={!form.canUndo} title="元に戻す" aria-label="元に戻す">↶</Button>
-      <Button variant="ghost" size="sm" onClick={form.redo} disabled={!form.canRedo} title="やり直す" aria-label="やり直す">↷</Button>
+      <Button variant="ghost" size="sm" onClick={form.undo} disabled={!form.canUndo} title="元に戻す" aria-label="元に戻す"><Icon name="undo" /></Button>
+      <Button variant="ghost" size="sm" onClick={form.redo} disabled={!form.canRedo} title="やり直す" aria-label="やり直す"><Icon name="redo" /></Button>
     </div>
   );
 
   return (
     <div className="edit">
       <header className="edit__header">
-        <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>← <span className="hide-sm">戻る</span></Button>
+        <Button variant="secondary" size="sm" onClick={() => navigate(-1)}><Icon name="arrow-left" /> <span className="hide-sm">戻る</span></Button>
         {/* 履歴操作はヘッダーに置き、本文の位置を閲覧表示と揃える */}
         {editMode && history}
         <span className={`edit__status ${error ? 'is-error' : ''}`} role="status">
-          {form.isSaving ? '💾 保存中...' : error ? `⚠ ${error}` : form.lastSaved
-            ? `✓ ${form.lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み` : ''}
+          {form.isSaving ? <><Icon name="save" /> 保存中...</> : error ? <><Icon name="alert" /> {error}</> : form.lastSaved
+            ? <><Icon name="check" /> {form.lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存済み</> : null}
         </span>
         <Button variant="secondary" size="sm" onClick={form.discard} disabled={!form.canDiscard} title="変更を破棄">
-          🔄 <span className="hide-sm">変更を破棄</span>
+          <Icon name="reset" /> <span className="hide-sm">変更を破棄</span>
         </Button>
-        <Button variant="danger" size="sm" onClick={remove} title="ゴミ箱へ移動">🗑️ <span className="hide-sm">削除</span></Button>
+        <Button variant="danger" size="sm" onClick={remove} title="ゴミ箱へ移動"><Icon name="trash" /> <span className="hide-sm">削除</span></Button>
         <Button size="sm" onClick={() => setEditMode((v) => !v)}>
-          {editMode ? <>📖 <span className="hide-sm">閲覧</span></> : <>✏️ <span className="hide-sm">編集</span></>}
+          {editMode ? <><Icon name="book-open" /> <span className="hide-sm">閲覧</span></> : <><Icon name="pencil" /> <span className="hide-sm">編集</span></>}
         </Button>
       </header>
 
@@ -157,13 +157,13 @@ const QuickAiEdit = ({ form, toolbar }: { form: Form; toolbar: React.ReactNode }
   return (
     <section className="quick-edit">
       <div className="row row--between">
-        <h3>✨ AI で編集</h3>
+        <h3><Icon name="sparkles" /> AI で編集</h3>
         {toolbar}
       </div>
       {settings.aiUsageEnabled ? (
         <>
           <Textarea placeholder="「明後日に変更」など" value={instruction} onChange={setInstruction} rows={4} disabled={isProcessing} />
-          {error && <p className="error-text">⚠ {error}</p>}
+          {error && <p className="error-text"><Icon name="alert" /> {error}</p>}
           <Button full onClick={submit} disabled={!instruction.trim() || isProcessing}>{isProcessing ? '書き換え中...' : '書き換える'}</Button>
         </>
       ) : (

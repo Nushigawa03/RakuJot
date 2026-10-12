@@ -27,6 +27,18 @@
 .btn--sm { min-height: 2rem; padding: 0 0.7rem; font-size: 0.8rem; border-radius: var(--radius-sm); }
 .btn--full { width: 100%; }
 
+/* アイコン（Icon.tsx）: SVG をマスクにして文字色で塗る */
+.icon {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  background-color: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+
 .icon-btn {
   display: inline-flex;
   flex-shrink: 0;
@@ -191,7 +203,7 @@
 .logic-op--not { color: var(--danger); }
 
 .sync-status { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; user-select: none; }
-.sync-status__icon { font-size: 0.65rem; }
+.sync-status__icon { font-size: 0.9rem; }
 .sync-status--syncing { color: var(--primary-text); }
 .sync-status--syncing .sync-status__icon { animation: spin 1s linear infinite; }
 .sync-status--error { color: var(--danger); }
@@ -211,6 +223,7 @@
   cursor: pointer;
 }
 .passkey-button:disabled { opacity: 0.7; cursor: wait; }
+.passkey-button .icon { font-size: 1.125rem; }
 .passkey-skeleton { width: 100%; height: 2.75rem; border-radius: var(--radius-sm); background: rgb(148 163 184 / 0.2); animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.5; } }
 

@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 import type { Tag } from '~/features/memos/types/tags';
+import Icon from './Icon';
 
 export interface Chip {
   key: string;
@@ -56,7 +57,7 @@ export const TagInput = ({ chips, onRemove, suggestions, onSelect, onCreate, pla
       {chips.map((chip) => (
         <span key={chip.key} className={`chip ${chip.className ?? ''}`}>
           {chip.label}
-          <button type="button" onClick={() => onRemove(chip.key)} aria-label={`${chip.label}を削除`} disabled={disabled}>×</button>
+          <button type="button" onClick={() => onRemove(chip.key)} aria-label={`${chip.label}を削除`} disabled={disabled}><Icon name="x" /></button>
         </span>
       ))}
       <div className="tag-input__field">

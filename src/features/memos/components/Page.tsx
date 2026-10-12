@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Icon } from '~/components';
 import type { LocalMemo } from '~/features/sync/localDb';
 import { useTagNameOf } from '../hooks/useLocalData';
 import { searchActions, useSearch } from '../searchStore';
@@ -42,7 +43,7 @@ const PagePC = () => {
 const MemoPreview = ({ memo }: { memo: LocalMemo | null }) => {
   const nameOf = useTagNameOf();
   if (!memo) {
-    return <div className="preview preview--empty" aria-hidden="true">📝</div>;
+    return <div className="preview preview--empty" aria-hidden="true"><Icon name="note" /></div>;
   }
   return (
     <div className="preview">

@@ -8,6 +8,7 @@ src/
   app.css                             デザイントークン（ライト/ダーク）と各 CSS の読み込み
   routes/                             React Router のルート（薄く保つ）
   components/                         ドメイン非依存の部品（Button, Modal, TagInput, DatePickerInput, Textarea, Switch, Loading）と ui.css
+  components/icons/                   アイコンの SVG（24×24・黒の線画）。<Icon name="..." /> で表示する
   features/
     sync/        localDb.ts（IndexedDB）, syncService.ts（クライアント同期）, sync.server.ts（同期 API の処理）
     memos/       メモ一覧画面: components/, hooks/useLocalData.ts, searchStore.ts, services/, utils/, models/*.server.ts
@@ -34,6 +35,7 @@ UI → services (memoService / tagService) → localDb (IndexedDB) ──変更�
 
 1. **UI**: 汎用部品は `src/components/`、ドメイン固有は `features/<feature>/components/`。PC とスマホで同じ機能を別コンポーネントに複製しない（`variant` で出し分ける）。
 2. **スタイル**: 色・角丸・影は `app.css` のトークン（`--bg`, `--text`, `--primary` など）だけを使う。汎用部品は `components/ui.css`、画面ごとの CSS は各 feature 直下（`memos.css` など）に置き、`app.css` から読み込む。分類の色のような動的な値だけは `style` で CSS 変数（`--category-color`）を渡す。
+   アイコンは絵文字や記号文字を使わず、`components/icons/` に SVG を追加して `Icon` で表示する（`IconName` にも名前を足す）。文字色で塗られるのでテーマに自動で追従する。
 3. **ロジック**
    - API ルート (`routes/api.*`) は入出力だけを扱い、処理は `*.server.ts` に委譲する。
    - DB 操作は `models/*.server.ts` / `sync.server.ts`、外部 API は `App/services/*.server.ts`。

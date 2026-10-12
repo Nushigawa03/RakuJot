@@ -57,7 +57,7 @@ describe('TrashPage', () => {
         render(<TrashPage />);
 
         await waitFor(() => {
-            expect(screen.getByText('🗑️ ゴミ箱')).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'ゴミ箱' })).toBeInTheDocument();
         });
         expect(screen.queryByText('ゴミ箱を空にする')).not.toBeInTheDocument();
     });

@@ -29,7 +29,7 @@ describe('NavigationBar', () => {
     expect(screen.getByText('Work')).toBeInTheDocument(); // 検索欄のタグチップ
   });
 
-  it('🔍 ボタンでも検索できる', () => {
+  it('検索ボタンでも検索できる', () => {
     render(<NavigationBar />);
     fireEvent.change(screen.getByPlaceholderText('さがす...'), { target: { value: 'メモ' } });
     fireEvent.click(screen.getByRole('button', { name: '検索' }));

@@ -4,6 +4,7 @@ import { useExpressions, useMemos, useQueryEmbedding, useTagNameOf } from '../ho
 import { searchActions, useSearch } from '../searchStore';
 import { filterMemos } from '../utils/search';
 import { memoDateSortKey } from '../utils/dateUtils';
+import { Icon } from '~/components';
 import type { LocalMemo } from '~/features/sync/localDb';
 
 type SortKey = 'date' | 'title';
@@ -47,7 +48,7 @@ const MemoList = ({ onHover }: MemoListProps) => {
       className={`memo-list__sort ${sort.key === key ? 'is-active' : ''}`}
       onClick={() => setSort((s) => ({ key, desc: s.key === key ? !s.desc : true }))}
     >
-      {label} {sort.key === key && (sort.desc ? '▼' : '▲')}
+      {label} {sort.key === key && <Icon name={sort.desc ? 'chevron-down' : 'chevron-up'} />}
     </button>
   );
 
@@ -61,7 +62,7 @@ const MemoList = ({ onHover }: MemoListProps) => {
       {visible.length === 0 ? (
         memos.length > 0 && (
           <div className="empty">
-            <button type="button" className="btn btn--secondary btn--sm" onClick={searchActions.clear}>× 検索をクリア</button>
+            <button type="button" className="btn btn--secondary btn--sm" onClick={searchActions.clear}><Icon name="x" /> 検索をクリア</button>
           </div>
         )
       ) : (

@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Icon } from '~/components';
 import { authenticateWithPasskey, isWebAuthnSupported, registerCredential } from '../services/webauthnService';
-
-const PasskeyIcon = () => (
-  <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 7a4 4 0 1 0-3.3 3.94" />
-    <path d="M14 11h7v3h-3v3h-3v3h-3v-5" />
-  </svg>
-);
 
 /** SSR では判定できないため、マウント後に WebAuthn 対応を確認する */
 const useSupported = () => {
@@ -32,7 +26,7 @@ export const PasskeyLoginButton = ({ onSuccess, onError }: { onSuccess: (user: {
 
   return (
     <button type="button" className="passkey-button" onClick={login} disabled={loading}>
-      <PasskeyIcon />
+      <Icon name="key" />
       <span>{loading ? '認証中...' : 'パスキーでログイン'}</span>
     </button>
   );
@@ -44,7 +38,7 @@ export const PasskeyRegisterButton = ({ onSuccess, onError }: { onSuccess: () =>
   const [loading, setLoading] = useState(false);
 
   if (supported === null) return <div className="passkey-skeleton" />;
-  if (!supported) return <p className="muted">⚠ このブラウザはパスキー非対応</p>;
+  if (!supported) return <p className="muted"><Icon name="alert" /> このブラウザはパスキー非対応</p>;
 
   const register = async () => {
     setLoading(true);
@@ -56,7 +50,7 @@ export const PasskeyRegisterButton = ({ onSuccess, onError }: { onSuccess: () =>
 
   return (
     <button type="button" className="btn btn--primary btn--full" onClick={register} disabled={loading}>
-      <PasskeyIcon />
+      <Icon name="key" />
       {loading ? '登録中...' : 'パスキーを追加'}
     </button>
   );

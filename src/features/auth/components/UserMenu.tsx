@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { Icon } from '~/components';
 import { setLoggedOut } from '~/features/sync/syncService';
 import { displayName, useCurrentUser, type CurrentUser } from '../currentUser';
 
@@ -46,7 +47,7 @@ export const UserAvatarButton = () => {
   const { user } = useCurrentUser();
   return (
     <Link className="icon-btn" to={user ? '/app/settings' : '/login'} title={user ? displayName(user) : 'ログイン'} aria-label={user ? 'ユーザー設定' : 'ログイン'}>
-      {user ? <Avatar user={user} /> : '👤'}
+      {user ? <Avatar user={user} /> : <Icon name="user" />}
     </Link>
   );
 };

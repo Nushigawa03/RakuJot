@@ -4,6 +4,7 @@ import { Link, redirect, useLoaderData, useNavigate } from 'react-router';
 import type { LoaderFunction, MetaFunction } from 'react-router';
 import { getCurrentUser } from '~/features/auth/utils/authMode.server';
 import { getPublicAuthConfig } from '~/features/auth/config/authEnvironment.server';
+import { Icon } from '~/components';
 import { PasskeyLoginButton } from '~/features/auth/components/PasskeyButtons';
 import { setLoggedIn, performSync } from '~/features/sync/syncService';
 
@@ -92,11 +93,11 @@ export default function LoginRoute() {
                 <section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
                     {isDevMode ? (
                         <div className="rounded-2xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-                            🛠 開発モード（AUTH_MODE=google で切替）
+                            <Icon name="wrench" /> 開発モード（AUTH_MODE=google で切替）
                         </div>
                     ) : !googleAuthAvailable ? (
                         <div className="rounded-2xl border border-rose-300/30 bg-rose-400/10 p-4 text-sm text-rose-100">
-                            ⚠ GOOGLE_CLIENT_ID と VITE_GOOGLE_CLIENT_ID が未設定
+                            <Icon name="alert" /> GOOGLE_CLIENT_ID と VITE_GOOGLE_CLIENT_ID が未設定
                         </div>
                     ) : (
                             <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
