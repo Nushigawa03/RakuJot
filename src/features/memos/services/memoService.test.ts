@@ -30,7 +30,7 @@ vi.mock('./tagService', () => ({
 }));
 
 vi.mock('../../settings/useSettings', () => ({
-  getSettings: vi.fn(() => ({ aiUsageEnabled: true, googleApiKey: '', detailSearchAlwaysVisible: false })),
+  getSettings: vi.fn(() => ({ aiUsageEnabled: true, googleApiKey: '', detailSearchAlwaysVisible: false, mobileInputExpressionButtons: false })),
 }));
 
 const jsonResponse = (body: unknown, ok = true) => ({ ok, json: () => Promise.resolve(body) });
@@ -66,7 +66,7 @@ describe('MemoService', () => {
   });
 
   it('AI がオフのときは呼び出さず、1行目をタイトルにする', async () => {
-    vi.mocked(getSettings).mockReturnValueOnce({ aiUsageEnabled: false, googleApiKey: '', detailSearchAlwaysVisible: false });
+    vi.mocked(getSettings).mockReturnValueOnce({ aiUsageEnabled: false, googleApiKey: '', detailSearchAlwaysVisible: false, mobileInputExpressionButtons: false });
 
     await service.createMemoWithAiSuggestions('一行目\n二行目');
 

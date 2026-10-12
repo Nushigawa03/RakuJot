@@ -5,6 +5,9 @@ export const evaluateExpression = (memoTagIds: string[], orTerms: TagExpressionT
   orTerms.some((t) => t.include.every((id) => memoTagIds.includes(id)) && t.exclude.every((id) => !memoTagIds.includes(id)));
 
 /** 「(A AND NOT B) OR C」形式の説明文を作る */
+/** 新規メモにつけるタグ: 最初の OR 項の「含む」タグ（これをつければ分類に入る） */
+export const expressionTagIds = (orTerms: TagExpressionTerm[]) => orTerms[0]?.include ?? [];
+
 export const describeExpression = (orTerms: TagExpressionTerm[], nameOf: (id: string) => string) =>
   orTerms
     .map((t) => [...t.include.map(nameOf), ...t.exclude.map((id) => `NOT ${nameOf(id)}`)])

@@ -78,9 +78,29 @@ export const Sidebar = () => {
   );
 };
 
+/** 分類の切り替えボタン。namedOnly なら名前のない検索フィルタは出さない */
+export const ExpressionPills = ({ namedOnly = false }: { namedOnly?: boolean }) => {
+  const { items } = useExpressionItems();
+  return (
+    <>
+      {items.filter((i) => !namedOnly || i.expression.name).map(({ expression: e, label, active }) => (
+        <button
+          key={e.id}
+          type="button"
+          className={`pill ${e.color ? 'has-color' : ''} ${active ? 'is-active' : ''}`}
+          style={colorStyle(e)}
+          onClick={() => searchActions.toggleExpression(e.id)}
+          aria-pressed={active}
+        >
+          {e.name ? label : <LogicText text={label} />}
+        </button>
+      ))}
+    </>
+  );
+};
+
 /** スマホ: 一覧上部の横スクロールするフィルタ（適用中の日付・タグ・分類） */
 export const FilterPills = () => {
-  const { items } = useExpressionItems();
   const search = useSearch();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -97,17 +117,7 @@ export const FilterPills = () => {
             <Icon name="tag" /> {tag.isExclude ? `NOT ${tag.name}` : tag.name} <Icon name="x" />
           </button>
         ))}
-        {items.map(({ expression: e, label, active }) => (
-          <button
-            key={e.id}
-            type="button"
-            className={`pill ${e.color ? 'has-color' : ''} ${active ? 'is-active' : ''}`}
-            style={colorStyle(e)}
-            onClick={() => searchActions.toggleExpression(e.id)}
-          >
-            {e.name ? label : <LogicText text={label} />}
-          </button>
-        ))}
+        <ExpressionPills />
       </div>
       <button type="button" className="icon-btn pills__add" onClick={() => setSettingsOpen(true)} aria-label="タグ設定を開く" title="タグ設定"><Icon name="plus" /></button>
       {settingsOpen && <TagSettingsModal onClose={() => setSettingsOpen(false)} />}

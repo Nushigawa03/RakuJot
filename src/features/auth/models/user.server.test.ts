@@ -174,7 +174,7 @@ describe('user.server', () => {
                 select: { settings: true },
             });
             expect(result).toEqual({
-                settings: { aiUsageEnabled: false, detailSearchAlwaysVisible: false },
+                settings: { aiUsageEnabled: false, detailSearchAlwaysVisible: false, mobileInputExpressionButtons: false },
                 hasStoredSettings: true,
             });
         });
@@ -185,7 +185,7 @@ describe('user.server', () => {
             const result = await getUserSettings('user-1');
 
             expect(result).toEqual({
-                settings: { aiUsageEnabled: true, detailSearchAlwaysVisible: false },
+                settings: { aiUsageEnabled: true, detailSearchAlwaysVisible: false, mobileInputExpressionButtons: false },
                 hasStoredSettings: false,
             });
         });
@@ -207,11 +207,11 @@ describe('user.server', () => {
             expect(mockPrisma.user.update).toHaveBeenCalledWith({
                 where: { id: 'user-1' },
                 data: {
-                    settings: { aiUsageEnabled: false, detailSearchAlwaysVisible: false },
+                    settings: { aiUsageEnabled: false, detailSearchAlwaysVisible: false, mobileInputExpressionButtons: false },
                 },
                 select: { settings: true },
             });
-            expect(result).toEqual({ aiUsageEnabled: false, detailSearchAlwaysVisible: false });
+            expect(result).toEqual({ aiUsageEnabled: false, detailSearchAlwaysVisible: false, mobileInputExpressionButtons: false });
         });
     });
 

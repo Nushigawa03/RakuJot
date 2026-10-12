@@ -105,14 +105,17 @@ export class MemoService {
     return { ok: true, memo };
   }
 
-  /** 本文だけから AI でタイトル・タグ・日付を推定して作成する（AI が使えなければ1行目と今日の日付） */
-  async createMemoWithAiSuggestions(content: string, opts: { tagLimit?: number } = {}): Promise<Result & { memo?: Memo }> {
+  /**
+   * 本文だけから AI でタイトル・タグ・日付を推定して作成する（AI が使えなければ1行目と今日の日付）。
+   * extraTags（選択中の分類のタグなど）は AI の推定に加えて必ずつける。
+   */
+  async createMemoWithAiSuggestions(content: string, opts: { tagLimit?: number; extraTags?: string[] } = {}): Promise<Result & { memo?: Memo }> {
     try {
       const ai = await this.callAi({ content: content.trim() });
       return await this.createMemo({
         title: ai.title || firstLine(content),
         body: content.trim(),
-        tags: await this.normalizeAiTags(ai.tags, opts.tagLimit),
+        tags: [...(opts.extraTags ?? []), ...(await this.normalizeAiTags(ai.tags, opts.tagLimit))],
         date: ai.date || todayString(),
       });
     } catch (e: any) {

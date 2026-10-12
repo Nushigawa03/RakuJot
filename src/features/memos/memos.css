@@ -190,6 +190,8 @@
 .quick-input .textarea { max-height: 30dvh; resize: none; }
 .quick-input--full { flex: 1; min-height: 0; padding: var(--memo-input-padding); }
 .quick-input--full .textarea { flex: 1; max-height: none; }
+.quick-input__expressions { display: flex; flex-shrink: 0; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
+.quick-input__expressions::-webkit-scrollbar { display: none; }
 .page-mobile .quick-input > .btn { flex: 0 0 2.5rem; height: 2.5rem; }
 .page-mobile .quick-input .hide-sm { display: none; }
 

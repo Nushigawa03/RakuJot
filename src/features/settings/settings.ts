@@ -2,6 +2,8 @@
 export interface PersistedUserSettings {
   aiUsageEnabled: boolean;
   detailSearchAlwaysVisible: boolean;
+  /** スマホの入力画面に分類ボタンを出す（選んだ分類のタグを新規メモにつける） */
+  mobileInputExpressionButtons: boolean;
 }
 
 /** 端末内（localStorage）だけに保存する設定 */
@@ -12,6 +14,7 @@ export interface Settings extends PersistedUserSettings {
 export const DEFAULT_PERSISTED_USER_SETTINGS: PersistedUserSettings = {
   aiUsageEnabled: true,
   detailSearchAlwaysVisible: false,
+  mobileInputExpressionButtons: false,
 };
 
 export const DEFAULT_SETTINGS: Settings = { ...DEFAULT_PERSISTED_USER_SETTINGS, googleApiKey: '' };

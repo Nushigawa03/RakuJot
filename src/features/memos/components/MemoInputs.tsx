@@ -1,13 +1,28 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Button, DatePickerInput, Icon, TagInput, Textarea } from '~/components';
 import { memoService } from '../services/memoService';
-import { useTags } from '../hooks/useLocalData';
+import { useSettings } from '~/features/settings/useSettings';
+import { useExpressions, useTags } from '../hooks/useLocalData';
+import { useSearch } from '../searchStore';
+import { expressionTagIds } from '../utils/expressions';
+import { ExpressionPills } from './Sidebar';
+
+/** 選択中の分類に入るためのタグ名（新規メモに自動でつける） */
+function useActiveExpressionTags() {
+  const { expressionId } = useSearch();
+  const expression = useExpressions().find((e) => e.id === expressionId);
+  const tags = useTags();
+  if (!expression) return [];
+  return expressionTagIds(expression.orTerms).flatMap((id) => tags.find((t) => t.id === id)?.name ?? []);
+}
 
 /**
- * 本文だけ入力してすぐ保存するメモ欄。タイトル・タグ・日付は AI が推定する。
- * fullScreen はスマホの入力画面用（罫線つき・全面）。
+ * 本文だけ入力してすぐ保存するメモ欄。タイトル・タグ・日付は AI が推定し、選択中の分類のタグを加える。
+ * fullScreen はスマホの入力画面用（罫線つき・全面）。設定で分類ボタンを出せる。
  */
 export const QuickMemoInput = ({ fullScreen = false }: { fullScreen?: boolean }) => {
+  const { settings } = useSettings();
+  const extraTags = useActiveExpressionTags();
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +31,7 @@ export const QuickMemoInput = ({ fullScreen = false }: { fullScreen?: boolean })
     if (!content.trim() || isSaving) return;
     setIsSaving(true);
     setError(null);
-    const result = await memoService.createMemoWithAiSuggestions(content, { tagLimit: 10 });
+    const result = await memoService.createMemoWithAiSuggestions(content, { tagLimit: 10, extraTags });
     setIsSaving(false);
     if (result.ok) setContent('');
     else setError(result.error || '保存に失敗しました。');
@@ -31,6 +46,9 @@ export const QuickMemoInput = ({ fullScreen = false }: { fullScreen?: boolean })
 
   return (
     <div className={`quick-input ${fullScreen ? 'quick-input--full' : ''}`}>
+      {fullScreen && settings.mobileInputExpressionButtons && (
+        <div className="quick-input__expressions"><ExpressionPills namedOnly /></div>
+      )}
       <Textarea
         placeholder="メモを入力..."
         value={content}

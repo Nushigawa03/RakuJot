@@ -108,6 +108,13 @@ const SettingsPage = () => {
             <Switch id="detail-search-toggle" checked={settings.detailSearchAlwaysVisible} onChange={(v) => updateSetting('detailSearchAlwaysVisible', v)} />
           </Item>
         </section>
+
+        <section className="card">
+          <h2>メモ入力</h2>
+          <Item inline label="スマホの入力画面に分類ボタンを表示" htmlFor="mobile-expression-toggle">
+            <Switch id="mobile-expression-toggle" checked={settings.mobileInputExpressionButtons} onChange={(v) => updateSetting('mobileInputExpressionButtons', v)} />
+          </Item>
+        </section>
       </main>
     </div>
   );
