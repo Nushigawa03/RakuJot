@@ -11,6 +11,7 @@
     "test:local": "env-cmd -f .env.testing npm run test",
     "build:deploy": "prisma generate && prisma migrate deploy && npm run build",
     "typecheck": "tsc",
+    "icons": "node scripts/generate-icons.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"

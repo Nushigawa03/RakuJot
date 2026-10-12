@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 512 512"
+   width="512"
+   height="512"
+   version="1.1"
+   id="svg18"
+   sodipodi:docname="icon.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview18"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.48436815"
+     inkscape:cx="39.226362"
+     inkscape:cy="764.91405"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg18" />
+  <defs
+     id="defs1">
+    <clipPath
+       id="bg">
+      <rect
+         width="512"
+         height="512"
+         rx="112"
+         id="rect1" />
+    </clipPath>
+  </defs>
+  <!-- 背景: 水平・垂直分割の4色 -->
+  <g
+     clip-path="url(#bg)"
+     id="g5">
+    <rect
+       x="0"
+       y="0"
+       width="256"
+       height="256"
+       fill="#ffcc1a"
+       id="rect2" />
+    <rect
+       x="256"
+       y="0"
+       width="256"
+       height="256"
+       fill="#ff6b9d"
+       id="rect3" />
+    <rect
+       x="0"
+       y="256"
+       width="256"
+       height="256"
+       fill="#00c9c2"
+       id="rect4" />
+    <rect
+       x="256"
+       y="256"
+       width="256"
+       height="256"
+       fill="#3a8dff"
+       id="rect5" />
+  </g>
+  <!-- メモ帳 -->
+  <rect
+     x="80"
+     y="124"
+     width="352"
+     height="324"
+     rx="48"
+     fill="#FCE2A4"
+     id="rect6" />
+  <rect
+     x="80"
+     y="104"
+     width="352"
+     height="324"
+     rx="48"
+     fill="#FFFFFF"
+     id="rect7" />
+  <!-- リング -->
+  <circle
+     cx="166"
+     cy="128"
+     r="22"
+     fill="#FF6B9D"
+     id="circle7" />
+  <circle
+     cx="226"
+     cy="128"
+     r="22"
+     fill="#FFCC1A"
+     id="circle8" />
+  <circle
+     cx="286"
+     cy="128"
+     r="22"
+     fill="#00C9C2"
+     id="circle9" />
+  <circle
+     cx="346"
+     cy="128"
+     r="22"
+     fill="#3A8DFF"
+     id="circle10" />
+  <g
+     stroke="#2B3165"
+     stroke-width="22"
+     stroke-linecap="round"
+     id="g10">
+    <path
+       d="M166 70V128M226 70V128M286 70V128M346 70V128"
+       id="path10" />
+  </g>
+  <!-- 楽 (水平・垂直のみ) -->
+  <g
+     fill="none"
+     stroke="#2B3165"
+     stroke-width="26"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     id="g18">
+    <!-- 白 -->
+    <path
+       d="M256 172V190"
+       id="path11" />
+    <rect
+       x="206"
+       y="205"
+       width="100"
+       height="102"
+       rx="4"
+       id="rect11" />
+    <path
+       d="M206 256H306"
+       id="path12" />
+    <!-- 左右の点 -->
+    <path
+       d="M144 230H170M144 282H170"
+       id="path13"
+       sodipodi:nodetypes="cccc" />
+    <path
+       d="M342 230H368M342 282H368"
+       id="path14"
+       sodipodi:nodetypes="cccc" />
+    <!-- 木 -->
+    <path
+       d="M 140 342 H 372"
+       id="path15" />
+    <path
+       d="m 256,307 v 97"
+       id="path16"
+       sodipodi:nodetypes="cc" />
+    <path
+       d="M214 380H186"
+       id="path17"
+       sodipodi:nodetypes="cc" />
+    <path
+       d="M298 380H326"
+       id="path18"
+       sodipodi:nodetypes="cc" />
+  </g>
+</svg>
